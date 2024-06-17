@@ -4,30 +4,21 @@ pragma solidity 0.8.7;
 import "../proposable/ProposableOwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./TokenInterface.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-// import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
-import "../libraries/OracleLibrary.sol";
-import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/IWETH.sol";
-import "../interfaces/IUniswapV2Router02.sol";
-import "../interfaces/IUniswapV2Factory.sol";
 
 /// @title Index Token
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
 contract IndexToken is
+    Initializable,
     ContextUpgradeable,
     ERC20Upgradeable,
     ProposableOwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    TokenInterface
 {
-
-    uint256 public fee;
     
     uint256 internal constant SCALAR = 1e20;
 
@@ -53,29 +44,6 @@ contract IndexToken is
     mapping(address => bool) public isRestricted;
 
     
-
-    
-    
-
-    mapping(address => uint) public tokenMarketShare;
-    mapping(address => uint) public tokenSwapVersion;
-
-    ISwapRouter public swapRouterV3;
-    IUniswapV3Factory public factoryV3;
-    IUniswapV2Router02 public swapRouterV2;
-    IUniswapV2Factory public factoryV2;
-    IWETH public weth;
-    IQuoter public quoter;
-
-    event FeeReceiverSet(address indexed feeReceiver);
-    event FeeRateSet(uint256 indexed feeRatePerDayScaled);
-    event MethodologistSet(address indexed methodologist);
-    event MethodologySet(string methodology);
-    event MinterSet(address indexed minter);
-    event SupplyCeilingSet(uint256 supplyCeiling);
-    event MintFeeToReceiver(address feeReceiver, uint256 timestamp, uint256 totalSupply, uint256 amount);
-    event ToggledRestricted(address indexed account, bool isRestricted);
-
     modifier onlyMethodologist() {
         require(msg.sender == methodologist, "IndexToken: caller is not the methodologist");
         _;
@@ -92,15 +60,8 @@ contract IndexToken is
         string memory tokenSymbol,
         uint256 _feeRatePerDayScaled,
         address _feeReceiver,
-        uint256 _supplyCeiling,
-        //addresses
-        address _weth,
-        address _quoter,
-        address _swapRouterV3,
-        address _factoryV3,
-        address _swapRouterV2,
-        address _factoryV2
-    ) external initializer {
+        uint256 _supplyCeiling
+    ) external override initializer {
         require(_feeReceiver != address(0));
 
         __Ownable_init();
@@ -112,36 +73,6 @@ contract IndexToken is
         feeReceiver = _feeReceiver;
         supplyCeiling = _supplyCeiling;
         feeTimestamp = block.timestamp;
-        //set addresses
-        weth = IWETH(_weth);
-        quoter = IQuoter(_quoter);
-        swapRouterV3 = ISwapRouter(_swapRouterV3);
-        factoryV3 = IUniswapV3Factory(_factoryV3);
-        swapRouterV2 = IUniswapV2Router02(_swapRouterV2);
-        factoryV2 = IUniswapV2Factory(_factoryV2);
-    }
-
-
-   /**
-    * @dev The contract's fallback function that does not allow direct payments to the contract.
-    * @notice Prevents users from sending ether directly to the contract by reverting the transaction.
-    */
-    receive() external payable {
-        // revert DoNotSendFundsDirectlyToTheContract();
-    }
-
-
-
-    /// @notice External mint function
-    /// @dev Mint function can only be called externally by the controller
-    /// @param to address
-    /// @param amount uint256
-    function _mintTo(address to, uint256 amount) internal whenNotPaused {
-        require(totalSupply() + amount <= supplyCeiling, "will exceed supply ceiling");
-        require(!isRestricted[to], "to is restricted");
-        require(!isRestricted[msg.sender], "msg.sender is restricted");
-        _mintToFeeReceiver();
-        _mint(to, amount);
     }
 
     
@@ -149,7 +80,7 @@ contract IndexToken is
     /// @dev Mint function can only be called externally by the controller
     /// @param to address
     /// @param amount uint256
-    function mint(address to, uint256 amount) public whenNotPaused onlyMinter {
+    function mint(address to, uint256 amount) external override whenNotPaused onlyMinter {
         require(totalSupply() + amount <= supplyCeiling, "will exceed supply ceiling");
         require(!isRestricted[to], "to is restricted");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
@@ -161,19 +92,7 @@ contract IndexToken is
     /// @dev burn function can only be called externally by the controller
     /// @param from address
     /// @param amount uint256
-    function _burnTo(address from, uint256 amount) internal whenNotPaused {
-        require(!isRestricted[from], "from is restricted");
-        require(!isRestricted[msg.sender], "msg.sender is restricted");
-        _mintToFeeReceiver();
-        _burn(from, amount);
-    }
-
-
-    /// @notice External burn function
-    /// @dev burn function can only be called externally by the controller
-    /// @param from address
-    /// @param amount uint256
-    function burn(address from, uint256 amount) public whenNotPaused onlyMinter {
+    function burn(address from, uint256 amount) external override whenNotPaused onlyMinter {
         require(!isRestricted[from], "from is restricted");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
         _mintToFeeReceiver();
@@ -206,14 +125,14 @@ contract IndexToken is
     /// @notice Expands supply and mints fees to fee reciever
     /// @dev Can only be called by the owner externally,
     /// @dev _mintToFeeReciver is the internal function and is called after each supply/rate change
-    function mintToFeeReceiver() external onlyOwner {
+    function mintToFeeReceiver() external override onlyOwner {
         _mintToFeeReceiver();
     }
 
     
     /// @notice Only owner function for setting the methodologist
     /// @param _methodologist address
-    function setMethodologist(address _methodologist) external onlyOwner {
+    function setMethodologist(address _methodologist) external override onlyOwner {
         require(_methodologist != address(0));
         methodologist = _methodologist;
         emit MethodologistSet(_methodologist);
@@ -221,7 +140,7 @@ contract IndexToken is
 
     /// @notice Callable only by the methodoligst to store on chain data about the underlying weight of the token
     /// @param _methodology string
-    function setMethodology(string memory _methodology) external onlyMethodologist {
+    function setMethodology(string memory _methodology) external override onlyMethodologist {
         methodology = _methodology;
         emit MethodologySet(_methodology);
     }
@@ -229,7 +148,7 @@ contract IndexToken is
     /// @notice Ownable function to set the fee rate
     /// @dev Given the annual fee rate this function sets and calculates the rate per second
     /// @param _feeRatePerDayScaled uint256
-    function setFeeRate(uint256 _feeRatePerDayScaled) external onlyOwner {
+    function setFeeRate(uint256 _feeRatePerDayScaled) external override onlyOwner {
         _mintToFeeReceiver();
         feeRatePerDayScaled = _feeRatePerDayScaled;
         emit FeeRateSet(_feeRatePerDayScaled);
@@ -237,7 +156,7 @@ contract IndexToken is
 
     /// @notice Ownable function to set the receiver
     /// @param _feeReceiver address
-    function setFeeReceiver(address _feeReceiver) external onlyOwner {
+    function setFeeReceiver(address _feeReceiver) external override onlyOwner {
         require(_feeReceiver != address(0));
         feeReceiver = _feeReceiver;
         emit FeeReceiverSet(_feeReceiver);
@@ -245,7 +164,7 @@ contract IndexToken is
 
     /// @notice Ownable function to set the contract that controls minting
     /// @param _minter address
-    function setMinter(address _minter) external onlyOwner {
+    function setMinter(address _minter) external override onlyOwner {
         require(_minter != address(0));
         minter = _minter;
         emit MinterSet(_minter);
@@ -253,17 +172,17 @@ contract IndexToken is
 
     /// @notice Ownable function to set the limit at which the total supply cannot exceed
     /// @param _supplyCeiling uint256
-    function setSupplyCeiling(uint256 _supplyCeiling) external onlyOwner {
+    function setSupplyCeiling(uint256 _supplyCeiling) external override onlyOwner {
         supplyCeiling = _supplyCeiling;
         emit SupplyCeilingSet(_supplyCeiling);
     }
 
     
-    function pause() external onlyOwner {
+    function pause() external override onlyOwner {
         _pause();
     }
 
-    function unpause() external onlyOwner {
+    function unpause() external override onlyOwner {
         _unpause();
     }
 
@@ -271,7 +190,7 @@ contract IndexToken is
     /// @notice Compliance feature to blacklist bad actors
     /// @dev Negates current restriction state
     /// @param who address
-    function toggleRestriction(address who) external onlyOwner {
+    function toggleRestriction(address who) external override onlyOwner {
         isRestricted[who] = !isRestricted[who];
         emit ToggledRestricted(who, isRestricted[who]);
     }
@@ -307,52 +226,4 @@ contract IndexToken is
         _transfer(from, to, amount);
         return true;
     }
-
-    function approveSwapToken(address _token, address _to, uint _amount) public onlyMinter {
-        IERC20(_token).approve(_to, _amount);
-    }
-
-    function swapSingle(address tokenIn, address tokenOut, uint amountIn, address _recipient, uint _swapVersion) public onlyMinter returns(uint){
-        
-            if(_swapVersion == 3){
-                IERC20(tokenIn).approve(address(swapRouterV3), amountIn);
-                ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-                .ExactInputSingleParams({
-                    tokenIn: tokenIn,
-                    tokenOut: tokenOut,
-                    // pool fee 0.3%
-                    fee: 3000,
-                    recipient: _recipient,
-                    deadline: block.timestamp,
-                    amountIn: amountIn,
-                    amountOutMinimum: 0,
-                    // NOTE: In production, this value can be used to set the limit
-                    // for the price the swap will push the pool to,
-                    // which can help protect against price impact
-                    sqrtPriceLimitX96: 0
-                });
-                uint finalAmountOut = swapRouterV3.exactInputSingle(params);
-                return finalAmountOut;
-            } else{
-                address[] memory path = new address[](2);
-                path[0] = tokenIn;
-                path[1] = tokenOut;
-
-                IERC20(tokenIn).approve(address(swapRouterV2), amountIn);
-                swapRouterV2.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                    amountIn, //amountIn
-                    0, //amountOutMin
-                    path, //path
-                    _recipient, //to
-                    block.timestamp //deadline
-                );
-                return 0;
-            }
-    }
-
-    function wethTransfer(address to, uint amount) public onlyMinter {
-        weth.transfer(to, amount);
-    }
-
-    
 }

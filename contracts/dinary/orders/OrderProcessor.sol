@@ -13,12 +13,12 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {mulDiv, mulDiv18} from "@prb/math/src/Common.sol";
-import {SelfPermit} from "./common/SelfPermit.sol";
-import {IOrderProcessor} from "./orders/IOrderProcessor.sol";
-import {IDShare} from "./IDShare.sol";
-import {FeeLib} from "./common/FeeLib.sol";
-import {OracleLib} from "./common/OracleLib.sol";
-import {IDShareFactory} from "./IDShareFactory.sol";
+import {SelfPermit} from "../common/SelfPermit.sol";
+import {IOrderProcessor} from "./IOrderProcessor.sol";
+import {IDShare} from "../IDShare.sol";
+import {FeeLib} from "../common/FeeLib.sol";
+import {OracleLib} from "../common/OracleLib.sol";
+import {IDShareFactory} from "../IDShareFactory.sol";
 
 /// @notice Core contract managing orders for dShare tokens
 /// @dev Assumes dShare asset tokens have 18 decimals and payment tokens have .decimals()

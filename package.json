@@ -1,10 +1,22 @@
 {
   "name": "hardhat-project",
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.5"
+    "@nomicfoundation/hardhat-ethers": "^3.0.4",
+    "@nomicfoundation/hardhat-foundry": "^1.1.2",
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "@openzeppelin/hardhat-upgrades": "^2.2.1",
+    "ethers": "^6.7.1",
+    "hardhat": "^2.17.3"
   },
   "dependencies": {
-    "@chainlink/contracts": "^1.1.1"
+    "@chainlink/contracts": "^0.6.0",
+    "@openzeppelin/contracts": "^4.9.3",
+    "@openzeppelin/contracts-upgradeable": "^4.9.3",
+    "@prb/math": "^4.0.3",
+    "@thirdweb-dev/chains": "^0.1.54",
+    "@thirdweb-dev/contracts": "^3.10.0",
+    "base64-sol": "^1.1.0",
+    "dotenv": "^16.3.1",
+    "prb-math": "^2.4.3"
   }
 }

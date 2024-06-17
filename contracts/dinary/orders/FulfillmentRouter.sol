@@ -5,8 +5,8 @@ import {AccessControlDefaultAdminRules} from
     "@openzeppelin/contracts/access/AccessControlDefaultAdminRules.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
-import {IVault} from "./orders/IVault.sol";
-import {IOrderProcessor} from "./orders/IOrderProcessor.sol";
+import {IVault} from "./IVault.sol";
+import {IOrderProcessor} from "./IOrderProcessor.sol";
 
 /// @notice Specialized multicall for fulfilling orders with vault funds.
 /// @dev Uses vault to remove the need for operator wallets to hold (non-gas) funds.
