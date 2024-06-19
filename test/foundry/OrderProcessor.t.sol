@@ -858,17 +858,17 @@ contract OrderProcessorTest is Test {
         emit OrderCancelled(id, order.recipient, reason);
         vm.prank(operator);
         issuer.cancelOrder(order, reason);
-        // uint balance = paymentToken.balanceOf(address(issuer));
-        // console.log(balance);
-        // assertEq(paymentToken.balanceOf(address(issuer)), 0);
-        // assertEq(paymentToken.balanceOf(treasury), feesEarned);
-        // balances after
-        // if (fillAmount > 0) {
-        //     assertEq(paymentToken.balanceOf(address(user)), quantityIn - fillAmount - feesEarned);
-        // } else {
-        //     assertEq(paymentToken.balanceOf(address(user)), quantityIn);
-        // }
-        // assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
+        uint balance = paymentToken.balanceOf(address(issuer));
+        console.log(balance);
+        assertEq(paymentToken.balanceOf(address(issuer)), 0);
+        assertEq(paymentToken.balanceOf(treasury), feesEarned);
+        balances after
+        if (fillAmount > 0) {
+            assertEq(paymentToken.balanceOf(address(user)), quantityIn - fillAmount - feesEarned);
+        } else {
+            assertEq(paymentToken.balanceOf(address(user)), quantityIn);
+        }
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
     }
 
     function testCancelSellOrder(uint256 orderAmount, uint256 fillAmount, string calldata reason) public {

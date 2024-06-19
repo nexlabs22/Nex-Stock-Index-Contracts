@@ -57,8 +57,8 @@ contract DShareFactory is IDShareFactory, Initializable, UUPSUpgradeable, Ownabl
         if (_dShareBeacon == address(0) || _wrappedDShareBeacon == address(0) || _transferRestrictor == address(0)) {
             revert ZeroAddress();
         }
-        // __Ownable_init(_owner);
-        __Ownable_init();
+        __Ownable_init(_owner);
+        // __Ownable_init();
 
         DShareFactoryStorage storage $ = _getDShareFactoryStorage();
         $._dShareBeacon = _dShareBeacon;

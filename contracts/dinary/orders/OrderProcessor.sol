@@ -163,8 +163,7 @@ contract OrderProcessor is
         virtual
         initializer
     {
-        // __Ownable_init(_owner);
-        __Ownable_init();
+        __Ownable_init(_owner);
         __EIP712_init("OrderProcessor", "1");
         __Multicall_init();
 

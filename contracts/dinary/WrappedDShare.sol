@@ -9,7 +9,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 // import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 // import {ReentrancyGuardUpgradeable} from
 //     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -50,8 +50,8 @@ contract WrappedDShare is Initializable, ERC4626, OwnableUpgradeable, Reentrancy
     /// ------------------- Initialization ------------------- ///
 
     function initialize(address owner, DShare dShare_, string memory name_, string memory symbol_) public initializer {
-        // __Ownable_init_unchained(owner);
-        __Ownable_init_unchained();
+        __Ownable_init_unchained(owner);
+        // __Ownable_init_unchained();
         __ReentrancyGuard_init_unchained();
 
         WrappedDShareStorage storage $ = _getWrappedDShareStorage();

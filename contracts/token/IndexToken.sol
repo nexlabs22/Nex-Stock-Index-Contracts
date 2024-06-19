@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity 0.8.25;
 
 import "../proposable/ProposableOwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./TokenInterface.sol";
@@ -64,7 +64,7 @@ contract IndexToken is
     ) external override initializer {
         require(_feeReceiver != address(0));
 
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __Pausable_init();
         __ERC20_init(tokenName, tokenSymbol);
         __Context_init();

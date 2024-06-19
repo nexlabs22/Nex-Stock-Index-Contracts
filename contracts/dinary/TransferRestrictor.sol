@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {AccessControlDefaultAdminRules} from
-    "@openzeppelin/contracts/access/AccessControlDefaultAdminRules.sol";
+    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {ITransferRestrictor} from "./ITransferRestrictor.sol";
 
 /// @notice Enforces transfer restrictions
