@@ -92,6 +92,21 @@ contract IndexFactory is
         _unpause();
     }
 
+    function getDummyOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
+        return IOrderProcessor.Order({
+            requestTimestamp: uint64(block.timestamp),
+            recipient: user,
+            assetToken: address(token),
+            paymentToken: address(paymentToken),
+            sell: sell,
+            orderType: IOrderProcessor.OrderType.MARKET,
+            assetTokenQuantity: sell ? 100 ether : 0,
+            paymentTokenQuantity: sell ? 0 : 100 ether,
+            price: 0,
+            tif: IOrderProcessor.TIF.GTC
+        });
+    }
+    
     function requestBuyOrder(address recipient, uint256 orderAmount) public {
        
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(paymentToken));
@@ -107,6 +122,24 @@ contract IndexFactory is
         paymentToken.approve(address(issuer), quantityIn);
         uint256 id = issuer.createOrderStandardFees(order);
         
+    }
+
+
+    function testRequestSellOrder(uint256 orderAmount) public {
+        
+        IOrderProcessor.Order memory order = getDummyOrder(true);
+        order.assetTokenQuantity = orderAmount;
+
+        token.mint(user, orderAmount);
+        
+        token.approve(address(issuer), orderAmount);
+
+        // balances before
+        uint256 userBalanceBefore = token.balanceOf(user);
+        uint256 id = issuer.hashOrder(order);
+        
+        uint256 id2 = issuer.createOrderStandardFees(order);
+       
     }
     
 }
