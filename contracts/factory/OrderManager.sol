@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../dinary/orders/IOrderProcessor.sol";
+import {FeeLib} from "../dinary/common/FeeLib.sol";
 
 /// @title Order Manager
 /// @author NEX Labs Protocol
@@ -35,10 +36,12 @@ contract IndexFactory is
     }
 
     address public custodianWallet;
-    address public issuer;
+    IOrderProcessor public issuer;
 
     address public usdc;
     uint8 public usdcDecimals;
+
+    address public token;
 
     
 
@@ -54,10 +57,12 @@ contract IndexFactory is
     
     function initialize(
         address _usdc,
-        uint8 _usdcDecimals
+        uint8 _usdcDecimals,
+        address _issuer
     ) external initializer {
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
+        issuer = IOrderProcessor(_issuer);
         __Ownable_init(msg.sender);
         __Pausable_init();
     }
@@ -92,12 +97,12 @@ contract IndexFactory is
         _unpause();
     }
 
-    function getDummyOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
+    function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
         return IOrderProcessor.Order({
             requestTimestamp: uint64(block.timestamp),
-            recipient: user,
+            recipient: address(this),
             assetToken: address(token),
-            paymentToken: address(paymentToken),
+            paymentToken: address(usdc),
             sell: sell,
             orderType: IOrderProcessor.OrderType.MARKET,
             assetTokenQuantity: sell ? 100 ether : 0,
@@ -107,39 +112,34 @@ contract IndexFactory is
         });
     }
     
-    function requestBuyOrder(address recipient, uint256 orderAmount) public {
+    function requestBuyOrder(address recipient, uint256 orderAmount) public returns(uint) {
        
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(paymentToken));
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, orderAmount);
-        vm.assume(!NumberUtils.addCheckOverflow(orderAmount, fees));
-
-        IOrderProcessor.Order memory order = getDummyOrder(false);
+        
+        IOrderProcessor.Order memory order = getPrimaryOrder(false);
         order.recipient = address(this);
         order.paymentTokenQuantity = orderAmount;
         uint256 quantityIn = order.paymentTokenQuantity + fees;
 
         
-        paymentToken.approve(address(issuer), quantityIn);
+        IERC20(usdc).approve(address(issuer), quantityIn);
         uint256 id = issuer.createOrderStandardFees(order);
-        
+        return id;
     }
 
 
-    function testRequestSellOrder(uint256 orderAmount) public {
+    function requestSellOrder(uint256 orderAmount) public returns(uint) {
         
-        IOrderProcessor.Order memory order = getDummyOrder(true);
+        IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetTokenQuantity = orderAmount;
 
-        token.mint(user, orderAmount);
-        
-        token.approve(address(issuer), orderAmount);
+       
+        IERC20(token).approve(address(issuer), orderAmount);
 
         // balances before
-        uint256 userBalanceBefore = token.balanceOf(user);
-        uint256 id = issuer.hashOrder(order);
-        
-        uint256 id2 = issuer.createOrderStandardFees(order);
-       
+        uint256 id = issuer.createOrderStandardFees(order);
+        return id;
     }
     
 }
