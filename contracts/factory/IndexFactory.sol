@@ -10,6 +10,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../chainlink/ChainlinkClient.sol";
+
+import "./OrderManager.sol";
+
+
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
@@ -44,7 +48,7 @@ contract IndexFactory is
 
     uint8 public feeRate; // 10/10000 = 0.1%
 
-
+    OrderManager public orderManager;
 
     // mapping between a mint request hash and the corresponding request nonce.
     mapping(bytes32 => uint256) public mintRequestNonce;
@@ -141,13 +145,7 @@ contract IndexFactory is
     }
 
     
-    // function setNFT(address _nft) external onlyOwner returns (bool) {
-    //     require(_nft != address(0), "invalid nft address");
-    //     nft = RequestNFT(_nft);
-
-    //     emit NFTSet(_nft);
-    //     return true;
-    // }
+   
 
 
     function concatenation(string memory a, string memory b) public pure returns (string memory) {
@@ -224,6 +222,36 @@ contract IndexFactory is
         }
         return allCustodianWallets;
     }
+
+    function issuance(uint _inputAmount) public {
+        for(uint i = 0; i < totalCurrentList; i++){
+            SafeERC20.safeTransferFrom(
+                IERC20(usdc),
+                msg.sender,
+                oracleCustodianList[i],
+                100e18*oracleShareList[i]/100
+            );
+
+            orderManager.requestBuyOrder( currentList[i], orderAmount*weights[i]/totalCurrentList);
+        }
+    }
+
+
+    function completeIssuance(uint id) public return(uint) {
+        uint completedReqeuestCount;
+        //checking orders status
+        for(uint i = 0; i < totalCurrentList; i++){
+        if (uint8(issuer.getOrderStatus(id)) == uint8(IOrderProcessor.OrderStatus.FULFILLED))){
+            completedReqeuestCount += 1;
+        }
+        }
+        //if all orders are completed mint index token
+        if(completedReqeuestCount == totalCurrentList){
+            //calculate and mint the index token
+        }
+    }
+
+    
 
     /// @notice Allows a user to initiate a mint request
     /// @param amount uint256
