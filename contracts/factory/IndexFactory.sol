@@ -9,9 +9,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../chainlink/ChainlinkClient.sol";
-
-import "./OrderManager.sol";
-
+import "../dinary/orders/IOrderProcessor.sol";
+import {FeeLib} from "../dinary/common/FeeLib.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -47,22 +46,29 @@ contract IndexFactory is
     IndexToken public token;
 
     address public custodianWallet;
-    address public issuer;
+    IOrderProcessor public issuer;
 
     address public usdc;
     uint8 public usdcDecimals;
 
     uint8 public feeRate; // 10/10000 = 0.1%
 
-    OrderManager public orderManager;
 
     // mapping between a mint request hash and the corresponding request nonce.
-    mapping(bytes32 => uint256) public mintRequestNonce;
+    uint public issuanceNonce;
 
     // mapping between a burn request hash and the corresponding request nonce.
-    mapping(bytes32 => uint256) public burnRequestNonce;
+    uint public redemptionNonce;
 
-    
+    mapping(uint => mapping(address => uint)) public issuanceRequestId;
+    mapping(uint => mapping(address => uint)) public redemptionRequestId;
+
+    mapping(uint => mapping(address => uint)) public issuanceTokenPrimaryBalance;
+    mapping(uint => mapping(address => uint)) public redemptionTokenPrimaryBalance;
+
+    mapping(uint => address) public issuanceRequesterByNonce;
+    mapping(uint => address) public redemptionRequesterByNonce;
+
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
 
@@ -76,7 +82,7 @@ contract IndexFactory is
         address _oracleAddress,
         bytes32 _externalJobId
     ) external initializer {
-        issuer = _issuer;
+        issuer = IOrderProcessor(_issuer);
         token = IndexToken(_token);
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
@@ -93,10 +99,7 @@ contract IndexFactory is
         urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
     }
 
-    modifier onlyIssuer() {
-        require(msg.sender == issuer, "sender not a issuer.");
-        _;
-    }
+    
 
 //Notice: newFee should be between 1 to 100 (0.01% - 1%)
   function setFeeRate(uint8 _newFee) public onlyOwner {
@@ -136,7 +139,7 @@ contract IndexFactory is
     /// @return bool
     function setIssuer(address _issuer) external onlyOwner returns (bool) {
         require(_issuer != address(0), "invalid issuer address");
-        issuer = _issuer;
+        issuer = IOrderProcessor(_issuer);
 
         return true;
     }
@@ -211,9 +214,99 @@ contract IndexFactory is
     }
 
     
+    function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
+        return IOrderProcessor.Order({
+            requestTimestamp: uint64(block.timestamp),
+            recipient: address(this),
+            assetToken: address(token),
+            paymentToken: address(usdc),
+            sell: sell,
+            orderType: IOrderProcessor.OrderType.MARKET,
+            assetTokenQuantity: sell ? 100 ether : 0,
+            paymentTokenQuantity: sell ? 0 : 100 ether,
+            price: 0,
+            tif: IOrderProcessor.TIF.GTC
+        });
+    }
     
+    function requestBuyOrder(address _token, uint256 orderAmount) internal returns(uint) {
+       
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, orderAmount);
+        
+        IOrderProcessor.Order memory order = getPrimaryOrder(false);
+        order.recipient = address(this);
+        order.assetToken = address(_token);
+        order.paymentTokenQuantity = orderAmount;
+        uint256 quantityIn = order.paymentTokenQuantity + fees;
+
+        IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
+       
+        IERC20(usdc).approve(address(issuer), quantityIn);
+        uint256 id = issuer.createOrderStandardFees(order);
+        return id;
+    }
 
     
+
+
+    function requestSellOrder(address _token, uint256 _orderAmount) internal returns(uint) {
+        
+        IOrderProcessor.Order memory order = getPrimaryOrder(true);
+        order.assetToken = _token;
+        order.assetTokenQuantity = _orderAmount;
+
+       IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
+
+       IERC20(token).approve(address(issuer), _orderAmount);
+
+        // balances before
+        uint256 id = issuer.createOrderStandardFees(order);
+        return id;
+    }
+    
+
+    function issuance(uint _inputAmount) public {
+        issuanceNonce += 1;
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100;
+            uint requestId = requestBuyOrder(tokenAddress, amount);
+            issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
+            issuanceRequesterByNonce[issuanceNonce] = msg.sender;
+            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(this));;
+        }
+
+    }
+
+    function completeIssuance(uint issuanceNonce) public {
+        require(checkIssuance(issuanceNonce), "Issuance not completed");
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
+            uint256 primaryBalance = issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress];
+            require(balance >= primaryBalance, "Issuance failed");
+            uint256 amount = balance - primaryBalance;
+            token.mint(msg.sender, amount);
+        }
+    }
+
+    function checkIssuance(uint _issuanceNonce) public view returns(bool) {
+        uint completedOrdersCount;
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
+            //if(!issuer.checkOrder(requestId)) return false;
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
+                completedOrdersCount += 1;
+            }
+        }
+        if(completedOrdersCount == totalCurrentList){
+            return true;
+        }else{
+            return false;
+        }
+    }
 
     function pause() external onlyOwner {
         _pause();
