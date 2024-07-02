@@ -414,6 +414,26 @@ contract OrderProcessorTest is Test {
         assertEq(issuer.getUnfilledAmount(id), orderAmount);
         assertEq(token.balanceOf(address(user)), userBalanceBefore - orderAmount);
     }
+    function testRequestSellOrder2(uint256 orderAmount) public {
+        vm.assume(orderAmount > 0);
+
+        IOrderProcessor.Order memory order = getDummyOrder(true);
+        order.assetTokenQuantity = orderAmount;
+
+        vm.prank(admin);
+        token.mint(user, orderAmount);
+        vm.prank(user);
+        token.approve(address(orderManager), orderAmount);
+
+        // balances before
+        uint256 userBalanceBefore = token.balanceOf(address(user));
+        
+        vm.prank(user);
+        uint256 id = orderManager.requestSellOrder(address(token), orderAmount);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+        assertEq(issuer.getUnfilledAmount(id), orderAmount);
+        assertEq(token.balanceOf(address(user)), userBalanceBefore - orderAmount);
+    }
 
     
     function testFillSellOrder(uint256 orderAmount, uint256 fillAmount, uint256 receivedAmount, uint256 fees) public {
