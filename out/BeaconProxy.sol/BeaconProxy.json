@@ -1,1 +1,978 @@
-{"abi":[{"type":"constructor","inputs":[{"name":"beacon","type":"address","internalType":"address"},{"name":"data","type":"bytes","internalType":"bytes"}],"stateMutability":"payable"},{"type":"fallback","stateMutability":"payable"},{"type":"event","name":"BeaconUpgraded","inputs":[{"name":"beacon","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"error","name":"AddressEmptyCode","inputs":[{"name":"target","type":"address","internalType":"address"}]},{"type":"error","name":"ERC1967InvalidBeacon","inputs":[{"name":"beacon","type":"address","internalType":"address"}]},{"type":"error","name":"ERC1967InvalidImplementation","inputs":[{"name":"implementation","type":"address","internalType":"address"}]},{"type":"error","name":"ERC1967NonPayable","inputs":[]},{"type":"error","name":"FailedInnerCall","inputs":[]}],"bytecode":{"object":"0x60a06040526040516105bf3803806105bf83398101604081905261002291610387565b61002c828261003e565b506001600160a01b031660805261047e565b610047826100fe565b6040516001600160a01b038316907f1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e90600090a28051156100f2576100ed826001600160a01b0316635c60da1b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156100c3573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906100e79190610447565b82610211565b505050565b6100fa610288565b5050565b806001600160a01b03163b60000361013957604051631933b43b60e21b81526001600160a01b03821660048201526024015b60405180910390fd5b807fa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d5080546001600160a01b0319166001600160a01b0392831617905560408051635c60da1b60e01b81529051600092841691635c60da1b9160048083019260209291908290030181865afa1580156101b5573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906101d99190610447565b9050806001600160a01b03163b6000036100fa57604051634c9c8ce360e01b81526001600160a01b0382166004820152602401610130565b6060600080846001600160a01b03168460405161022e9190610462565b600060405180830381855af49150503d8060008114610269576040519150601f19603f3d011682016040523d82523d6000602084013e61026e565b606091505b50909250905061027f8583836102a9565b95945050505050565b34156102a75760405163b398979f60e01b815260040160405180910390fd5b565b6060826102be576102b982610308565b610301565b81511580156102d557506001600160a01b0384163b155b156102fe57604051639996b31560e01b81526001600160a01b0385166004820152602401610130565b50805b9392505050565b8051156103185780518082602001fd5b604051630a12f52160e11b815260040160405180910390fd5b80516001600160a01b038116811461034857600080fd5b919050565b634e487b7160e01b600052604160045260246000fd5b60005b8381101561037e578181015183820152602001610366565b50506000910152565b6000806040838503121561039a57600080fd5b6103a383610331565b60208401519092506001600160401b03808211156103c057600080fd5b818501915085601f8301126103d457600080fd5b8151818111156103e6576103e661034d565b604051601f8201601f19908116603f0116810190838211818310171561040e5761040e61034d565b8160405282815288602084870101111561042757600080fd5b610438836020830160208801610363565b80955050505050509250929050565b60006020828403121561045957600080fd5b61030182610331565b60008251610474818460208701610363565b9190910192915050565b6080516101276104986000396000601e01526101276000f3fe6080604052600a600c565b005b60186014601a565b60a0565b565b60007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316635c60da1b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156079573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190609b919060c3565b905090565b3660008037600080366000845af43d6000803e80801560be573d6000f35b3d6000fd5b60006020828403121560d457600080fd5b81516001600160a01b038116811460ea57600080fd5b939250505056fea2646970667358221220f09f317b2db88012214b7acdc5148fb3ad38b89d4b51cba82f1de2f026e4fc9664736f6c63430008190033","sourceMap":"1115:1194:86:-:0;;;1772:147;;;;;;;;;;;;;;;;;;:::i;:::-;1837:49;1873:6;1881:4;1837:35;:49::i;:::-;-1:-1:-1;;;;;;1896:16:86;;;1115:1194;;6076:333:84;6165:21;6176:9;6165:10;:21::i;:::-;6201:25;;-1:-1:-1;;;;;6201:25:84;;;;;;;;6241:11;;:15;6237:166;;6272:71;6309:9;-1:-1:-1;;;;;6301:33:84;;:35;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;6338:4;6272:28;:71::i;:::-;;6076:333;;:::o;6237:166::-;6374:18;:16;:18::i;:::-;6076:333;;:::o;5114:437::-;5175:9;-1:-1:-1;;;;;5175:21:84;;5200:1;5175:26;5171:95;;5224:31;;-1:-1:-1;;;5224:31:84;;-1:-1:-1;;;;;1946:32:124;;5224:31:84;;;1928:51:124;1901:18;;5224:31:84;;;;;;;;5171:95;5324:9;4781:66;5276:57;;-1:-1:-1;;;;;;5276:57:84;-1:-1:-1;;;;;5276:57:84;;;;;;5375:35;;;-1:-1:-1;;;5375:35:84;;;;-1:-1:-1;;5375:33:84;;;;;:35;;;;;;;;;;;;;;:33;:35;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;5344:66;;5424:20;-1:-1:-1;;;;;5424:32:84;;5460:1;5424:37;5420:125;;5484:50;;-1:-1:-1;;;5484:50:84;;-1:-1:-1;;;;;1946:32:124;;5484:50:84;;;1928:51:124;1901:18;;5484:50:84;1782:203:124;4106:253:94;4189:12;4214;4228:23;4255:6;-1:-1:-1;;;;;4255:19:94;4275:4;4255:25;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;4213:67:94;;-1:-1:-1;4213:67:94;-1:-1:-1;4297:55:94;4324:6;4213:67;;4297:26;:55::i;:::-;4290:62;4106:253;-1:-1:-1;;;;;4106:253:94:o;6598:122:84:-;6648:9;:13;6644:70;;6684:19;;-1:-1:-1;;;6684:19:84;;;;;;;;;;;6644:70;6598:122::o;4625:582:94:-;4769:12;4798:7;4793:408;;4821:19;4829:10;4821:7;:19::i;:::-;4793:408;;;5045:17;;:22;:49;;;;-1:-1:-1;;;;;;5071:18:94;;;:23;5045:49;5041:119;;;5121:24;;-1:-1:-1;;;5121:24:94;;-1:-1:-1;;;;;1946:32:124;;5121:24:94;;;1928:51:124;1901:18;;5121:24:94;1782:203:124;5041:119:94;-1:-1:-1;5180:10:94;4793:408;4625:582;;;;;:::o;5743:516::-;5874:17;;:21;5870:383;;6102:10;6096:17;6158:15;6145:10;6141:2;6137:19;6130:44;5870:383;6225:17;;-1:-1:-1;;;6225:17:94;;;;;;;;;;;14:177:124;93:13;;-1:-1:-1;;;;;135:31:124;;125:42;;115:70;;181:1;178;171:12;115:70;14:177;;;:::o;196:127::-;257:10;252:3;248:20;245:1;238:31;288:4;285:1;278:15;312:4;309:1;302:15;328:250;413:1;423:113;437:6;434:1;431:13;423:113;;;513:11;;;507:18;494:11;;;487:39;459:2;452:10;423:113;;;-1:-1:-1;;570:1:124;552:16;;545:27;328:250::o;583:981::-;671:6;679;732:2;720:9;711:7;707:23;703:32;700:52;;;748:1;745;738:12;700:52;771:40;801:9;771:40;:::i;:::-;855:2;840:18;;834:25;761:50;;-1:-1:-1;;;;;;908:14:124;;;905:34;;;935:1;932;925:12;905:34;973:6;962:9;958:22;948:32;;1018:7;1011:4;1007:2;1003:13;999:27;989:55;;1040:1;1037;1030:12;989:55;1069:2;1063:9;1091:2;1087;1084:10;1081:36;;;1097:18;;:::i;:::-;1172:2;1166:9;1140:2;1226:13;;-1:-1:-1;;1222:22:124;;;1246:2;1218:31;1214:40;1202:53;;;1270:18;;;1290:22;;;1267:46;1264:72;;;1316:18;;:::i;:::-;1356:10;1352:2;1345:22;1391:2;1383:6;1376:18;1431:7;1426:2;1421;1417;1413:11;1409:20;1406:33;1403:53;;;1452:1;1449;1442:12;1403:53;1465:68;1530:2;1525;1517:6;1513:15;1508:2;1504;1500:11;1465:68;:::i;:::-;1552:6;1542:16;;;;;;;583:981;;;;;:::o;1569:208::-;1639:6;1692:2;1680:9;1671:7;1667:23;1663:32;1660:52;;;1708:1;1705;1698:12;1660:52;1731:40;1761:9;1731:40;:::i;1990:287::-;2119:3;2157:6;2151:13;2173:66;2232:6;2227:3;2220:4;2212:6;2208:17;2173:66;:::i;:::-;2255:16;;;;;1990:287;-1:-1:-1;;1990:287:124:o;:::-;1115:1194:86;;;;;;;;;;;;","linkReferences":{}},"deployedBytecode":{"object":"0x6080604052600a600c565b005b60186014601a565b60a0565b565b60007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316635c60da1b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156079573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190609b919060c3565b905090565b3660008037600080366000845af43d6000803e80801560be573d6000f35b3d6000fd5b60006020828403121560d457600080fd5b81516001600160a01b038116811460ea57600080fd5b939250505056fea2646970667358221220f09f317b2db88012214b7acdc5148fb3ad38b89d4b51cba82f1de2f026e4fc9664736f6c63430008190033","sourceMap":"1115:1194:86:-:0;;;2649:11:85;:9;:11::i;:::-;1115:1194:86;2323:83:85;2371:28;2381:17;:15;:17::i;:::-;2371:9;:28::i;:::-;2323:83::o;2022:138:86:-;2089:7;2293;-1:-1:-1;;;;;2115:36:86;;:38;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;2108:45;;2022:138;:::o;949:895:85:-;1287:14;1284:1;1281;1268:34;1501:1;1498;1482:14;1479:1;1463:14;1456:5;1443:60;1577:16;1574:1;1571;1556:38;1615:6;1682:66;;;;1797:16;1794:1;1787:27;1682:66;1717:16;1714:1;1707:27;14:290:124;84:6;137:2;125:9;116:7;112:23;108:32;105:52;;;153:1;150;143:12;105:52;179:16;;-1:-1:-1;;;;;224:31:124;;214:42;;204:70;;270:1;267;260:12;204:70;293:5;14:290;-1:-1:-1;;;14:290:124:o","linkReferences":{},"immutableReferences":{"62586":[{"start":30,"length":32}]}},"methodIdentifiers":{},"rawMetadata":"{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidBeacon\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedInnerCall\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"}],\"devdoc\":{\"details\":\"This contract implements a proxy that gets the implementation address for each call from an {UpgradeableBeacon}. The beacon address can only be set once during construction, and cannot be changed afterwards. It is stored in an immutable variable to avoid unnecessary storage reads, and also in the beacon storage slot specified by https://eips.ethereum.org/EIPS/eip-1967[EIP1967] so that it can be accessed externally. CAUTION: Since the beacon address can never be changed, you must ensure that you either control the beacon, or trust the beacon to not upgrade the implementation maliciously. IMPORTANT: Do not use the implementation logic to modify the beacon storage slot. Doing so would leave the proxy in an inconsistent state where the beacon storage slot does not match the beacon address.\",\"errors\":{\"AddressEmptyCode(address)\":[{\"details\":\"There's no code at `target` (it is not a contract).\"}],\"ERC1967InvalidBeacon(address)\":[{\"details\":\"The `beacon` of the proxy is invalid.\"}],\"ERC1967InvalidImplementation(address)\":[{\"details\":\"The `implementation` of the proxy is invalid.\"}],\"ERC1967NonPayable()\":[{\"details\":\"An upgrade function sees `msg.value > 0` that may be lost.\"}],\"FailedInnerCall()\":[{\"details\":\"A call to an address target failed. The target may have reverted.\"}]},\"events\":{\"BeaconUpgraded(address)\":{\"details\":\"Emitted when the beacon is changed.\"}},\"kind\":\"dev\",\"methods\":{\"constructor\":{\"details\":\"Initializes the proxy with `beacon`. If `data` is nonempty, it's used as data in a delegate call to the implementation returned by the beacon. This will typically be an encoded function call, and allows initializing the storage of the proxy like a Solidity constructor. Requirements: - `beacon` must be a contract with the interface {IBeacon}. - If `data` is empty, `msg.value` must be zero.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol\":\"BeaconProxy\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol\":{\"keccak256\":\"0x06a78f9b3ee3e6d0eb4e4cd635ba49960bea34cac1db8c0a27c75f2319f1fd65\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://547d21aa17f4f3f1a1a7edf7167beff8dd9496a0348d5588f15cc8a4b29d052a\",\"dweb:/ipfs/QmT16JtRQSWNpLo9W23jr6CzaMuTAcQcjJJcdRd8HLJ6cE\"]},\"node_modules/@openzeppelin/contracts/proxy/Proxy.sol\":{\"keccak256\":\"0xc3f2ec76a3de8ed7a7007c46166f5550c72c7709e3fc7e8bb3111a7191cdedbd\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e73efb4c2ca655882dc237c6b4f234a9bd36d97159d8fcaa837eb01171f726ac\",\"dweb:/ipfs/QmTNnnv7Gu5fs5G1ZMh7Fexp8N4XUs3XrNAngjcxgiss3e\"]},\"node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol\":{\"keccak256\":\"0x387ebdcb365b8e620f26645d2b34a161cd39eedfb0219e8baff55630c5ae113c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://744ea187c195e31cb9201e63ca291fca9e623747f54f0ba390b366a6213b8964\",\"dweb:/ipfs/Qmc547qfV4sz65DC9B4okx1HvgxwUzJR7zTfKKbTzL3UQT\"]},\"node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol\":{\"keccak256\":\"0xc59a78b07b44b2cf2e8ab4175fca91e8eca1eee2df7357b8d2a8833e5ea1f64c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5aa4f07e65444784c29cd7bfcc2341b34381e4e5b5da9f0c5bd00d7f430e66fa\",\"dweb:/ipfs/QmWRMh4Q9DpaU9GvsiXmDdoNYMyyece9if7hnfLz7uqzWM\"]},\"node_modules/@openzeppelin/contracts/utils/Address.sol\":{\"keccak256\":\"0xaf28a975a78550e45f65e559a3ad6a5ad43b9b8a37366999abd1b7084eb70721\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b7bd24e224f67f65bfadf85dc2929fa965456bb2415478bd0125471b5ce35245\",\"dweb:/ipfs/QmRaydGr8BTHs1kvaZfsNU69pKzUAGFrvABn1KiRSbE51y\"]},\"node_modules/@openzeppelin/contracts/utils/StorageSlot.sol\":{\"keccak256\":\"0x32ba59b4b7299237c8ba56319110989d7978a039faf754793064e967e5894418\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1ae50c8b562427df610cc4540c9bf104acca7ef8e2dcae567ae7e52272281e9c\",\"dweb:/ipfs/QmTHiadFCSJUPpRjNegc5SahmeU8bAoY8i9Aq6tVscbcKR\"]}},\"version\":1}","metadata":{"compiler":{"version":"0.8.25+commit.b61c2a91"},"language":"Solidity","output":{"abi":[{"inputs":[{"internalType":"address","name":"beacon","type":"address"},{"internalType":"bytes","name":"data","type":"bytes"}],"stateMutability":"payable","type":"constructor"},{"inputs":[{"internalType":"address","name":"target","type":"address"}],"type":"error","name":"AddressEmptyCode"},{"inputs":[{"internalType":"address","name":"beacon","type":"address"}],"type":"error","name":"ERC1967InvalidBeacon"},{"inputs":[{"internalType":"address","name":"implementation","type":"address"}],"type":"error","name":"ERC1967InvalidImplementation"},{"inputs":[],"type":"error","name":"ERC1967NonPayable"},{"inputs":[],"type":"error","name":"FailedInnerCall"},{"inputs":[{"internalType":"address","name":"beacon","type":"address","indexed":true}],"type":"event","name":"BeaconUpgraded","anonymous":false},{"inputs":[],"stateMutability":"payable","type":"fallback"}],"devdoc":{"kind":"dev","methods":{"constructor":{"details":"Initializes the proxy with `beacon`. If `data` is nonempty, it's used as data in a delegate call to the implementation returned by the beacon. This will typically be an encoded function call, and allows initializing the storage of the proxy like a Solidity constructor. Requirements: - `beacon` must be a contract with the interface {IBeacon}. - If `data` is empty, `msg.value` must be zero."}},"version":1},"userdoc":{"kind":"user","methods":{},"version":1}},"settings":{"remappings":["@chainlink/=node_modules/@chainlink/","@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/","@openzeppelin/=node_modules/@openzeppelin/","@prb/=node_modules/@prb/","@thirdweb-dev/=node_modules/@thirdweb-dev/","base64-sol/=node_modules/base64-sol/","ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/","erc721a-upgradeable/=node_modules/erc721a-upgradeable/","eth-gas-reporter/=node_modules/eth-gas-reporter/","forge-std/=lib/forge-std/src/","hardhat/=node_modules/hardhat/","prb-math/=node_modules/prb-math/","solady/=node_modules/solady/","sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"],"optimizer":{"enabled":true,"runs":200},"metadata":{"bytecodeHash":"ipfs"},"compilationTarget":{"node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol":"BeaconProxy"},"evmVersion":"paris","libraries":{}},"sources":{"node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol":{"keccak256":"0x06a78f9b3ee3e6d0eb4e4cd635ba49960bea34cac1db8c0a27c75f2319f1fd65","urls":["bzz-raw://547d21aa17f4f3f1a1a7edf7167beff8dd9496a0348d5588f15cc8a4b29d052a","dweb:/ipfs/QmT16JtRQSWNpLo9W23jr6CzaMuTAcQcjJJcdRd8HLJ6cE"],"license":"MIT"},"node_modules/@openzeppelin/contracts/proxy/Proxy.sol":{"keccak256":"0xc3f2ec76a3de8ed7a7007c46166f5550c72c7709e3fc7e8bb3111a7191cdedbd","urls":["bzz-raw://e73efb4c2ca655882dc237c6b4f234a9bd36d97159d8fcaa837eb01171f726ac","dweb:/ipfs/QmTNnnv7Gu5fs5G1ZMh7Fexp8N4XUs3XrNAngjcxgiss3e"],"license":"MIT"},"node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol":{"keccak256":"0x387ebdcb365b8e620f26645d2b34a161cd39eedfb0219e8baff55630c5ae113c","urls":["bzz-raw://744ea187c195e31cb9201e63ca291fca9e623747f54f0ba390b366a6213b8964","dweb:/ipfs/Qmc547qfV4sz65DC9B4okx1HvgxwUzJR7zTfKKbTzL3UQT"],"license":"MIT"},"node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol":{"keccak256":"0xc59a78b07b44b2cf2e8ab4175fca91e8eca1eee2df7357b8d2a8833e5ea1f64c","urls":["bzz-raw://5aa4f07e65444784c29cd7bfcc2341b34381e4e5b5da9f0c5bd00d7f430e66fa","dweb:/ipfs/QmWRMh4Q9DpaU9GvsiXmDdoNYMyyece9if7hnfLz7uqzWM"],"license":"MIT"},"node_modules/@openzeppelin/contracts/utils/Address.sol":{"keccak256":"0xaf28a975a78550e45f65e559a3ad6a5ad43b9b8a37366999abd1b7084eb70721","urls":["bzz-raw://b7bd24e224f67f65bfadf85dc2929fa965456bb2415478bd0125471b5ce35245","dweb:/ipfs/QmRaydGr8BTHs1kvaZfsNU69pKzUAGFrvABn1KiRSbE51y"],"license":"MIT"},"node_modules/@openzeppelin/contracts/utils/StorageSlot.sol":{"keccak256":"0x32ba59b4b7299237c8ba56319110989d7978a039faf754793064e967e5894418","urls":["bzz-raw://1ae50c8b562427df610cc4540c9bf104acca7ef8e2dcae567ae7e52272281e9c","dweb:/ipfs/QmTHiadFCSJUPpRjNegc5SahmeU8bAoY8i9Aq6tVscbcKR"],"license":"MIT"}},"version":1},"id":86}
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "beacon",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "target",
+          "type": "address"
+        }
+      ],
+      "name": "AddressEmptyCode",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "beacon",
+          "type": "address"
+        }
+      ],
+      "name": "ERC1967InvalidBeacon",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "implementation",
+          "type": "address"
+        }
+      ],
+      "name": "ERC1967InvalidImplementation",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ERC1967NonPayable",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "FailedInnerCall",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "beacon",
+          "type": "address"
+        }
+      ],
+      "name": "BeaconUpgraded",
+      "type": "event"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "fallback"
+    }
+  ],
+  "bytecode": {
+    "object": "0x60a06040526040516105bf3803806105bf83398101604081905261002291610387565b61002c828261003e565b506001600160a01b031660805261047e565b610047826100fe565b6040516001600160a01b038316907f1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e90600090a28051156100f2576100ed826001600160a01b0316635c60da1b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156100c3573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906100e79190610447565b82610211565b505050565b6100fa610288565b5050565b806001600160a01b03163b60000361013957604051631933b43b60e21b81526001600160a01b03821660048201526024015b60405180910390fd5b807fa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d5080546001600160a01b0319166001600160a01b0392831617905560408051635c60da1b60e01b81529051600092841691635c60da1b9160048083019260209291908290030181865afa1580156101b5573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906101d99190610447565b9050806001600160a01b03163b6000036100fa57604051634c9c8ce360e01b81526001600160a01b0382166004820152602401610130565b6060600080846001600160a01b03168460405161022e9190610462565b600060405180830381855af49150503d8060008114610269576040519150601f19603f3d011682016040523d82523d6000602084013e61026e565b606091505b50909250905061027f8583836102a9565b95945050505050565b34156102a75760405163b398979f60e01b815260040160405180910390fd5b565b6060826102be576102b982610308565b610301565b81511580156102d557506001600160a01b0384163b155b156102fe57604051639996b31560e01b81526001600160a01b0385166004820152602401610130565b50805b9392505050565b8051156103185780518082602001fd5b604051630a12f52160e11b815260040160405180910390fd5b80516001600160a01b038116811461034857600080fd5b919050565b634e487b7160e01b600052604160045260246000fd5b60005b8381101561037e578181015183820152602001610366565b50506000910152565b6000806040838503121561039a57600080fd5b6103a383610331565b60208401519092506001600160401b03808211156103c057600080fd5b818501915085601f8301126103d457600080fd5b8151818111156103e6576103e661034d565b604051601f8201601f19908116603f0116810190838211818310171561040e5761040e61034d565b8160405282815288602084870101111561042757600080fd5b610438836020830160208801610363565b80955050505050509250929050565b60006020828403121561045957600080fd5b61030182610331565b60008251610474818460208701610363565b9190910192915050565b6080516101276104986000396000601e01526101276000f3fe6080604052600a600c565b005b60186014601a565b60a0565b565b60007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316635c60da1b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156079573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190609b919060c3565b905090565b3660008037600080366000845af43d6000803e80801560be573d6000f35b3d6000fd5b60006020828403121560d457600080fd5b81516001600160a01b038116811460ea57600080fd5b939250505056fea2646970667358221220373c90a836e357b4aa32fd263fad33593d52266001cd710e3853664a89f90c2f64736f6c63430008190033",
+    "sourceMap": "1115:1194:95:-:0;;;1772:147;;;;;;;;;;;;;;;;;;:::i;:::-;1837:49;1873:6;1881:4;1837:35;:49::i;:::-;-1:-1:-1;;;;;;1896:16:95;;;1115:1194;;6076:333:93;6165:21;6176:9;6165:10;:21::i;:::-;6201:25;;-1:-1:-1;;;;;6201:25:93;;;;;;;;6241:11;;:15;6237:166;;6272:71;6309:9;-1:-1:-1;;;;;6301:33:93;;:35;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;6338:4;6272:28;:71::i;:::-;;6076:333;;:::o;6237:166::-;6374:18;:16;:18::i;:::-;6076:333;;:::o;5114:437::-;5175:9;-1:-1:-1;;;;;5175:21:93;;5200:1;5175:26;5171:95;;5224:31;;-1:-1:-1;;;5224:31:93;;-1:-1:-1;;;;;1946:32:135;;5224:31:93;;;1928:51:135;1901:18;;5224:31:93;;;;;;;;5171:95;5324:9;4781:66;5276:57;;-1:-1:-1;;;;;;5276:57:93;-1:-1:-1;;;;;5276:57:93;;;;;;5375:35;;;-1:-1:-1;;;5375:35:93;;;;-1:-1:-1;;5375:33:93;;;;;:35;;;;;;;;;;;;;;:33;:35;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;5344:66;;5424:20;-1:-1:-1;;;;;5424:32:93;;5460:1;5424:37;5420:125;;5484:50;;-1:-1:-1;;;5484:50:93;;-1:-1:-1;;;;;1946:32:135;;5484:50:93;;;1928:51:135;1901:18;;5484:50:93;1782:203:135;4106:253:103;4189:12;4214;4228:23;4255:6;-1:-1:-1;;;;;4255:19:103;4275:4;4255:25;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;4213:67:103;;-1:-1:-1;4213:67:103;-1:-1:-1;4297:55:103;4324:6;4213:67;;4297:26;:55::i;:::-;4290:62;4106:253;-1:-1:-1;;;;;4106:253:103:o;6598:122:93:-;6648:9;:13;6644:70;;6684:19;;-1:-1:-1;;;6684:19:93;;;;;;;;;;;6644:70;6598:122::o;4625:582:103:-;4769:12;4798:7;4793:408;;4821:19;4829:10;4821:7;:19::i;:::-;4793:408;;;5045:17;;:22;:49;;;;-1:-1:-1;;;;;;5071:18:103;;;:23;5045:49;5041:119;;;5121:24;;-1:-1:-1;;;5121:24:103;;-1:-1:-1;;;;;1946:32:135;;5121:24:103;;;1928:51:135;1901:18;;5121:24:103;1782:203:135;5041:119:103;-1:-1:-1;5180:10:103;4793:408;4625:582;;;;;:::o;5743:516::-;5874:17;;:21;5870:383;;6102:10;6096:17;6158:15;6145:10;6141:2;6137:19;6130:44;5870:383;6225:17;;-1:-1:-1;;;6225:17:103;;;;;;;;;;;14:177:135;93:13;;-1:-1:-1;;;;;135:31:135;;125:42;;115:70;;181:1;178;171:12;115:70;14:177;;;:::o;196:127::-;257:10;252:3;248:20;245:1;238:31;288:4;285:1;278:15;312:4;309:1;302:15;328:250;413:1;423:113;437:6;434:1;431:13;423:113;;;513:11;;;507:18;494:11;;;487:39;459:2;452:10;423:113;;;-1:-1:-1;;570:1:135;552:16;;545:27;328:250::o;583:981::-;671:6;679;732:2;720:9;711:7;707:23;703:32;700:52;;;748:1;745;738:12;700:52;771:40;801:9;771:40;:::i;:::-;855:2;840:18;;834:25;761:50;;-1:-1:-1;;;;;;908:14:135;;;905:34;;;935:1;932;925:12;905:34;973:6;962:9;958:22;948:32;;1018:7;1011:4;1007:2;1003:13;999:27;989:55;;1040:1;1037;1030:12;989:55;1069:2;1063:9;1091:2;1087;1084:10;1081:36;;;1097:18;;:::i;:::-;1172:2;1166:9;1140:2;1226:13;;-1:-1:-1;;1222:22:135;;;1246:2;1218:31;1214:40;1202:53;;;1270:18;;;1290:22;;;1267:46;1264:72;;;1316:18;;:::i;:::-;1356:10;1352:2;1345:22;1391:2;1383:6;1376:18;1431:7;1426:2;1421;1417;1413:11;1409:20;1406:33;1403:53;;;1452:1;1449;1442:12;1403:53;1465:68;1530:2;1525;1517:6;1513:15;1508:2;1504;1500:11;1465:68;:::i;:::-;1552:6;1542:16;;;;;;;583:981;;;;;:::o;1569:208::-;1639:6;1692:2;1680:9;1671:7;1667:23;1663:32;1660:52;;;1708:1;1705;1698:12;1660:52;1731:40;1761:9;1731:40;:::i;1990:287::-;2119:3;2157:6;2151:13;2173:66;2232:6;2227:3;2220:4;2212:6;2208:17;2173:66;:::i;:::-;2255:16;;;;;1990:287;-1:-1:-1;;1990:287:135:o;:::-;1115:1194:95;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052600a600c565b005b60186014601a565b60a0565b565b60007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316635c60da1b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156079573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190609b919060c3565b905090565b3660008037600080366000845af43d6000803e80801560be573d6000f35b3d6000fd5b60006020828403121560d457600080fd5b81516001600160a01b038116811460ea57600080fd5b939250505056fea2646970667358221220373c90a836e357b4aa32fd263fad33593d52266001cd710e3853664a89f90c2f64736f6c63430008190033",
+    "sourceMap": "1115:1194:95:-:0;;;2649:11:94;:9;:11::i;:::-;1115:1194:95;2323:83:94;2371:28;2381:17;:15;:17::i;:::-;2371:9;:28::i;:::-;2323:83::o;2022:138:95:-;2089:7;2293;-1:-1:-1;;;;;2115:36:95;;:38;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;2108:45;;2022:138;:::o;949:895:94:-;1287:14;1284:1;1281;1268:34;1501:1;1498;1482:14;1479:1;1463:14;1456:5;1443:60;1577:16;1574:1;1571;1556:38;1615:6;1682:66;;;;1797:16;1794:1;1787:27;1682:66;1717:16;1714:1;1707:27;14:290:135;84:6;137:2;125:9;116:7;112:23;108:32;105:52;;;153:1;150;143:12;105:52;179:16;;-1:-1:-1;;;;;224:31:135;;214:42;;204:70;;270:1;267;260:12;204:70;293:5;14:290;-1:-1:-1;;;14:290:135:o",
+    "linkReferences": {},
+    "immutableReferences": {
+      "63773": [
+        {
+          "start": 30,
+          "length": 32
+        }
+      ]
+    }
+  },
+  "methodIdentifiers": {},
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidBeacon\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedInnerCall\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"}],\"devdoc\":{\"details\":\"This contract implements a proxy that gets the implementation address for each call from an {UpgradeableBeacon}. The beacon address can only be set once during construction, and cannot be changed afterwards. It is stored in an immutable variable to avoid unnecessary storage reads, and also in the beacon storage slot specified by https://eips.ethereum.org/EIPS/eip-1967[EIP1967] so that it can be accessed externally. CAUTION: Since the beacon address can never be changed, you must ensure that you either control the beacon, or trust the beacon to not upgrade the implementation maliciously. IMPORTANT: Do not use the implementation logic to modify the beacon storage slot. Doing so would leave the proxy in an inconsistent state where the beacon storage slot does not match the beacon address.\",\"errors\":{\"AddressEmptyCode(address)\":[{\"details\":\"There's no code at `target` (it is not a contract).\"}],\"ERC1967InvalidBeacon(address)\":[{\"details\":\"The `beacon` of the proxy is invalid.\"}],\"ERC1967InvalidImplementation(address)\":[{\"details\":\"The `implementation` of the proxy is invalid.\"}],\"ERC1967NonPayable()\":[{\"details\":\"An upgrade function sees `msg.value > 0` that may be lost.\"}],\"FailedInnerCall()\":[{\"details\":\"A call to an address target failed. The target may have reverted.\"}]},\"events\":{\"BeaconUpgraded(address)\":{\"details\":\"Emitted when the beacon is changed.\"}},\"kind\":\"dev\",\"methods\":{\"constructor\":{\"details\":\"Initializes the proxy with `beacon`. If `data` is nonempty, it's used as data in a delegate call to the implementation returned by the beacon. This will typically be an encoded function call, and allows initializing the storage of the proxy like a Solidity constructor. Requirements: - `beacon` must be a contract with the interface {IBeacon}. - If `data` is empty, `msg.value` must be zero.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol\":\"BeaconProxy\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol\":{\"keccak256\":\"0x06a78f9b3ee3e6d0eb4e4cd635ba49960bea34cac1db8c0a27c75f2319f1fd65\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://547d21aa17f4f3f1a1a7edf7167beff8dd9496a0348d5588f15cc8a4b29d052a\",\"dweb:/ipfs/QmT16JtRQSWNpLo9W23jr6CzaMuTAcQcjJJcdRd8HLJ6cE\"]},\"node_modules/@openzeppelin/contracts/proxy/Proxy.sol\":{\"keccak256\":\"0xc3f2ec76a3de8ed7a7007c46166f5550c72c7709e3fc7e8bb3111a7191cdedbd\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e73efb4c2ca655882dc237c6b4f234a9bd36d97159d8fcaa837eb01171f726ac\",\"dweb:/ipfs/QmTNnnv7Gu5fs5G1ZMh7Fexp8N4XUs3XrNAngjcxgiss3e\"]},\"node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol\":{\"keccak256\":\"0x387ebdcb365b8e620f26645d2b34a161cd39eedfb0219e8baff55630c5ae113c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://744ea187c195e31cb9201e63ca291fca9e623747f54f0ba390b366a6213b8964\",\"dweb:/ipfs/Qmc547qfV4sz65DC9B4okx1HvgxwUzJR7zTfKKbTzL3UQT\"]},\"node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol\":{\"keccak256\":\"0xc59a78b07b44b2cf2e8ab4175fca91e8eca1eee2df7357b8d2a8833e5ea1f64c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5aa4f07e65444784c29cd7bfcc2341b34381e4e5b5da9f0c5bd00d7f430e66fa\",\"dweb:/ipfs/QmWRMh4Q9DpaU9GvsiXmDdoNYMyyece9if7hnfLz7uqzWM\"]},\"node_modules/@openzeppelin/contracts/utils/Address.sol\":{\"keccak256\":\"0xaf28a975a78550e45f65e559a3ad6a5ad43b9b8a37366999abd1b7084eb70721\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b7bd24e224f67f65bfadf85dc2929fa965456bb2415478bd0125471b5ce35245\",\"dweb:/ipfs/QmRaydGr8BTHs1kvaZfsNU69pKzUAGFrvABn1KiRSbE51y\"]},\"node_modules/@openzeppelin/contracts/utils/StorageSlot.sol\":{\"keccak256\":\"0x32ba59b4b7299237c8ba56319110989d7978a039faf754793064e967e5894418\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1ae50c8b562427df610cc4540c9bf104acca7ef8e2dcae567ae7e52272281e9c\",\"dweb:/ipfs/QmTHiadFCSJUPpRjNegc5SahmeU8bAoY8i9Aq6tVscbcKR\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.25+commit.b61c2a91"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "target",
+              "type": "address"
+            }
+          ],
+          "type": "error",
+          "name": "AddressEmptyCode"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "type": "error",
+          "name": "ERC1967InvalidBeacon"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "type": "error",
+          "name": "ERC1967InvalidImplementation"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "ERC1967NonPayable"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "FailedInnerCall"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "BeaconUpgraded",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "stateMutability": "payable",
+          "type": "fallback"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "constructor": {
+            "details": "Initializes the proxy with `beacon`. If `data` is nonempty, it's used as data in a delegate call to the implementation returned by the beacon. This will typically be an encoded function call, and allows initializing the storage of the proxy like a Solidity constructor. Requirements: - `beacon` must be a contract with the interface {IBeacon}. - If `data` is empty, `msg.value` must be zero."
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@chainlink/=node_modules/@chainlink/",
+        ":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@prb/=node_modules/@prb/",
+        ":@thirdweb-dev/=node_modules/@thirdweb-dev/",
+        ":base64-sol/=node_modules/base64-sol/",
+        ":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/",
+        ":erc721a-upgradeable/=node_modules/erc721a-upgradeable/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":forge-std/=lib/forge-std/src/",
+        ":hardhat/=node_modules/hardhat/",
+        ":prb-math/=node_modules/prb-math/",
+        ":solady/=node_modules/solady/",
+        ":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol": "BeaconProxy"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol": {
+        "keccak256": "0x06a78f9b3ee3e6d0eb4e4cd635ba49960bea34cac1db8c0a27c75f2319f1fd65",
+        "urls": [
+          "bzz-raw://547d21aa17f4f3f1a1a7edf7167beff8dd9496a0348d5588f15cc8a4b29d052a",
+          "dweb:/ipfs/QmT16JtRQSWNpLo9W23jr6CzaMuTAcQcjJJcdRd8HLJ6cE"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts/proxy/Proxy.sol": {
+        "keccak256": "0xc3f2ec76a3de8ed7a7007c46166f5550c72c7709e3fc7e8bb3111a7191cdedbd",
+        "urls": [
+          "bzz-raw://e73efb4c2ca655882dc237c6b4f234a9bd36d97159d8fcaa837eb01171f726ac",
+          "dweb:/ipfs/QmTNnnv7Gu5fs5G1ZMh7Fexp8N4XUs3XrNAngjcxgiss3e"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol": {
+        "keccak256": "0x387ebdcb365b8e620f26645d2b34a161cd39eedfb0219e8baff55630c5ae113c",
+        "urls": [
+          "bzz-raw://744ea187c195e31cb9201e63ca291fca9e623747f54f0ba390b366a6213b8964",
+          "dweb:/ipfs/Qmc547qfV4sz65DC9B4okx1HvgxwUzJR7zTfKKbTzL3UQT"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol": {
+        "keccak256": "0xc59a78b07b44b2cf2e8ab4175fca91e8eca1eee2df7357b8d2a8833e5ea1f64c",
+        "urls": [
+          "bzz-raw://5aa4f07e65444784c29cd7bfcc2341b34381e4e5b5da9f0c5bd00d7f430e66fa",
+          "dweb:/ipfs/QmWRMh4Q9DpaU9GvsiXmDdoNYMyyece9if7hnfLz7uqzWM"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts/utils/Address.sol": {
+        "keccak256": "0xaf28a975a78550e45f65e559a3ad6a5ad43b9b8a37366999abd1b7084eb70721",
+        "urls": [
+          "bzz-raw://b7bd24e224f67f65bfadf85dc2929fa965456bb2415478bd0125471b5ce35245",
+          "dweb:/ipfs/QmRaydGr8BTHs1kvaZfsNU69pKzUAGFrvABn1KiRSbE51y"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts/utils/StorageSlot.sol": {
+        "keccak256": "0x32ba59b4b7299237c8ba56319110989d7978a039faf754793064e967e5894418",
+        "urls": [
+          "bzz-raw://1ae50c8b562427df610cc4540c9bf104acca7ef8e2dcae567ae7e52272281e9c",
+          "dweb:/ipfs/QmTHiadFCSJUPpRjNegc5SahmeU8bAoY8i9Aq6tVscbcKR"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "node_modules/@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol",
+    "id": 63819,
+    "exportedSymbols": {
+      "BeaconProxy": [
+        63818
+      ],
+      "ERC1967Utils": [
+        63724
+      ],
+      "IBeacon": [
+        63828
+      ],
+      "Proxy": [
+        63760
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "112:2198:95",
+    "nodes": [
+      {
+        "id": 63762,
+        "nodeType": "PragmaDirective",
+        "src": "112:24:95",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".20"
+        ]
+      },
+      {
+        "id": 63764,
+        "nodeType": "ImportDirective",
+        "src": "138:38:95",
+        "nodes": [],
+        "absolutePath": "node_modules/@openzeppelin/contracts/proxy/beacon/IBeacon.sol",
+        "file": "./IBeacon.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 63819,
+        "sourceUnit": 63829,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 63763,
+              "name": "IBeacon",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 63828,
+              "src": "146:7:95",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 63766,
+        "nodeType": "ImportDirective",
+        "src": "177:35:95",
+        "nodes": [],
+        "absolutePath": "node_modules/@openzeppelin/contracts/proxy/Proxy.sol",
+        "file": "../Proxy.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 63819,
+        "sourceUnit": 63761,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 63765,
+              "name": "Proxy",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 63760,
+              "src": "185:5:95",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 63768,
+        "nodeType": "ImportDirective",
+        "src": "213:57:95",
+        "nodes": [],
+        "absolutePath": "node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol",
+        "file": "../ERC1967/ERC1967Utils.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 63819,
+        "sourceUnit": 63725,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 63767,
+              "name": "ERC1967Utils",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 63724,
+              "src": "221:12:95",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 63818,
+        "nodeType": "ContractDefinition",
+        "src": "1115:1194:95",
+        "nodes": [
+          {
+            "id": 63773,
+            "nodeType": "VariableDeclaration",
+            "src": "1249:33:95",
+            "nodes": [],
+            "constant": false,
+            "mutability": "immutable",
+            "name": "_beacon",
+            "nameLocation": "1275:7:95",
+            "scope": 63818,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 63772,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "1249:7:95",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "private"
+          },
+          {
+            "id": 63793,
+            "nodeType": "FunctionDefinition",
+            "src": "1772:147:95",
+            "nodes": [],
+            "body": {
+              "id": 63792,
+              "nodeType": "Block",
+              "src": "1827:92:95",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "id": 63784,
+                        "name": "beacon",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 63776,
+                        "src": "1873:6:95",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        }
+                      },
+                      {
+                        "id": 63785,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 63778,
+                        "src": "1881:4:95",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes_memory_ptr",
+                          "typeString": "bytes memory"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        {
+                          "typeIdentifier": "t_bytes_memory_ptr",
+                          "typeString": "bytes memory"
+                        }
+                      ],
+                      "expression": {
+                        "id": 63781,
+                        "name": "ERC1967Utils",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 63724,
+                        "src": "1837:12:95",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_type$_t_contract$_ERC1967Utils_$63724_$",
+                          "typeString": "type(library ERC1967Utils)"
+                        }
+                      },
+                      "id": 63783,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberLocation": "1850:22:95",
+                      "memberName": "upgradeBeaconToAndCall",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 63709,
+                      "src": "1837:35:95",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_address_$_t_bytes_memory_ptr_$returns$__$",
+                        "typeString": "function (address,bytes memory)"
+                      }
+                    },
+                    "id": 63786,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1837:49:95",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 63787,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1837:49:95"
+                },
+                {
+                  "expression": {
+                    "id": 63790,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 63788,
+                      "name": "_beacon",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 63773,
+                      "src": "1896:7:95",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 63789,
+                      "name": "beacon",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 63776,
+                      "src": "1906:6:95",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      }
+                    },
+                    "src": "1896:16:95",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "id": 63791,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1896:16:95"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 63774,
+              "nodeType": "StructuredDocumentation",
+              "src": "1289:478:95",
+              "text": " @dev Initializes the proxy with `beacon`.\n If `data` is nonempty, it's used as data in a delegate call to the implementation returned by the beacon. This\n will typically be an encoded function call, and allows initializing the storage of the proxy like a Solidity\n constructor.\n Requirements:\n - `beacon` must be a contract with the interface {IBeacon}.\n - If `data` is empty, `msg.value` must be zero."
+            },
+            "implemented": true,
+            "kind": "constructor",
+            "modifiers": [],
+            "name": "",
+            "nameLocation": "-1:-1:-1",
+            "parameters": {
+              "id": 63779,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 63776,
+                  "mutability": "mutable",
+                  "name": "beacon",
+                  "nameLocation": "1792:6:95",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 63793,
+                  "src": "1784:14:95",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 63775,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1784:7:95",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 63778,
+                  "mutability": "mutable",
+                  "name": "data",
+                  "nameLocation": "1813:4:95",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 63793,
+                  "src": "1800:17:95",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 63777,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1800:5:95",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1783:35:95"
+            },
+            "returnParameters": {
+              "id": 63780,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1827:0:95"
+            },
+            "scope": 63818,
+            "stateMutability": "payable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 63808,
+            "nodeType": "FunctionDefinition",
+            "src": "2022:138:95",
+            "nodes": [],
+            "body": {
+              "id": 63807,
+              "nodeType": "Block",
+              "src": "2098:62:95",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "arguments": [
+                          {
+                            "arguments": [],
+                            "expression": {
+                              "argumentTypes": [],
+                              "id": 63801,
+                              "name": "_getBeacon",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 63817,
+                              "src": "2123:10:95",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_function_internal_view$__$returns$_t_address_$",
+                                "typeString": "function () view returns (address)"
+                              }
+                            },
+                            "id": 63802,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "kind": "functionCall",
+                            "lValueRequested": false,
+                            "nameLocations": [],
+                            "names": [],
+                            "nodeType": "FunctionCall",
+                            "src": "2123:12:95",
+                            "tryCall": false,
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_address",
+                              "typeString": "address"
+                            }
+                          }
+                        ],
+                        "expression": {
+                          "argumentTypes": [
+                            {
+                              "typeIdentifier": "t_address",
+                              "typeString": "address"
+                            }
+                          ],
+                          "id": 63800,
+                          "name": "IBeacon",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 63828,
+                          "src": "2115:7:95",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_type$_t_contract$_IBeacon_$63828_$",
+                            "typeString": "type(contract IBeacon)"
+                          }
+                        },
+                        "id": 63803,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "typeConversion",
+                        "lValueRequested": false,
+                        "nameLocations": [],
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "2115:21:95",
+                        "tryCall": false,
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_contract$_IBeacon_$63828",
+                          "typeString": "contract IBeacon"
+                        }
+                      },
+                      "id": 63804,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberLocation": "2137:14:95",
+                      "memberName": "implementation",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 63827,
+                      "src": "2115:36:95",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_external_view$__$returns$_t_address_$",
+                        "typeString": "function () view external returns (address)"
+                      }
+                    },
+                    "id": 63805,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2115:38:95",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "functionReturnParameters": 63799,
+                  "id": 63806,
+                  "nodeType": "Return",
+                  "src": "2108:45:95"
+                }
+              ]
+            },
+            "baseFunctions": [
+              63741
+            ],
+            "documentation": {
+              "id": 63794,
+              "nodeType": "StructuredDocumentation",
+              "src": "1925:92:95",
+              "text": " @dev Returns the current implementation address of the associated beacon."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "_implementation",
+            "nameLocation": "2031:15:95",
+            "overrides": {
+              "id": 63796,
+              "nodeType": "OverrideSpecifier",
+              "overrides": [],
+              "src": "2071:8:95"
+            },
+            "parameters": {
+              "id": 63795,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2046:2:95"
+            },
+            "returnParameters": {
+              "id": 63799,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 63798,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 63808,
+                  "src": "2089:7:95",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 63797,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2089:7:95",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2088:9:95"
+            },
+            "scope": 63818,
+            "stateMutability": "view",
+            "virtual": true,
+            "visibility": "internal"
+          },
+          {
+            "id": 63817,
+            "nodeType": "FunctionDefinition",
+            "src": "2214:93:95",
+            "nodes": [],
+            "body": {
+              "id": 63816,
+              "nodeType": "Block",
+              "src": "2276:31:95",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 63814,
+                    "name": "_beacon",
+                    "nodeType": "Identifier",
+                    "overloadedDeclarations": [],
+                    "referencedDeclaration": 63773,
+                    "src": "2293:7:95",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "functionReturnParameters": 63813,
+                  "id": 63815,
+                  "nodeType": "Return",
+                  "src": "2286:14:95"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 63809,
+              "nodeType": "StructuredDocumentation",
+              "src": "2166:43:95",
+              "text": " @dev Returns the beacon."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "_getBeacon",
+            "nameLocation": "2223:10:95",
+            "parameters": {
+              "id": 63810,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2233:2:95"
+            },
+            "returnParameters": {
+              "id": 63813,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 63812,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 63817,
+                  "src": "2267:7:95",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 63811,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2267:7:95",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2266:9:95"
+            },
+            "scope": 63818,
+            "stateMutability": "view",
+            "virtual": true,
+            "visibility": "internal"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 63770,
+              "name": "Proxy",
+              "nameLocations": [
+                "1139:5:95"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 63760,
+              "src": "1139:5:95"
+            },
+            "id": 63771,
+            "nodeType": "InheritanceSpecifier",
+            "src": "1139:5:95"
+          }
+        ],
+        "canonicalName": "BeaconProxy",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": {
+          "id": 63769,
+          "nodeType": "StructuredDocumentation",
+          "src": "272:842:95",
+          "text": " @dev This contract implements a proxy that gets the implementation address for each call from an {UpgradeableBeacon}.\n The beacon address can only be set once during construction, and cannot be changed afterwards. It is stored in an\n immutable variable to avoid unnecessary storage reads, and also in the beacon storage slot specified by\n https://eips.ethereum.org/EIPS/eip-1967[EIP1967] so that it can be accessed externally.\n CAUTION: Since the beacon address can never be changed, you must ensure that you either control the beacon, or trust\n the beacon to not upgrade the implementation maliciously.\n IMPORTANT: Do not use the implementation logic to modify the beacon storage slot. Doing so would leave the proxy in\n an inconsistent state where the beacon storage slot does not match the beacon address."
+        },
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          63818,
+          63760
+        ],
+        "name": "BeaconProxy",
+        "nameLocation": "1124:11:95",
+        "scope": 63819,
+        "usedErrors": [
+          63456,
+          63466,
+          63469,
+          64874,
+          64877
+        ],
+        "usedEvents": [
+          63447
+        ]
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 95
+}

@@ -1,1 +1,358 @@
-{"abi":[{"type":"function","name":"isBlacklisted","inputs":[{"name":"account","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"bool","internalType":"bool"}],"stateMutability":"view"}],"bytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"deployedBytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"methodIdentifiers":{"isBlacklisted(address)":"fe575a87"},"rawMetadata":"{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isBlacklisted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"test/foundry/utils/mocks/BlacklistInterfaces.sol\":\"IERC20Usdc\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"test/foundry/utils/mocks/BlacklistInterfaces.sol\":{\"keccak256\":\"0x78af634417819b268b8f6a688cacce61335df9f3ad471c7abfed95ccbffe93d9\",\"license\":\"GPL-3.0-or-later\",\"urls\":[\"bzz-raw://8b69163f74b459a5bd34bf5c71fb7ed9f44554d1e2367580dbb02def11ed9fc6\",\"dweb:/ipfs/QmYJ67ox66eWZ4Frft3J2hesbhgAgSeQCGZ11nqgpLPEqQ\"]}},\"version\":1}","metadata":{"compiler":{"version":"0.8.25+commit.b61c2a91"},"language":"Solidity","output":{"abi":[{"inputs":[{"internalType":"address","name":"account","type":"address"}],"stateMutability":"view","type":"function","name":"isBlacklisted","outputs":[{"internalType":"bool","name":"","type":"bool"}]}],"devdoc":{"kind":"dev","methods":{},"version":1},"userdoc":{"kind":"user","methods":{},"version":1}},"settings":{"remappings":["@chainlink/=node_modules/@chainlink/","@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/","@openzeppelin/=node_modules/@openzeppelin/","@prb/=node_modules/@prb/","@thirdweb-dev/=node_modules/@thirdweb-dev/","base64-sol/=node_modules/base64-sol/","ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/","erc721a-upgradeable/=node_modules/erc721a-upgradeable/","eth-gas-reporter/=node_modules/eth-gas-reporter/","forge-std/=lib/forge-std/src/","hardhat/=node_modules/hardhat/","prb-math/=node_modules/prb-math/","solady/=node_modules/solady/","sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"],"optimizer":{"enabled":true,"runs":200},"metadata":{"bytecodeHash":"ipfs"},"compilationTarget":{"test/foundry/utils/mocks/BlacklistInterfaces.sol":"IERC20Usdc"},"evmVersion":"paris","libraries":{}},"sources":{"test/foundry/utils/mocks/BlacklistInterfaces.sol":{"keccak256":"0x78af634417819b268b8f6a688cacce61335df9f3ad471c7abfed95ccbffe93d9","urls":["bzz-raw://8b69163f74b459a5bd34bf5c71fb7ed9f44554d1e2367580dbb02def11ed9fc6","dweb:/ipfs/QmYJ67ox66eWZ4Frft3J2hesbhgAgSeQCGZ11nqgpLPEqQ"],"license":"GPL-3.0-or-later"}},"version":1},"id":119}
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "isBlacklisted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "isBlacklisted(address)": "fe575a87"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isBlacklisted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"test/foundry/utils/mocks/BlacklistInterfaces.sol\":\"IERC20Usdc\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"test/foundry/utils/mocks/BlacklistInterfaces.sol\":{\"keccak256\":\"0x78af634417819b268b8f6a688cacce61335df9f3ad471c7abfed95ccbffe93d9\",\"license\":\"GPL-3.0-or-later\",\"urls\":[\"bzz-raw://8b69163f74b459a5bd34bf5c71fb7ed9f44554d1e2367580dbb02def11ed9fc6\",\"dweb:/ipfs/QmYJ67ox66eWZ4Frft3J2hesbhgAgSeQCGZ11nqgpLPEqQ\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.25+commit.b61c2a91"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "isBlacklisted",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@chainlink/=node_modules/@chainlink/",
+        ":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@prb/=node_modules/@prb/",
+        ":@thirdweb-dev/=node_modules/@thirdweb-dev/",
+        ":base64-sol/=node_modules/base64-sol/",
+        ":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/",
+        ":erc721a-upgradeable/=node_modules/erc721a-upgradeable/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":forge-std/=lib/forge-std/src/",
+        ":hardhat/=node_modules/hardhat/",
+        ":prb-math/=node_modules/prb-math/",
+        ":solady/=node_modules/solady/",
+        ":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "test/foundry/utils/mocks/BlacklistInterfaces.sol": "IERC20Usdc"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "test/foundry/utils/mocks/BlacklistInterfaces.sol": {
+        "keccak256": "0x78af634417819b268b8f6a688cacce61335df9f3ad471c7abfed95ccbffe93d9",
+        "urls": [
+          "bzz-raw://8b69163f74b459a5bd34bf5c71fb7ed9f44554d1e2367580dbb02def11ed9fc6",
+          "dweb:/ipfs/QmYJ67ox66eWZ4Frft3J2hesbhgAgSeQCGZ11nqgpLPEqQ"
+        ],
+        "license": "GPL-3.0-or-later"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "test/foundry/utils/mocks/BlacklistInterfaces.sol",
+    "id": 88539,
+    "exportedSymbols": {
+      "IERC20Usdc": [
+        88530
+      ],
+      "IERC20Usdt": [
+        88538
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "45:311:130",
+    "nodes": [
+      {
+        "id": 88522,
+        "nodeType": "PragmaDirective",
+        "src": "45:24:130",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".22"
+        ]
+      },
+      {
+        "id": 88530,
+        "nodeType": "ContractDefinition",
+        "src": "157:98:130",
+        "nodes": [
+          {
+            "id": 88529,
+            "nodeType": "FunctionDefinition",
+            "src": "184:69:130",
+            "nodes": [],
+            "functionSelector": "fe575a87",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "isBlacklisted",
+            "nameLocation": "193:13:130",
+            "parameters": {
+              "id": 88525,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 88524,
+                  "mutability": "mutable",
+                  "name": "account",
+                  "nameLocation": "215:7:130",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 88529,
+                  "src": "207:15:130",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 88523,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "207:7:130",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "206:17:130"
+            },
+            "returnParameters": {
+              "id": 88528,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 88527,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 88529,
+                  "src": "247:4:130",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 88526,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "247:4:130",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "246:6:130"
+            },
+            "scope": 88530,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IERC20Usdc",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          88530
+        ],
+        "name": "IERC20Usdc",
+        "nameLocation": "167:10:130",
+        "scope": 88539,
+        "usedErrors": [],
+        "usedEvents": []
+      },
+      {
+        "id": 88538,
+        "nodeType": "ContractDefinition",
+        "src": "257:98:130",
+        "nodes": [
+          {
+            "id": 88537,
+            "nodeType": "FunctionDefinition",
+            "src": "284:69:130",
+            "nodes": [],
+            "functionSelector": "e47d6060",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "isBlackListed",
+            "nameLocation": "293:13:130",
+            "parameters": {
+              "id": 88533,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 88532,
+                  "mutability": "mutable",
+                  "name": "account",
+                  "nameLocation": "315:7:130",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 88537,
+                  "src": "307:15:130",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 88531,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "307:7:130",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "306:17:130"
+            },
+            "returnParameters": {
+              "id": 88536,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 88535,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 88537,
+                  "src": "347:4:130",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 88534,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "347:4:130",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "346:6:130"
+            },
+            "scope": 88538,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IERC20Usdt",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          88538
+        ],
+        "name": "IERC20Usdt",
+        "nameLocation": "267:10:130",
+        "scope": 88539,
+        "usedErrors": [],
+        "usedEvents": []
+      }
+    ],
+    "license": "GPL-3.0-or-later"
+  },
+  "id": 130
+}

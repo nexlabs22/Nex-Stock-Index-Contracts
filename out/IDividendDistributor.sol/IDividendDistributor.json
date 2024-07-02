@@ -1,1 +1,716 @@
-{"abi":[{"type":"function","name":"createDistribution","inputs":[{"name":"token","type":"address","internalType":"address"},{"name":"totalDistribution","type":"uint256","internalType":"uint256"},{"name":"endTime","type":"uint256","internalType":"uint256"}],"outputs":[{"name":"distributionId","type":"uint256","internalType":"uint256"}],"stateMutability":"nonpayable"},{"type":"function","name":"distribute","inputs":[{"name":"_distributionId","type":"uint256","internalType":"uint256"},{"name":"_recipient","type":"address","internalType":"address"},{"name":"_amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"nextDistributionId","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"nonpayable"},{"type":"function","name":"reclaimDistribution","inputs":[{"name":"_distributionId","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"}],"bytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"deployedBytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"methodIdentifiers":{"createDistribution(address,uint256,uint256)":"35f86a36","distribute(uint256,address,uint256)":"775520a4","nextDistributionId()":"795be4b9","reclaimDistribution(uint256)":"89217e6f"},"rawMetadata":"{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"totalDistribution\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"endTime\",\"type\":\"uint256\"}],\"name\":\"createDistribution\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"distributionId\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_distributionId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"distribute\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextDistributionId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_distributionId\",\"type\":\"uint256\"}],\"name\":\"reclaimDistribution\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Dinari (https://github.com/dinaricrypto/sbt-contracts/blob/main/src/dividend/IDividendDistributor.sol)\",\"kind\":\"dev\",\"methods\":{\"createDistribution(address,uint256,uint256)\":{\"details\":\"Only the owner can create a new distribution.\",\"params\":{\"endTime\":\"The timestamp when the distribution stops.\",\"token\":\"The address of the token to be distributed.\",\"totalDistribution\":\"The total amount of tokens to be distributed.\"}},\"distribute(uint256,address,uint256)\":{\"details\":\"Can only be called by the owner.\",\"params\":{\"_amount\":\"The amount of tokens the user is claiming.\",\"_distributionId\":\"The ID of the distribution.\",\"_recipient\":\"The address of the user claiming tokens.\"}},\"nextDistributionId()\":{\"returns\":{\"_0\":\"The ID for the next distribution.\"}},\"reclaimDistribution(uint256)\":{\"details\":\"Can only be called by the distributor after the claim window has passed.\",\"params\":{\"_distributionId\":\"The ID of the distribution to reclaim tokens from.\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"createDistribution(address,uint256,uint256)\":{\"notice\":\"Creates a new distribution.\"},\"distribute(uint256,address,uint256)\":{\"notice\":\"Distributes tokens to recipient.\"},\"nextDistributionId()\":{\"notice\":\"Fetches the ID for the next distribution.\"},\"reclaimDistribution(uint256)\":{\"notice\":\"Reclaims unclaimed tokens from an distribution.\"}},\"notice\":\"Interface for the extended functionalities of DividendDistribution contract\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/dinary/dividend/IDividendDistributor.sol\":\"IDividendDistributor\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"contracts/dinary/dividend/IDividendDistributor.sol\":{\"keccak256\":\"0xa8c10a0a90ddb7ef2fc4bf84816463081f69f59b409d857da559c447081a3c7d\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b37b182ee1253fee7b91bcbcd0b6e50d8227f105f7413d1c561c98aa0cce2b16\",\"dweb:/ipfs/QmTMZFTJwbHaNuYMRi7MrmMGT5waEJYoF1gtZ33JtumPMZ\"]}},\"version\":1}","metadata":{"compiler":{"version":"0.8.25+commit.b61c2a91"},"language":"Solidity","output":{"abi":[{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"totalDistribution","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"createDistribution","outputs":[{"internalType":"uint256","name":"distributionId","type":"uint256"}]},{"inputs":[{"internalType":"uint256","name":"_distributionId","type":"uint256"},{"internalType":"address","name":"_recipient","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"distribute"},{"inputs":[],"stateMutability":"nonpayable","type":"function","name":"nextDistributionId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}]},{"inputs":[{"internalType":"uint256","name":"_distributionId","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"reclaimDistribution"}],"devdoc":{"kind":"dev","methods":{"createDistribution(address,uint256,uint256)":{"details":"Only the owner can create a new distribution.","params":{"endTime":"The timestamp when the distribution stops.","token":"The address of the token to be distributed.","totalDistribution":"The total amount of tokens to be distributed."}},"distribute(uint256,address,uint256)":{"details":"Can only be called by the owner.","params":{"_amount":"The amount of tokens the user is claiming.","_distributionId":"The ID of the distribution.","_recipient":"The address of the user claiming tokens."}},"nextDistributionId()":{"returns":{"_0":"The ID for the next distribution."}},"reclaimDistribution(uint256)":{"details":"Can only be called by the distributor after the claim window has passed.","params":{"_distributionId":"The ID of the distribution to reclaim tokens from."}}},"version":1},"userdoc":{"kind":"user","methods":{"createDistribution(address,uint256,uint256)":{"notice":"Creates a new distribution."},"distribute(uint256,address,uint256)":{"notice":"Distributes tokens to recipient."},"nextDistributionId()":{"notice":"Fetches the ID for the next distribution."},"reclaimDistribution(uint256)":{"notice":"Reclaims unclaimed tokens from an distribution."}},"version":1}},"settings":{"remappings":["@chainlink/=node_modules/@chainlink/","@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/","@openzeppelin/=node_modules/@openzeppelin/","@prb/=node_modules/@prb/","@thirdweb-dev/=node_modules/@thirdweb-dev/","base64-sol/=node_modules/base64-sol/","ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/","erc721a-upgradeable/=node_modules/erc721a-upgradeable/","eth-gas-reporter/=node_modules/eth-gas-reporter/","forge-std/=lib/forge-std/src/","hardhat/=node_modules/hardhat/","prb-math/=node_modules/prb-math/","solady/=node_modules/solady/","sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"],"optimizer":{"enabled":true,"runs":200},"metadata":{"bytecodeHash":"ipfs"},"compilationTarget":{"contracts/dinary/dividend/IDividendDistributor.sol":"IDividendDistributor"},"evmVersion":"paris","libraries":{}},"sources":{"contracts/dinary/dividend/IDividendDistributor.sol":{"keccak256":"0xa8c10a0a90ddb7ef2fc4bf84816463081f69f59b409d857da559c447081a3c7d","urls":["bzz-raw://b37b182ee1253fee7b91bcbcd0b6e50d8227f105f7413d1c561c98aa0cce2b16","dweb:/ipfs/QmTMZFTJwbHaNuYMRi7MrmMGT5waEJYoF1gtZ33JtumPMZ"],"license":"MIT"}},"version":1},"id":14}
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalDistribution",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "endTime",
+          "type": "uint256"
+        }
+      ],
+      "name": "createDistribution",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "distributionId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_distributionId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "_recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "distribute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nextDistributionId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_distributionId",
+          "type": "uint256"
+        }
+      ],
+      "name": "reclaimDistribution",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "createDistribution(address,uint256,uint256)": "35f86a36",
+    "distribute(uint256,address,uint256)": "775520a4",
+    "nextDistributionId()": "795be4b9",
+    "reclaimDistribution(uint256)": "89217e6f"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"totalDistribution\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"endTime\",\"type\":\"uint256\"}],\"name\":\"createDistribution\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"distributionId\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_distributionId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"distribute\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextDistributionId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_distributionId\",\"type\":\"uint256\"}],\"name\":\"reclaimDistribution\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Dinari (https://github.com/dinaricrypto/sbt-contracts/blob/main/src/dividend/IDividendDistributor.sol)\",\"kind\":\"dev\",\"methods\":{\"createDistribution(address,uint256,uint256)\":{\"details\":\"Only the owner can create a new distribution.\",\"params\":{\"endTime\":\"The timestamp when the distribution stops.\",\"token\":\"The address of the token to be distributed.\",\"totalDistribution\":\"The total amount of tokens to be distributed.\"}},\"distribute(uint256,address,uint256)\":{\"details\":\"Can only be called by the owner.\",\"params\":{\"_amount\":\"The amount of tokens the user is claiming.\",\"_distributionId\":\"The ID of the distribution.\",\"_recipient\":\"The address of the user claiming tokens.\"}},\"nextDistributionId()\":{\"returns\":{\"_0\":\"The ID for the next distribution.\"}},\"reclaimDistribution(uint256)\":{\"details\":\"Can only be called by the distributor after the claim window has passed.\",\"params\":{\"_distributionId\":\"The ID of the distribution to reclaim tokens from.\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"createDistribution(address,uint256,uint256)\":{\"notice\":\"Creates a new distribution.\"},\"distribute(uint256,address,uint256)\":{\"notice\":\"Distributes tokens to recipient.\"},\"nextDistributionId()\":{\"notice\":\"Fetches the ID for the next distribution.\"},\"reclaimDistribution(uint256)\":{\"notice\":\"Reclaims unclaimed tokens from an distribution.\"}},\"notice\":\"Interface for the extended functionalities of DividendDistribution contract\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/dinary/dividend/IDividendDistributor.sol\":\"IDividendDistributor\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"contracts/dinary/dividend/IDividendDistributor.sol\":{\"keccak256\":\"0xa8c10a0a90ddb7ef2fc4bf84816463081f69f59b409d857da559c447081a3c7d\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b37b182ee1253fee7b91bcbcd0b6e50d8227f105f7413d1c561c98aa0cce2b16\",\"dweb:/ipfs/QmTMZFTJwbHaNuYMRi7MrmMGT5waEJYoF1gtZ33JtumPMZ\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.25+commit.b61c2a91"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalDistribution",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "endTime",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "createDistribution",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "distributionId",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_distributionId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "_recipient",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "distribute"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "nextDistributionId",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_distributionId",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "reclaimDistribution"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "createDistribution(address,uint256,uint256)": {
+            "details": "Only the owner can create a new distribution.",
+            "params": {
+              "endTime": "The timestamp when the distribution stops.",
+              "token": "The address of the token to be distributed.",
+              "totalDistribution": "The total amount of tokens to be distributed."
+            }
+          },
+          "distribute(uint256,address,uint256)": {
+            "details": "Can only be called by the owner.",
+            "params": {
+              "_amount": "The amount of tokens the user is claiming.",
+              "_distributionId": "The ID of the distribution.",
+              "_recipient": "The address of the user claiming tokens."
+            }
+          },
+          "nextDistributionId()": {
+            "returns": {
+              "_0": "The ID for the next distribution."
+            }
+          },
+          "reclaimDistribution(uint256)": {
+            "details": "Can only be called by the distributor after the claim window has passed.",
+            "params": {
+              "_distributionId": "The ID of the distribution to reclaim tokens from."
+            }
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "createDistribution(address,uint256,uint256)": {
+            "notice": "Creates a new distribution."
+          },
+          "distribute(uint256,address,uint256)": {
+            "notice": "Distributes tokens to recipient."
+          },
+          "nextDistributionId()": {
+            "notice": "Fetches the ID for the next distribution."
+          },
+          "reclaimDistribution(uint256)": {
+            "notice": "Reclaims unclaimed tokens from an distribution."
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@chainlink/=node_modules/@chainlink/",
+        ":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@prb/=node_modules/@prb/",
+        ":@thirdweb-dev/=node_modules/@thirdweb-dev/",
+        ":base64-sol/=node_modules/base64-sol/",
+        ":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/",
+        ":erc721a-upgradeable/=node_modules/erc721a-upgradeable/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":forge-std/=lib/forge-std/src/",
+        ":hardhat/=node_modules/hardhat/",
+        ":prb-math/=node_modules/prb-math/",
+        ":solady/=node_modules/solady/",
+        ":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/dinary/dividend/IDividendDistributor.sol": "IDividendDistributor"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/dinary/dividend/IDividendDistributor.sol": {
+        "keccak256": "0xa8c10a0a90ddb7ef2fc4bf84816463081f69f59b409d857da559c447081a3c7d",
+        "urls": [
+          "bzz-raw://b37b182ee1253fee7b91bcbcd0b6e50d8227f105f7413d1c561c98aa0cce2b16",
+          "dweb:/ipfs/QmTMZFTJwbHaNuYMRi7MrmMGT5waEJYoF1gtZ33JtumPMZ"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "contracts/dinary/dividend/IDividendDistributor.sol",
+    "id": 3177,
+    "exportedSymbols": {
+      "IDividendDistributor": [
+        3176
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:1629:14",
+    "nodes": [
+      {
+        "id": 3140,
+        "nodeType": "PragmaDirective",
+        "src": "32:24:14",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".23"
+        ]
+      },
+      {
+        "id": 3176,
+        "nodeType": "ContractDefinition",
+        "src": "261:1399:14",
+        "nodes": [
+          {
+            "id": 3147,
+            "nodeType": "FunctionDefinition",
+            "src": "420:57:14",
+            "nodes": [],
+            "documentation": {
+              "id": 3142,
+              "nodeType": "StructuredDocumentation",
+              "src": "298:117:14",
+              "text": " @notice Fetches the ID for the next distribution.\n @return The ID for the next distribution."
+            },
+            "functionSelector": "795be4b9",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "nextDistributionId",
+            "nameLocation": "429:18:14",
+            "parameters": {
+              "id": 3143,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "447:2:14"
+            },
+            "returnParameters": {
+              "id": 3146,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3145,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3147,
+                  "src": "468:7:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3144,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "468:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "467:9:14"
+            },
+            "scope": 3176,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 3159,
+            "nodeType": "FunctionDefinition",
+            "src": "806:145:14",
+            "nodes": [],
+            "documentation": {
+              "id": 3148,
+              "nodeType": "StructuredDocumentation",
+              "src": "482:319:14",
+              "text": " @notice Creates a new distribution.\n @param token The address of the token to be distributed.\n @param totalDistribution The total amount of tokens to be distributed.\n @param endTime The timestamp when the distribution stops.\n @dev Only the owner can create a new distribution."
+            },
+            "functionSelector": "35f86a36",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "createDistribution",
+            "nameLocation": "815:18:14",
+            "parameters": {
+              "id": 3155,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3150,
+                  "mutability": "mutable",
+                  "name": "token",
+                  "nameLocation": "842:5:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3159,
+                  "src": "834:13:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3149,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "834:7:14",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3152,
+                  "mutability": "mutable",
+                  "name": "totalDistribution",
+                  "nameLocation": "857:17:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3159,
+                  "src": "849:25:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3151,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "849:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3154,
+                  "mutability": "mutable",
+                  "name": "endTime",
+                  "nameLocation": "884:7:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3159,
+                  "src": "876:15:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3153,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "876:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "833:59:14"
+            },
+            "returnParameters": {
+              "id": 3158,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3157,
+                  "mutability": "mutable",
+                  "name": "distributionId",
+                  "nameLocation": "935:14:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3159,
+                  "src": "927:22:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3156,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "927:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "926:24:14"
+            },
+            "scope": 3176,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 3169,
+            "nodeType": "FunctionDefinition",
+            "src": "1254:91:14",
+            "nodes": [],
+            "documentation": {
+              "id": 3160,
+              "nodeType": "StructuredDocumentation",
+              "src": "956:293:14",
+              "text": " @notice Distributes tokens to recipient.\n @param _distributionId The ID of the distribution.\n @param _recipient The address of the user claiming tokens.\n @param _amount The amount of tokens the user is claiming.\n @dev Can only be called by the owner."
+            },
+            "functionSelector": "775520a4",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "distribute",
+            "nameLocation": "1263:10:14",
+            "parameters": {
+              "id": 3167,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3162,
+                  "mutability": "mutable",
+                  "name": "_distributionId",
+                  "nameLocation": "1282:15:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3169,
+                  "src": "1274:23:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3161,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1274:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3164,
+                  "mutability": "mutable",
+                  "name": "_recipient",
+                  "nameLocation": "1307:10:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3169,
+                  "src": "1299:18:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3163,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1299:7:14",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3166,
+                  "mutability": "mutable",
+                  "name": "_amount",
+                  "nameLocation": "1327:7:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3169,
+                  "src": "1319:15:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3165,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1319:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1273:62:14"
+            },
+            "returnParameters": {
+              "id": 3168,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1344:0:14"
+            },
+            "scope": 3176,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 3175,
+            "nodeType": "FunctionDefinition",
+            "src": "1595:63:14",
+            "nodes": [],
+            "documentation": {
+              "id": 3170,
+              "nodeType": "StructuredDocumentation",
+              "src": "1350:240:14",
+              "text": " @notice Reclaims unclaimed tokens from an distribution.\n @param _distributionId The ID of the distribution to reclaim tokens from.\n @dev Can only be called by the distributor after the claim window has passed."
+            },
+            "functionSelector": "89217e6f",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "reclaimDistribution",
+            "nameLocation": "1604:19:14",
+            "parameters": {
+              "id": 3173,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3172,
+                  "mutability": "mutable",
+                  "name": "_distributionId",
+                  "nameLocation": "1632:15:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3175,
+                  "src": "1624:23:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3171,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1624:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1623:25:14"
+            },
+            "returnParameters": {
+              "id": 3174,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1657:0:14"
+            },
+            "scope": 3176,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IDividendDistributor",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": {
+          "id": 3141,
+          "nodeType": "StructuredDocumentation",
+          "src": "58:203:14",
+          "text": "@notice Interface for the extended functionalities of DividendDistribution contract\n @author Dinari (https://github.com/dinaricrypto/sbt-contracts/blob/main/src/dividend/IDividendDistributor.sol)"
+        },
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          3176
+        ],
+        "name": "IDividendDistributor",
+        "nameLocation": "271:20:14",
+        "scope": 3177,
+        "usedErrors": [],
+        "usedEvents": []
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 14
+}

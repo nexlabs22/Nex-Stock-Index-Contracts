@@ -26,6 +26,8 @@ contract IndexFactory is
     string baseUrl;
     string urlParams;
 
+    
+
     bytes32 public externalJobId;
     uint256 public oraclePayment;
     uint public lastUpdateTime;
@@ -63,8 +65,13 @@ contract IndexFactory is
     mapping(uint => mapping(address => uint)) public issuanceRequestId;
     mapping(uint => mapping(address => uint)) public redemptionRequestId;
 
+    mapping(uint => uint) public buyRequestPayedAmountById;
+    mapping(uint => uint) public sellRequestAssetAmountById;
+
     mapping(uint => mapping(address => uint)) public issuanceTokenPrimaryBalance;
     mapping(uint => mapping(address => uint)) public redemptionTokenPrimaryBalance;
+
+    mapping(uint => uint) public issuanceIndexTokenPrimaryTotalSupply;
 
     mapping(uint => address) public issuanceRequesterByNonce;
     mapping(uint => address) public redemptionRequesterByNonce;
@@ -272,23 +279,35 @@ contract IndexFactory is
             address tokenAddress = currentList[i];
             uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100;
             uint requestId = requestBuyOrder(tokenAddress, amount);
+            buyRequestPayedAmountById[requestId] = amount;
             issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
             issuanceRequesterByNonce[issuanceNonce] = msg.sender;
-            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(this));;
+            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(this));
+            issuanceIndexTokenPrimaryTotalSupply[issuanceNonce] = IERC20(token).totalSupply();
         }
 
     }
 
     function completeIssuance(uint issuanceNonce) public {
         require(checkIssuance(issuanceNonce), "Issuance not completed");
+        address reqeuster = issuanceRequesterByNonce[issuanceNonce];
+        uint primaryPortfolioValue;
+        uint secondaryPortfolioValue;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
+            uint256 tokenRequestId = issuanceRequestId[issuanceNonce][tokenAddress];
+            IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(tokenAddress, address(usdc));
             uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
             uint256 primaryBalance = issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress];
-            require(balance >= primaryBalance, "Issuance failed");
-            uint256 amount = balance - primaryBalance;
-            token.mint(msg.sender, amount);
+            uint256 primaryValue = primaryBalance*tokenPriceData.price;
+            uint256 secondaryValue = primaryValue + buyRequestPayedAmountById[tokenRequestId];
+            primaryPortfolioValue += primaryValue;
+            secondaryPortfolioValue += secondaryValue;
         }
+            uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[issuanceNonce];
+            uint256 secondaryTotalSupply = primaryTotalSupply * secondaryPortfolioValue / primaryPortfolioValue;
+            uint256 mintAmount = secondaryTotalSupply - primaryTotalSupply;
+            token.mint(reqeuster, mintAmount);
     }
 
     function checkIssuance(uint _issuanceNonce) public view returns(bool) {
@@ -296,7 +315,6 @@ contract IndexFactory is
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
-            //if(!issuer.checkOrder(requestId)) return false;
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
                 completedOrdersCount += 1;
             }

@@ -1,1 +1,764 @@
-{"abi":[{"type":"function","name":"burn","inputs":[{"name":"value","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"burnFrom","inputs":[{"name":"from","type":"address","internalType":"address"},{"name":"value","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"isBlacklisted","inputs":[{"name":"account","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"bool","internalType":"bool"}],"stateMutability":"view"},{"type":"function","name":"mint","inputs":[{"name":"to","type":"address","internalType":"address"},{"name":"value","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"transferRestrictor","inputs":[],"outputs":[{"name":"","type":"address","internalType":"contract ITransferRestrictor"}],"stateMutability":"view"}],"bytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"deployedBytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"methodIdentifiers":{"burn(uint256)":"42966c68","burnFrom(address,uint256)":"79cc6790","isBlacklisted(address)":"fe575a87","mint(address,uint256)":"40c10f19","transferRestrictor()":"d4ec137a"},"rawMetadata":"{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burnFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isBlacklisted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"transferRestrictor\",\"outputs\":[{\"internalType\":\"contract ITransferRestrictor\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Dinari (https://github.com/dinaricrypto/sbt-contracts/blob/main/src/IDShare.sol) Minter, burner, and blacklist\",\"kind\":\"dev\",\"methods\":{\"burn(uint256)\":{\"details\":\"Only callable by approved burnerDeployer can always burn after split\",\"params\":{\"value\":\"Amount of tokens to burn\"}},\"isBlacklisted(address)\":{\"details\":\"Returns true if the account is blacklisted , if the account is the zero address\",\"params\":{\"account\":\"The address of the account\"},\"returns\":{\"_0\":\"Whether the account is blacklisted\"}},\"mint(address,uint256)\":{\"details\":\"Only callable by approved minter and deployerNot callable after split\",\"params\":{\"to\":\"Address to mint tokens to\",\"value\":\"Amount of tokens to mint\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"burn(uint256)\":{\"notice\":\"Burn tokens\"},\"mint(address,uint256)\":{\"notice\":\"Mint tokens\"},\"transferRestrictor()\":{\"notice\":\"Contract to restrict transfers\"}},\"notice\":\"Core token contract interface for bridged assets.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/dinary/IDShare.sol\":\"IDShare\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"contracts/dinary/IDShare.sol\":{\"keccak256\":\"0x376e4b9abec934b1f7fab6d185a6053a7204f2dda78732457e400bba1f066564\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://4399f5a0b1947b8852e342d3c93f26e60310ada2bd1a6bb5d207e8d3a2c3e476\",\"dweb:/ipfs/QmX7KmTubWH7bVcQ1Un73LgdRUGLyim49TWegFHLN8BvfW\"]},\"contracts/dinary/ITransferRestrictor.sol\":{\"keccak256\":\"0xfa53c6ef18fde050f0b65a9bbb318817a933d656ce560e0eed15f4e9619050fb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://82b30b78bf22b31fa54f0c55bf4346aa73abfca2d0938f679cbd1b78206bde10\",\"dweb:/ipfs/QmUyNdo2EXaXsZURBDVbwnyMFW15jEzCeSsVQU6WPqqeFV\"]}},\"version\":1}","metadata":{"compiler":{"version":"0.8.25+commit.b61c2a91"},"language":"Solidity","output":{"abi":[{"inputs":[{"internalType":"uint256","name":"value","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"burn"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"burnFrom"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"stateMutability":"view","type":"function","name":"isBlacklisted","outputs":[{"internalType":"bool","name":"","type":"bool"}]},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"mint"},{"inputs":[],"stateMutability":"view","type":"function","name":"transferRestrictor","outputs":[{"internalType":"contract ITransferRestrictor","name":"","type":"address"}]}],"devdoc":{"kind":"dev","methods":{"burn(uint256)":{"details":"Only callable by approved burnerDeployer can always burn after split","params":{"value":"Amount of tokens to burn"}},"isBlacklisted(address)":{"details":"Returns true if the account is blacklisted , if the account is the zero address","params":{"account":"The address of the account"},"returns":{"_0":"Whether the account is blacklisted"}},"mint(address,uint256)":{"details":"Only callable by approved minter and deployerNot callable after split","params":{"to":"Address to mint tokens to","value":"Amount of tokens to mint"}}},"version":1},"userdoc":{"kind":"user","methods":{"burn(uint256)":{"notice":"Burn tokens"},"mint(address,uint256)":{"notice":"Mint tokens"},"transferRestrictor()":{"notice":"Contract to restrict transfers"}},"version":1}},"settings":{"remappings":["@chainlink/=node_modules/@chainlink/","@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/","@openzeppelin/=node_modules/@openzeppelin/","@prb/=node_modules/@prb/","@thirdweb-dev/=node_modules/@thirdweb-dev/","base64-sol/=node_modules/base64-sol/","ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/","erc721a-upgradeable/=node_modules/erc721a-upgradeable/","eth-gas-reporter/=node_modules/eth-gas-reporter/","forge-std/=lib/forge-std/src/","hardhat/=node_modules/hardhat/","prb-math/=node_modules/prb-math/","solady/=node_modules/solady/","sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"],"optimizer":{"enabled":true,"runs":200},"metadata":{"bytecodeHash":"ipfs"},"compilationTarget":{"contracts/dinary/IDShare.sol":"IDShare"},"evmVersion":"paris","libraries":{}},"sources":{"contracts/dinary/IDShare.sol":{"keccak256":"0x376e4b9abec934b1f7fab6d185a6053a7204f2dda78732457e400bba1f066564","urls":["bzz-raw://4399f5a0b1947b8852e342d3c93f26e60310ada2bd1a6bb5d207e8d3a2c3e476","dweb:/ipfs/QmX7KmTubWH7bVcQ1Un73LgdRUGLyim49TWegFHLN8BvfW"],"license":"MIT"},"contracts/dinary/ITransferRestrictor.sol":{"keccak256":"0xfa53c6ef18fde050f0b65a9bbb318817a933d656ce560e0eed15f4e9619050fb","urls":["bzz-raw://82b30b78bf22b31fa54f0c55bf4346aa73abfca2d0938f679cbd1b78206bde10","dweb:/ipfs/QmUyNdo2EXaXsZURBDVbwnyMFW15jEzCeSsVQU6WPqqeFV"],"license":"MIT"}},"version":1},"id":4}
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "burn",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "burnFrom",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "isBlacklisted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "mint",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "transferRestrictor",
+      "outputs": [
+        {
+          "internalType": "contract ITransferRestrictor",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "burn(uint256)": "42966c68",
+    "burnFrom(address,uint256)": "79cc6790",
+    "isBlacklisted(address)": "fe575a87",
+    "mint(address,uint256)": "40c10f19",
+    "transferRestrictor()": "d4ec137a"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burnFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isBlacklisted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"transferRestrictor\",\"outputs\":[{\"internalType\":\"contract ITransferRestrictor\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Dinari (https://github.com/dinaricrypto/sbt-contracts/blob/main/src/IDShare.sol) Minter, burner, and blacklist\",\"kind\":\"dev\",\"methods\":{\"burn(uint256)\":{\"details\":\"Only callable by approved burnerDeployer can always burn after split\",\"params\":{\"value\":\"Amount of tokens to burn\"}},\"isBlacklisted(address)\":{\"details\":\"Returns true if the account is blacklisted , if the account is the zero address\",\"params\":{\"account\":\"The address of the account\"},\"returns\":{\"_0\":\"Whether the account is blacklisted\"}},\"mint(address,uint256)\":{\"details\":\"Only callable by approved minter and deployerNot callable after split\",\"params\":{\"to\":\"Address to mint tokens to\",\"value\":\"Amount of tokens to mint\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"burn(uint256)\":{\"notice\":\"Burn tokens\"},\"mint(address,uint256)\":{\"notice\":\"Mint tokens\"},\"transferRestrictor()\":{\"notice\":\"Contract to restrict transfers\"}},\"notice\":\"Core token contract interface for bridged assets.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/dinary/IDShare.sol\":\"IDShare\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"contracts/dinary/IDShare.sol\":{\"keccak256\":\"0x376e4b9abec934b1f7fab6d185a6053a7204f2dda78732457e400bba1f066564\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://4399f5a0b1947b8852e342d3c93f26e60310ada2bd1a6bb5d207e8d3a2c3e476\",\"dweb:/ipfs/QmX7KmTubWH7bVcQ1Un73LgdRUGLyim49TWegFHLN8BvfW\"]},\"contracts/dinary/ITransferRestrictor.sol\":{\"keccak256\":\"0xfa53c6ef18fde050f0b65a9bbb318817a933d656ce560e0eed15f4e9619050fb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://82b30b78bf22b31fa54f0c55bf4346aa73abfca2d0938f679cbd1b78206bde10\",\"dweb:/ipfs/QmUyNdo2EXaXsZURBDVbwnyMFW15jEzCeSsVQU6WPqqeFV\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.25+commit.b61c2a91"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "burn"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "burnFrom"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "isBlacklisted",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "mint"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "transferRestrictor",
+          "outputs": [
+            {
+              "internalType": "contract ITransferRestrictor",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "burn(uint256)": {
+            "details": "Only callable by approved burnerDeployer can always burn after split",
+            "params": {
+              "value": "Amount of tokens to burn"
+            }
+          },
+          "isBlacklisted(address)": {
+            "details": "Returns true if the account is blacklisted , if the account is the zero address",
+            "params": {
+              "account": "The address of the account"
+            },
+            "returns": {
+              "_0": "Whether the account is blacklisted"
+            }
+          },
+          "mint(address,uint256)": {
+            "details": "Only callable by approved minter and deployerNot callable after split",
+            "params": {
+              "to": "Address to mint tokens to",
+              "value": "Amount of tokens to mint"
+            }
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "burn(uint256)": {
+            "notice": "Burn tokens"
+          },
+          "mint(address,uint256)": {
+            "notice": "Mint tokens"
+          },
+          "transferRestrictor()": {
+            "notice": "Contract to restrict transfers"
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@chainlink/=node_modules/@chainlink/",
+        ":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@prb/=node_modules/@prb/",
+        ":@thirdweb-dev/=node_modules/@thirdweb-dev/",
+        ":base64-sol/=node_modules/base64-sol/",
+        ":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/",
+        ":erc721a-upgradeable/=node_modules/erc721a-upgradeable/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":forge-std/=lib/forge-std/src/",
+        ":hardhat/=node_modules/hardhat/",
+        ":prb-math/=node_modules/prb-math/",
+        ":solady/=node_modules/solady/",
+        ":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/dinary/IDShare.sol": "IDShare"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/dinary/IDShare.sol": {
+        "keccak256": "0x376e4b9abec934b1f7fab6d185a6053a7204f2dda78732457e400bba1f066564",
+        "urls": [
+          "bzz-raw://4399f5a0b1947b8852e342d3c93f26e60310ada2bd1a6bb5d207e8d3a2c3e476",
+          "dweb:/ipfs/QmX7KmTubWH7bVcQ1Un73LgdRUGLyim49TWegFHLN8BvfW"
+        ],
+        "license": "MIT"
+      },
+      "contracts/dinary/ITransferRestrictor.sol": {
+        "keccak256": "0xfa53c6ef18fde050f0b65a9bbb318817a933d656ce560e0eed15f4e9619050fb",
+        "urls": [
+          "bzz-raw://82b30b78bf22b31fa54f0c55bf4346aa73abfca2d0938f679cbd1b78206bde10",
+          "dweb:/ipfs/QmUyNdo2EXaXsZURBDVbwnyMFW15jEzCeSsVQU6WPqqeFV"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "contracts/dinary/IDShare.sol",
+    "id": 2044,
+    "exportedSymbols": {
+      "IDShare": [
+        2043
+      ],
+      "ITransferRestrictor": [
+        2107
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:1255:4",
+    "nodes": [
+      {
+        "id": 2003,
+        "nodeType": "PragmaDirective",
+        "src": "32:24:4",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".23"
+        ]
+      },
+      {
+        "id": 2005,
+        "nodeType": "ImportDirective",
+        "src": "58:62:4",
+        "nodes": [],
+        "absolutePath": "contracts/dinary/ITransferRestrictor.sol",
+        "file": "./ITransferRestrictor.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 2044,
+        "sourceUnit": 2108,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 2004,
+              "name": "ITransferRestrictor",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 2107,
+              "src": "66:19:4",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 2043,
+        "nodeType": "ContractDefinition",
+        "src": "311:975:4",
+        "nodes": [
+          {
+            "id": 2013,
+            "nodeType": "FunctionDefinition",
+            "src": "382:74:4",
+            "nodes": [],
+            "documentation": {
+              "id": 2007,
+              "nodeType": "StructuredDocumentation",
+              "src": "335:42:4",
+              "text": "@notice Contract to restrict transfers"
+            },
+            "functionSelector": "d4ec137a",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "transferRestrictor",
+            "nameLocation": "391:18:4",
+            "parameters": {
+              "id": 2008,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "409:2:4"
+            },
+            "returnParameters": {
+              "id": 2012,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2011,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2013,
+                  "src": "435:19:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_ITransferRestrictor_$2107",
+                    "typeString": "contract ITransferRestrictor"
+                  },
+                  "typeName": {
+                    "id": 2010,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2009,
+                      "name": "ITransferRestrictor",
+                      "nameLocations": [
+                        "435:19:4"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2107,
+                      "src": "435:19:4"
+                    },
+                    "referencedDeclaration": 2107,
+                    "src": "435:19:4",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_ITransferRestrictor_$2107",
+                      "typeString": "contract ITransferRestrictor"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "434:21:4"
+            },
+            "scope": 2043,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2021,
+            "nodeType": "FunctionDefinition",
+            "src": "677:50:4",
+            "nodes": [],
+            "documentation": {
+              "id": 2014,
+              "nodeType": "StructuredDocumentation",
+              "src": "462:210:4",
+              "text": "@notice Mint tokens\n @param to Address to mint tokens to\n @param value Amount of tokens to mint\n @dev Only callable by approved minter and deployer\n @dev Not callable after split"
+            },
+            "functionSelector": "40c10f19",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "mint",
+            "nameLocation": "686:4:4",
+            "parameters": {
+              "id": 2019,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2016,
+                  "mutability": "mutable",
+                  "name": "to",
+                  "nameLocation": "699:2:4",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2021,
+                  "src": "691:10:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2015,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "691:7:4",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2018,
+                  "mutability": "mutable",
+                  "name": "value",
+                  "nameLocation": "711:5:4",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2021,
+                  "src": "703:13:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2017,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "703:7:4",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "690:27:4"
+            },
+            "returnParameters": {
+              "id": 2020,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "726:0:4"
+            },
+            "scope": 2043,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2027,
+            "nodeType": "FunctionDefinition",
+            "src": "903:38:4",
+            "nodes": [],
+            "documentation": {
+              "id": 2022,
+              "nodeType": "StructuredDocumentation",
+              "src": "733:165:4",
+              "text": "@notice Burn tokens\n @param value Amount of tokens to burn\n @dev Only callable by approved burner\n @dev Deployer can always burn after split"
+            },
+            "functionSelector": "42966c68",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "burn",
+            "nameLocation": "912:4:4",
+            "parameters": {
+              "id": 2025,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2024,
+                  "mutability": "mutable",
+                  "name": "value",
+                  "nameLocation": "925:5:4",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2027,
+                  "src": "917:13:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2023,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "917:7:4",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "916:15:4"
+            },
+            "returnParameters": {
+              "id": 2026,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "940:0:4"
+            },
+            "scope": 2043,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2034,
+            "nodeType": "FunctionDefinition",
+            "src": "946:56:4",
+            "nodes": [],
+            "functionSelector": "79cc6790",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "burnFrom",
+            "nameLocation": "955:8:4",
+            "parameters": {
+              "id": 2032,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2029,
+                  "mutability": "mutable",
+                  "name": "from",
+                  "nameLocation": "972:4:4",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2034,
+                  "src": "964:12:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2028,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "964:7:4",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2031,
+                  "mutability": "mutable",
+                  "name": "value",
+                  "nameLocation": "986:5:4",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2034,
+                  "src": "978:13:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2030,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "978:7:4",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "963:29:4"
+            },
+            "returnParameters": {
+              "id": 2033,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1001:0:4"
+            },
+            "scope": 2043,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2042,
+            "nodeType": "FunctionDefinition",
+            "src": "1215:69:4",
+            "nodes": [],
+            "documentation": {
+              "id": 2035,
+              "nodeType": "StructuredDocumentation",
+              "src": "1008:202:4",
+              "text": " @param account The address of the account\n @return Whether the account is blacklisted\n @dev Returns true if the account is blacklisted , if the account is the zero address"
+            },
+            "functionSelector": "fe575a87",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "isBlacklisted",
+            "nameLocation": "1224:13:4",
+            "parameters": {
+              "id": 2038,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2037,
+                  "mutability": "mutable",
+                  "name": "account",
+                  "nameLocation": "1246:7:4",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2042,
+                  "src": "1238:15:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2036,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1238:7:4",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1237:17:4"
+            },
+            "returnParameters": {
+              "id": 2041,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2040,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2042,
+                  "src": "1278:4:4",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 2039,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1278:4:4",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1277:6:4"
+            },
+            "scope": 2043,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IDShare",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": {
+          "id": 2006,
+          "nodeType": "StructuredDocumentation",
+          "src": "122:189:4",
+          "text": "@notice Core token contract interface for bridged assets.\n @author Dinari (https://github.com/dinaricrypto/sbt-contracts/blob/main/src/IDShare.sol)\n Minter, burner, and blacklist"
+        },
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          2043
+        ],
+        "name": "IDShare",
+        "nameLocation": "321:7:4",
+        "scope": 2044,
+        "usedErrors": [],
+        "usedEvents": []
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 4
+}

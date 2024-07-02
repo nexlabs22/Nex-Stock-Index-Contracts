@@ -1,1 +1,2205 @@
-{"abi":[{"type":"function","name":"burn","inputs":[{"name":"from","type":"address","internalType":"address"},{"name":"amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"initialize","inputs":[{"name":"tokenName","type":"string","internalType":"string"},{"name":"tokenSymbol","type":"string","internalType":"string"},{"name":"_feeRatePerDayScaled","type":"uint256","internalType":"uint256"},{"name":"_feeReceiver","type":"address","internalType":"address"},{"name":"_supplyCeiling","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"mint","inputs":[{"name":"to","type":"address","internalType":"address"},{"name":"amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"mintToFeeReceiver","inputs":[],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"pause","inputs":[],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setFeeRate","inputs":[{"name":"_feeRatePerDayScaled","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setFeeReceiver","inputs":[{"name":"_feeReceiver","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setMethodologist","inputs":[{"name":"_methodologist","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setMethodology","inputs":[{"name":"_methodology","type":"string","internalType":"string"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setMinter","inputs":[{"name":"_minter","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setSupplyCeiling","inputs":[{"name":"_supplyCeiling","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"toggleRestriction","inputs":[{"name":"who","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"unpause","inputs":[],"outputs":[],"stateMutability":"nonpayable"},{"type":"event","name":"FeeRateSet","inputs":[{"name":"feeRatePerDayScaled","type":"uint256","indexed":true,"internalType":"uint256"}],"anonymous":false},{"type":"event","name":"FeeReceiverSet","inputs":[{"name":"feeReceiver","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"MethodologistSet","inputs":[{"name":"methodologist","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"MethodologySet","inputs":[{"name":"methodology","type":"string","indexed":false,"internalType":"string"}],"anonymous":false},{"type":"event","name":"MintFeeToReceiver","inputs":[{"name":"feeReceiver","type":"address","indexed":false,"internalType":"address"},{"name":"timestamp","type":"uint256","indexed":false,"internalType":"uint256"},{"name":"totalSupply","type":"uint256","indexed":false,"internalType":"uint256"},{"name":"amount","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false},{"type":"event","name":"MinterSet","inputs":[{"name":"minter","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"SupplyCeilingSet","inputs":[{"name":"supplyCeiling","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false},{"type":"event","name":"ToggledRestricted","inputs":[{"name":"account","type":"address","indexed":true,"internalType":"address"},{"name":"isRestricted","type":"bool","indexed":false,"internalType":"bool"}],"anonymous":false}],"bytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"deployedBytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"methodIdentifiers":{"burn(address,uint256)":"9dc29fac","initialize(string,string,uint256,address,uint256)":"fede0276","mint(address,uint256)":"40c10f19","mintToFeeReceiver()":"f734e22a","pause()":"8456cb59","setFeeRate(uint256)":"45596e2e","setFeeReceiver(address)":"efdcd974","setMethodologist(address)":"660db484","setMethodology(string)":"91fe1b92","setMinter(address)":"fca3b5aa","setSupplyCeiling(uint256)":"6e01a686","toggleRestriction(address)":"aaa4a184","unpause()":"3f4ba83a"},"rawMetadata":"{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"feeRatePerDayScaled\",\"type\":\"uint256\"}],\"name\":\"FeeRateSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"feeReceiver\",\"type\":\"address\"}],\"name\":\"FeeReceiverSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"methodologist\",\"type\":\"address\"}],\"name\":\"MethodologistSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"methodology\",\"type\":\"string\"}],\"name\":\"MethodologySet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"feeReceiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalSupply\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"MintFeeToReceiver\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"minter\",\"type\":\"address\"}],\"name\":\"MinterSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"supplyCeiling\",\"type\":\"uint256\"}],\"name\":\"SupplyCeilingSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isRestricted\",\"type\":\"bool\"}],\"name\":\"ToggledRestricted\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"tokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"tokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_feeRatePerDayScaled\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_feeReceiver\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_supplyCeiling\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mintToFeeReceiver\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_feeRatePerDayScaled\",\"type\":\"uint256\"}],\"name\":\"setFeeRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_feeReceiver\",\"type\":\"address\"}],\"name\":\"setFeeReceiver\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_methodologist\",\"type\":\"address\"}],\"name\":\"setMethodologist\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_methodology\",\"type\":\"string\"}],\"name\":\"setMethodology\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_minter\",\"type\":\"address\"}],\"name\":\"setMinter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_supplyCeiling\",\"type\":\"uint256\"}],\"name\":\"setSupplyCeiling\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"who\",\"type\":\"address\"}],\"name\":\"toggleRestriction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"burn(address,uint256)\":{\"details\":\"burn function can only be called externally by the controller\",\"params\":{\"amount\":\"uint256\",\"from\":\"address\"}},\"mint(address,uint256)\":{\"details\":\"Mint function can only be called externally by the controller\",\"params\":{\"amount\":\"uint256\",\"to\":\"address\"}},\"mintToFeeReceiver()\":{\"details\":\"Can only be called by the owner externally,_mintToFeeReciver is the internal function and is called after each supply/rate change\"},\"setFeeRate(uint256)\":{\"details\":\"Given the annual fee rate this function sets and calculates the rate per second\",\"params\":{\"_feeRatePerDayScaled\":\"uint256\"}},\"setFeeReceiver(address)\":{\"params\":{\"_feeReceiver\":\"address\"}},\"setMethodologist(address)\":{\"params\":{\"_methodologist\":\"address\"}},\"setMethodology(string)\":{\"params\":{\"_methodology\":\"string\"}},\"setMinter(address)\":{\"params\":{\"_minter\":\"address\"}},\"setSupplyCeiling(uint256)\":{\"params\":{\"_supplyCeiling\":\"uint256\"}},\"toggleRestriction(address)\":{\"details\":\"Negates current restriction state\",\"params\":{\"who\":\"address\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"burn(address,uint256)\":{\"notice\":\"External burn function\"},\"initialize(string,string,uint256,address,uint256)\":{\"notice\":\"============================================================================================= Initializer =============================================================================================\"},\"mint(address,uint256)\":{\"notice\":\"External mint function\"},\"mintToFeeReceiver()\":{\"notice\":\"Expands supply and mints fees to fee reciever\"},\"pause()\":{\"notice\":\"============================================================================================= Pausable Logic =============================================================================================\"},\"setFeeRate(uint256)\":{\"notice\":\"Ownable function to set the fee rate\"},\"setFeeReceiver(address)\":{\"notice\":\"Ownable function to set the receiver\"},\"setMethodologist(address)\":{\"notice\":\"Only owner function for setting the methodologist\"},\"setMethodology(string)\":{\"notice\":\"Callable only by the methodoligst to store on chain data about the underlying weight of the token\"},\"setMinter(address)\":{\"notice\":\"Ownable function to set the contract that controls minting\"},\"setSupplyCeiling(uint256)\":{\"notice\":\"Ownable function to set the limit at which the total supply cannot exceed\"},\"toggleRestriction(address)\":{\"notice\":\"Compliance feature to blacklist bad actors\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/token/TokenInterface.sol\":\"TokenInterface\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"contracts/token/TokenInterface.sol\":{\"keccak256\":\"0x41ff186e7f9affb160f869086c743abf5deb7902ec815d8b60fd739c3a045e9f\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9efb7f3c2015099314ca07e4249b0f6b4ff28dc5ff13df83ea46db0eb35d6a68\",\"dweb:/ipfs/QmNtwtqwDuG6wSQmNLfCFSowBp9MdTH1H1n84KB3qDw3cq\"]}},\"version\":1}","metadata":{"compiler":{"version":"0.8.25+commit.b61c2a91"},"language":"Solidity","output":{"abi":[{"inputs":[{"internalType":"uint256","name":"feeRatePerDayScaled","type":"uint256","indexed":true}],"type":"event","name":"FeeRateSet","anonymous":false},{"inputs":[{"internalType":"address","name":"feeReceiver","type":"address","indexed":true}],"type":"event","name":"FeeReceiverSet","anonymous":false},{"inputs":[{"internalType":"address","name":"methodologist","type":"address","indexed":true}],"type":"event","name":"MethodologistSet","anonymous":false},{"inputs":[{"internalType":"string","name":"methodology","type":"string","indexed":false}],"type":"event","name":"MethodologySet","anonymous":false},{"inputs":[{"internalType":"address","name":"feeReceiver","type":"address","indexed":false},{"internalType":"uint256","name":"timestamp","type":"uint256","indexed":false},{"internalType":"uint256","name":"totalSupply","type":"uint256","indexed":false},{"internalType":"uint256","name":"amount","type":"uint256","indexed":false}],"type":"event","name":"MintFeeToReceiver","anonymous":false},{"inputs":[{"internalType":"address","name":"minter","type":"address","indexed":true}],"type":"event","name":"MinterSet","anonymous":false},{"inputs":[{"internalType":"uint256","name":"supplyCeiling","type":"uint256","indexed":false}],"type":"event","name":"SupplyCeilingSet","anonymous":false},{"inputs":[{"internalType":"address","name":"account","type":"address","indexed":true},{"internalType":"bool","name":"isRestricted","type":"bool","indexed":false}],"type":"event","name":"ToggledRestricted","anonymous":false},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"burn"},{"inputs":[{"internalType":"string","name":"tokenName","type":"string"},{"internalType":"string","name":"tokenSymbol","type":"string"},{"internalType":"uint256","name":"_feeRatePerDayScaled","type":"uint256"},{"internalType":"address","name":"_feeReceiver","type":"address"},{"internalType":"uint256","name":"_supplyCeiling","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"initialize"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"mint"},{"inputs":[],"stateMutability":"nonpayable","type":"function","name":"mintToFeeReceiver"},{"inputs":[],"stateMutability":"nonpayable","type":"function","name":"pause"},{"inputs":[{"internalType":"uint256","name":"_feeRatePerDayScaled","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"setFeeRate"},{"inputs":[{"internalType":"address","name":"_feeReceiver","type":"address"}],"stateMutability":"nonpayable","type":"function","name":"setFeeReceiver"},{"inputs":[{"internalType":"address","name":"_methodologist","type":"address"}],"stateMutability":"nonpayable","type":"function","name":"setMethodologist"},{"inputs":[{"internalType":"string","name":"_methodology","type":"string"}],"stateMutability":"nonpayable","type":"function","name":"setMethodology"},{"inputs":[{"internalType":"address","name":"_minter","type":"address"}],"stateMutability":"nonpayable","type":"function","name":"setMinter"},{"inputs":[{"internalType":"uint256","name":"_supplyCeiling","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"setSupplyCeiling"},{"inputs":[{"internalType":"address","name":"who","type":"address"}],"stateMutability":"nonpayable","type":"function","name":"toggleRestriction"},{"inputs":[],"stateMutability":"nonpayable","type":"function","name":"unpause"}],"devdoc":{"kind":"dev","methods":{"burn(address,uint256)":{"details":"burn function can only be called externally by the controller","params":{"amount":"uint256","from":"address"}},"mint(address,uint256)":{"details":"Mint function can only be called externally by the controller","params":{"amount":"uint256","to":"address"}},"mintToFeeReceiver()":{"details":"Can only be called by the owner externally,_mintToFeeReciver is the internal function and is called after each supply/rate change"},"setFeeRate(uint256)":{"details":"Given the annual fee rate this function sets and calculates the rate per second","params":{"_feeRatePerDayScaled":"uint256"}},"setFeeReceiver(address)":{"params":{"_feeReceiver":"address"}},"setMethodologist(address)":{"params":{"_methodologist":"address"}},"setMethodology(string)":{"params":{"_methodology":"string"}},"setMinter(address)":{"params":{"_minter":"address"}},"setSupplyCeiling(uint256)":{"params":{"_supplyCeiling":"uint256"}},"toggleRestriction(address)":{"details":"Negates current restriction state","params":{"who":"address"}}},"version":1},"userdoc":{"kind":"user","methods":{"burn(address,uint256)":{"notice":"External burn function"},"initialize(string,string,uint256,address,uint256)":{"notice":"============================================================================================= Initializer ============================================================================================="},"mint(address,uint256)":{"notice":"External mint function"},"mintToFeeReceiver()":{"notice":"Expands supply and mints fees to fee reciever"},"pause()":{"notice":"============================================================================================= Pausable Logic ============================================================================================="},"setFeeRate(uint256)":{"notice":"Ownable function to set the fee rate"},"setFeeReceiver(address)":{"notice":"Ownable function to set the receiver"},"setMethodologist(address)":{"notice":"Only owner function for setting the methodologist"},"setMethodology(string)":{"notice":"Callable only by the methodoligst to store on chain data about the underlying weight of the token"},"setMinter(address)":{"notice":"Ownable function to set the contract that controls minting"},"setSupplyCeiling(uint256)":{"notice":"Ownable function to set the limit at which the total supply cannot exceed"},"toggleRestriction(address)":{"notice":"Compliance feature to blacklist bad actors"}},"version":1}},"settings":{"remappings":["@chainlink/=node_modules/@chainlink/","@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/","@openzeppelin/=node_modules/@openzeppelin/","@prb/=node_modules/@prb/","@thirdweb-dev/=node_modules/@thirdweb-dev/","base64-sol/=node_modules/base64-sol/","ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/","erc721a-upgradeable/=node_modules/erc721a-upgradeable/","eth-gas-reporter/=node_modules/eth-gas-reporter/","forge-std/=lib/forge-std/src/","hardhat/=node_modules/hardhat/","prb-math/=node_modules/prb-math/","solady/=node_modules/solady/","sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"],"optimizer":{"enabled":true,"runs":200},"metadata":{"bytecodeHash":"ipfs"},"compilationTarget":{"contracts/token/TokenInterface.sol":"TokenInterface"},"evmVersion":"paris","libraries":{}},"sources":{"contracts/token/TokenInterface.sol":{"keccak256":"0x41ff186e7f9affb160f869086c743abf5deb7902ec815d8b60fd739c3a045e9f","urls":["bzz-raw://9efb7f3c2015099314ca07e4249b0f6b4ff28dc5ff13df83ea46db0eb35d6a68","dweb:/ipfs/QmNtwtqwDuG6wSQmNLfCFSowBp9MdTH1H1n84KB3qDw3cq"],"license":"MIT"}},"version":1},"id":27}
+{
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "feeRatePerDayScaled",
+          "type": "uint256"
+        }
+      ],
+      "name": "FeeRateSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "feeReceiver",
+          "type": "address"
+        }
+      ],
+      "name": "FeeReceiverSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "methodologist",
+          "type": "address"
+        }
+      ],
+      "name": "MethodologistSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "methodology",
+          "type": "string"
+        }
+      ],
+      "name": "MethodologySet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "feeReceiver",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalSupply",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "MintFeeToReceiver",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "minter",
+          "type": "address"
+        }
+      ],
+      "name": "MinterSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "supplyCeiling",
+          "type": "uint256"
+        }
+      ],
+      "name": "SupplyCeilingSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "isRestricted",
+          "type": "bool"
+        }
+      ],
+      "name": "ToggledRestricted",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "burn",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "tokenName",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "tokenSymbol",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_feeRatePerDayScaled",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "_feeReceiver",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_supplyCeiling",
+          "type": "uint256"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "mint",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "mintToFeeReceiver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pause",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_feeRatePerDayScaled",
+          "type": "uint256"
+        }
+      ],
+      "name": "setFeeRate",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_feeReceiver",
+          "type": "address"
+        }
+      ],
+      "name": "setFeeReceiver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_methodologist",
+          "type": "address"
+        }
+      ],
+      "name": "setMethodologist",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_methodology",
+          "type": "string"
+        }
+      ],
+      "name": "setMethodology",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_minter",
+          "type": "address"
+        }
+      ],
+      "name": "setMinter",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_supplyCeiling",
+          "type": "uint256"
+        }
+      ],
+      "name": "setSupplyCeiling",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "who",
+          "type": "address"
+        }
+      ],
+      "name": "toggleRestriction",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "unpause",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "burn(address,uint256)": "9dc29fac",
+    "initialize(string,string,uint256,address,uint256)": "fede0276",
+    "mint(address,uint256)": "40c10f19",
+    "mintToFeeReceiver()": "f734e22a",
+    "pause()": "8456cb59",
+    "setFeeRate(uint256)": "45596e2e",
+    "setFeeReceiver(address)": "efdcd974",
+    "setMethodologist(address)": "660db484",
+    "setMethodology(string)": "91fe1b92",
+    "setMinter(address)": "fca3b5aa",
+    "setSupplyCeiling(uint256)": "6e01a686",
+    "toggleRestriction(address)": "aaa4a184",
+    "unpause()": "3f4ba83a"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"feeRatePerDayScaled\",\"type\":\"uint256\"}],\"name\":\"FeeRateSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"feeReceiver\",\"type\":\"address\"}],\"name\":\"FeeReceiverSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"methodologist\",\"type\":\"address\"}],\"name\":\"MethodologistSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"methodology\",\"type\":\"string\"}],\"name\":\"MethodologySet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"feeReceiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalSupply\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"MintFeeToReceiver\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"minter\",\"type\":\"address\"}],\"name\":\"MinterSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"supplyCeiling\",\"type\":\"uint256\"}],\"name\":\"SupplyCeilingSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isRestricted\",\"type\":\"bool\"}],\"name\":\"ToggledRestricted\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"tokenName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"tokenSymbol\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_feeRatePerDayScaled\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_feeReceiver\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_supplyCeiling\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mintToFeeReceiver\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_feeRatePerDayScaled\",\"type\":\"uint256\"}],\"name\":\"setFeeRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_feeReceiver\",\"type\":\"address\"}],\"name\":\"setFeeReceiver\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_methodologist\",\"type\":\"address\"}],\"name\":\"setMethodologist\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_methodology\",\"type\":\"string\"}],\"name\":\"setMethodology\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_minter\",\"type\":\"address\"}],\"name\":\"setMinter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_supplyCeiling\",\"type\":\"uint256\"}],\"name\":\"setSupplyCeiling\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"who\",\"type\":\"address\"}],\"name\":\"toggleRestriction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"burn(address,uint256)\":{\"details\":\"burn function can only be called externally by the controller\",\"params\":{\"amount\":\"uint256\",\"from\":\"address\"}},\"mint(address,uint256)\":{\"details\":\"Mint function can only be called externally by the controller\",\"params\":{\"amount\":\"uint256\",\"to\":\"address\"}},\"mintToFeeReceiver()\":{\"details\":\"Can only be called by the owner externally,_mintToFeeReciver is the internal function and is called after each supply/rate change\"},\"setFeeRate(uint256)\":{\"details\":\"Given the annual fee rate this function sets and calculates the rate per second\",\"params\":{\"_feeRatePerDayScaled\":\"uint256\"}},\"setFeeReceiver(address)\":{\"params\":{\"_feeReceiver\":\"address\"}},\"setMethodologist(address)\":{\"params\":{\"_methodologist\":\"address\"}},\"setMethodology(string)\":{\"params\":{\"_methodology\":\"string\"}},\"setMinter(address)\":{\"params\":{\"_minter\":\"address\"}},\"setSupplyCeiling(uint256)\":{\"params\":{\"_supplyCeiling\":\"uint256\"}},\"toggleRestriction(address)\":{\"details\":\"Negates current restriction state\",\"params\":{\"who\":\"address\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"burn(address,uint256)\":{\"notice\":\"External burn function\"},\"initialize(string,string,uint256,address,uint256)\":{\"notice\":\"============================================================================================= Initializer =============================================================================================\"},\"mint(address,uint256)\":{\"notice\":\"External mint function\"},\"mintToFeeReceiver()\":{\"notice\":\"Expands supply and mints fees to fee reciever\"},\"pause()\":{\"notice\":\"============================================================================================= Pausable Logic =============================================================================================\"},\"setFeeRate(uint256)\":{\"notice\":\"Ownable function to set the fee rate\"},\"setFeeReceiver(address)\":{\"notice\":\"Ownable function to set the receiver\"},\"setMethodologist(address)\":{\"notice\":\"Only owner function for setting the methodologist\"},\"setMethodology(string)\":{\"notice\":\"Callable only by the methodoligst to store on chain data about the underlying weight of the token\"},\"setMinter(address)\":{\"notice\":\"Ownable function to set the contract that controls minting\"},\"setSupplyCeiling(uint256)\":{\"notice\":\"Ownable function to set the limit at which the total supply cannot exceed\"},\"toggleRestriction(address)\":{\"notice\":\"Compliance feature to blacklist bad actors\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/token/TokenInterface.sol\":\"TokenInterface\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@prb/=node_modules/@prb/\",\":@thirdweb-dev/=node_modules/@thirdweb-dev/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/\",\":erc721a-upgradeable/=node_modules/erc721a-upgradeable/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":prb-math/=node_modules/prb-math/\",\":solady/=node_modules/solady/\",\":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/\"]},\"sources\":{\"contracts/token/TokenInterface.sol\":{\"keccak256\":\"0xe9d623cf111bb61b7b3af8b6cb3dac414b21ca90c0b425cf8e868383c5a9bd9c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://08a5aea27bf62c6237b5cae292e6369fd621b5abe1c6bdeadea5e6d77f94fbac\",\"dweb:/ipfs/QmewME7Akg78FdV3ugUcMFjxvWQ6VVNsdDHp7Hfva7MM7V\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.25+commit.b61c2a91"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "feeRatePerDayScaled",
+              "type": "uint256",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "FeeRateSet",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "feeReceiver",
+              "type": "address",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "FeeReceiverSet",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "methodologist",
+              "type": "address",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "MethodologistSet",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "string",
+              "name": "methodology",
+              "type": "string",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "MethodologySet",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "feeReceiver",
+              "type": "address",
+              "indexed": false
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256",
+              "indexed": false
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalSupply",
+              "type": "uint256",
+              "indexed": false
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "MintFeeToReceiver",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "minter",
+              "type": "address",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "MinterSet",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "supplyCeiling",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "SupplyCeilingSet",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "internalType": "bool",
+              "name": "isRestricted",
+              "type": "bool",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "ToggledRestricted",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "burn"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenSymbol",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_feeRatePerDayScaled",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "_feeReceiver",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_supplyCeiling",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "initialize"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "mint"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "mintToFeeReceiver"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "pause"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_feeRatePerDayScaled",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setFeeRate"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_feeReceiver",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setFeeReceiver"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_methodologist",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setMethodologist"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "string",
+              "name": "_methodology",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setMethodology"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_minter",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setMinter"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_supplyCeiling",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setSupplyCeiling"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "who",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "toggleRestriction"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "unpause"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "burn(address,uint256)": {
+            "details": "burn function can only be called externally by the controller",
+            "params": {
+              "amount": "uint256",
+              "from": "address"
+            }
+          },
+          "mint(address,uint256)": {
+            "details": "Mint function can only be called externally by the controller",
+            "params": {
+              "amount": "uint256",
+              "to": "address"
+            }
+          },
+          "mintToFeeReceiver()": {
+            "details": "Can only be called by the owner externally,_mintToFeeReciver is the internal function and is called after each supply/rate change"
+          },
+          "setFeeRate(uint256)": {
+            "details": "Given the annual fee rate this function sets and calculates the rate per second",
+            "params": {
+              "_feeRatePerDayScaled": "uint256"
+            }
+          },
+          "setFeeReceiver(address)": {
+            "params": {
+              "_feeReceiver": "address"
+            }
+          },
+          "setMethodologist(address)": {
+            "params": {
+              "_methodologist": "address"
+            }
+          },
+          "setMethodology(string)": {
+            "params": {
+              "_methodology": "string"
+            }
+          },
+          "setMinter(address)": {
+            "params": {
+              "_minter": "address"
+            }
+          },
+          "setSupplyCeiling(uint256)": {
+            "params": {
+              "_supplyCeiling": "uint256"
+            }
+          },
+          "toggleRestriction(address)": {
+            "details": "Negates current restriction state",
+            "params": {
+              "who": "address"
+            }
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "burn(address,uint256)": {
+            "notice": "External burn function"
+          },
+          "initialize(string,string,uint256,address,uint256)": {
+            "notice": "============================================================================================= Initializer ============================================================================================="
+          },
+          "mint(address,uint256)": {
+            "notice": "External mint function"
+          },
+          "mintToFeeReceiver()": {
+            "notice": "Expands supply and mints fees to fee reciever"
+          },
+          "pause()": {
+            "notice": "============================================================================================= Pausable Logic ============================================================================================="
+          },
+          "setFeeRate(uint256)": {
+            "notice": "Ownable function to set the fee rate"
+          },
+          "setFeeReceiver(address)": {
+            "notice": "Ownable function to set the receiver"
+          },
+          "setMethodologist(address)": {
+            "notice": "Only owner function for setting the methodologist"
+          },
+          "setMethodology(string)": {
+            "notice": "Callable only by the methodoligst to store on chain data about the underlying weight of the token"
+          },
+          "setMinter(address)": {
+            "notice": "Ownable function to set the contract that controls minting"
+          },
+          "setSupplyCeiling(uint256)": {
+            "notice": "Ownable function to set the limit at which the total supply cannot exceed"
+          },
+          "toggleRestriction(address)": {
+            "notice": "Compliance feature to blacklist bad actors"
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@chainlink/=node_modules/@chainlink/",
+        ":@eth-optimism/=node_modules/@chainlink/contracts/node_modules/@eth-optimism/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@prb/=node_modules/@prb/",
+        ":@thirdweb-dev/=node_modules/@thirdweb-dev/",
+        ":base64-sol/=node_modules/base64-sol/",
+        ":ds-test/=node_modules/@thirdweb-dev/dynamic-contracts/lib/forge-std/lib/ds-test/",
+        ":erc721a-upgradeable/=node_modules/erc721a-upgradeable/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":forge-std/=lib/forge-std/src/",
+        ":hardhat/=node_modules/hardhat/",
+        ":prb-math/=node_modules/prb-math/",
+        ":solady/=node_modules/solady/",
+        ":sstore2/=node_modules/@thirdweb-dev/dynamic-contracts/lib/sstore2/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/token/TokenInterface.sol": "TokenInterface"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/token/TokenInterface.sol": {
+        "keccak256": "0xe9d623cf111bb61b7b3af8b6cb3dac414b21ca90c0b425cf8e868383c5a9bd9c",
+        "urls": [
+          "bzz-raw://08a5aea27bf62c6237b5cae292e6369fd621b5abe1c6bdeadea5e6d77f94fbac",
+          "dweb:/ipfs/QmewME7Akg78FdV3ugUcMFjxvWQ6VVNsdDHp7Hfva7MM7V"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "contracts/token/TokenInterface.sol",
+    "id": 9760,
+    "exportedSymbols": {
+      "TokenInterface": [
+        9759
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "33:4175:32",
+    "nodes": [
+      {
+        "id": 9635,
+        "nodeType": "PragmaDirective",
+        "src": "33:23:32",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".25"
+        ]
+      },
+      {
+        "id": 9759,
+        "nodeType": "ContractDefinition",
+        "src": "60:4148:32",
+        "nodes": [
+          {
+            "id": 9639,
+            "nodeType": "EventDefinition",
+            "src": "92:50:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "bdf37c276f641820b141429d245add2552b4118c0866e5a78638e3de5ef18d9d",
+            "name": "FeeReceiverSet",
+            "nameLocation": "98:14:32",
+            "parameters": {
+              "id": 9638,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9637,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "feeReceiver",
+                  "nameLocation": "129:11:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9639,
+                  "src": "113:27:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9636,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "113:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "112:29:32"
+            }
+          },
+          {
+            "id": 9643,
+            "nodeType": "EventDefinition",
+            "src": "148:54:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "45398c451b1a31b88dbaed4e7b89a632f43cc4b50149d437db03a5300afe40d1",
+            "name": "FeeRateSet",
+            "nameLocation": "154:10:32",
+            "parameters": {
+              "id": 9642,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9641,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "feeRatePerDayScaled",
+                  "nameLocation": "181:19:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9643,
+                  "src": "165:35:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9640,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "165:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "164:37:32"
+            }
+          },
+          {
+            "id": 9647,
+            "nodeType": "EventDefinition",
+            "src": "208:54:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "164d8ef0d742b45087644f55c61abeb84557df70d06730591e451f0981e278ca",
+            "name": "MethodologistSet",
+            "nameLocation": "214:16:32",
+            "parameters": {
+              "id": 9646,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9645,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "methodologist",
+                  "nameLocation": "247:13:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9647,
+                  "src": "231:29:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9644,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "231:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "230:31:32"
+            }
+          },
+          {
+            "id": 9651,
+            "nodeType": "EventDefinition",
+            "src": "268:41:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "e6be68107100e39cb16d675c1086a4d5479fbd01108d721dabbccaa2249b995f",
+            "name": "MethodologySet",
+            "nameLocation": "274:14:32",
+            "parameters": {
+              "id": 9650,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9649,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "methodology",
+                  "nameLocation": "296:11:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9651,
+                  "src": "289:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_memory_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 9648,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "289:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "288:20:32"
+            }
+          },
+          {
+            "id": 9655,
+            "nodeType": "EventDefinition",
+            "src": "315:40:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "726b590ef91a8c76ad05bbe91a57ef84605276528f49cd47d787f558a4e755b6",
+            "name": "MinterSet",
+            "nameLocation": "321:9:32",
+            "parameters": {
+              "id": 9654,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9653,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "minter",
+                  "nameLocation": "347:6:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9655,
+                  "src": "331:22:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9652,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "331:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "330:24:32"
+            }
+          },
+          {
+            "id": 9659,
+            "nodeType": "EventDefinition",
+            "src": "361:46:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "e35be406f69e9d11d6ac8e5b54bbc8b6c4baf2fa2359f84a56baa5ea5d07dc8f",
+            "name": "SupplyCeilingSet",
+            "nameLocation": "367:16:32",
+            "parameters": {
+              "id": 9658,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9657,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "supplyCeiling",
+                  "nameLocation": "392:13:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9659,
+                  "src": "384:21:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9656,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "384:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "383:23:32"
+            }
+          },
+          {
+            "id": 9669,
+            "nodeType": "EventDefinition",
+            "src": "413:101:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "07982395c678b2ffc23fcf59aaec243ca79418c285af0d0e10b4e65bc4189f4c",
+            "name": "MintFeeToReceiver",
+            "nameLocation": "419:17:32",
+            "parameters": {
+              "id": 9668,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9661,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "feeReceiver",
+                  "nameLocation": "445:11:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9669,
+                  "src": "437:19:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9660,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "437:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9663,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "timestamp",
+                  "nameLocation": "466:9:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9669,
+                  "src": "458:17:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9662,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "458:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9665,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "totalSupply",
+                  "nameLocation": "485:11:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9669,
+                  "src": "477:19:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9664,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "477:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9667,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "amount",
+                  "nameLocation": "506:6:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9669,
+                  "src": "498:14:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9666,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "498:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "436:77:32"
+            }
+          },
+          {
+            "id": 9675,
+            "nodeType": "EventDefinition",
+            "src": "520:68:32",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "14ddf324cc5d8b14a3c3b12c84b0a7d578d72c8d60655c06d6a457e71431d5ee",
+            "name": "ToggledRestricted",
+            "nameLocation": "526:17:32",
+            "parameters": {
+              "id": 9674,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9671,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "account",
+                  "nameLocation": "560:7:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9675,
+                  "src": "544:23:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9670,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "544:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9673,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "isRestricted",
+                  "nameLocation": "574:12:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9675,
+                  "src": "569:17:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 9672,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "569:4:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "543:44:32"
+            }
+          },
+          {
+            "id": 9689,
+            "nodeType": "FunctionDefinition",
+            "src": "823:217:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9676,
+              "nodeType": "StructuredDocumentation",
+              "src": "596:221:32",
+              "text": "=============================================================================================\n Initializer\n============================================================================================="
+            },
+            "functionSelector": "fede0276",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "initialize",
+            "nameLocation": "832:10:32",
+            "parameters": {
+              "id": 9687,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9678,
+                  "mutability": "mutable",
+                  "name": "tokenName",
+                  "nameLocation": "867:9:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9689,
+                  "src": "853:23:32",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_memory_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 9677,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "853:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9680,
+                  "mutability": "mutable",
+                  "name": "tokenSymbol",
+                  "nameLocation": "901:11:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9689,
+                  "src": "887:25:32",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_memory_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 9679,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "887:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9682,
+                  "mutability": "mutable",
+                  "name": "_feeRatePerDayScaled",
+                  "nameLocation": "931:20:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9689,
+                  "src": "923:28:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9681,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "923:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9684,
+                  "mutability": "mutable",
+                  "name": "_feeReceiver",
+                  "nameLocation": "970:12:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9689,
+                  "src": "962:20:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9683,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "962:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9686,
+                  "mutability": "mutable",
+                  "name": "_supplyCeiling",
+                  "nameLocation": "1001:14:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9689,
+                  "src": "993:22:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9685,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "993:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "842:180:32"
+            },
+            "returnParameters": {
+              "id": 9688,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1039:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9697,
+            "nodeType": "FunctionDefinition",
+            "src": "1448:59:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9690,
+              "nodeType": "StructuredDocumentation",
+              "src": "1274:168:32",
+              "text": "@notice External mint function\n @dev Mint function can only be called externally by the controller\n @param to address\n @param amount uint256"
+            },
+            "functionSelector": "40c10f19",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "mint",
+            "nameLocation": "1457:4:32",
+            "parameters": {
+              "id": 9695,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9692,
+                  "mutability": "mutable",
+                  "name": "to",
+                  "nameLocation": "1470:2:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9697,
+                  "src": "1462:10:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9691,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1462:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9694,
+                  "mutability": "mutable",
+                  "name": "amount",
+                  "nameLocation": "1482:6:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9697,
+                  "src": "1474:14:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9693,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1474:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1461:28:32"
+            },
+            "returnParameters": {
+              "id": 9696,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1506:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9705,
+            "nodeType": "FunctionDefinition",
+            "src": "1691:61:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9698,
+              "nodeType": "StructuredDocumentation",
+              "src": "1515:170:32",
+              "text": "@notice External burn function\n @dev burn function can only be called externally by the controller\n @param from address\n @param amount uint256"
+            },
+            "functionSelector": "9dc29fac",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "burn",
+            "nameLocation": "1700:4:32",
+            "parameters": {
+              "id": 9703,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9700,
+                  "mutability": "mutable",
+                  "name": "from",
+                  "nameLocation": "1713:4:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9705,
+                  "src": "1705:12:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9699,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1705:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 9702,
+                  "mutability": "mutable",
+                  "name": "amount",
+                  "nameLocation": "1727:6:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9705,
+                  "src": "1719:14:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9701,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1719:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1704:30:32"
+            },
+            "returnParameters": {
+              "id": 9704,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1751:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9709,
+            "nodeType": "FunctionDefinition",
+            "src": "1982:46:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9706,
+              "nodeType": "StructuredDocumentation",
+              "src": "1760:216:32",
+              "text": "@notice Expands supply and mints fees to fee reciever\n @dev Can only be called by the owner externally,\n @dev _mintToFeeReciver is the internal function and is called after each supply/rate change"
+            },
+            "functionSelector": "f734e22a",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "mintToFeeReceiver",
+            "nameLocation": "1991:17:32",
+            "parameters": {
+              "id": 9707,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2008:2:32"
+            },
+            "returnParameters": {
+              "id": 9708,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2027:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9715,
+            "nodeType": "FunctionDefinition",
+            "src": "2365:67:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9710,
+              "nodeType": "StructuredDocumentation",
+              "src": "2259:100:32",
+              "text": "@notice Only owner function for setting the methodologist\n @param _methodologist address"
+            },
+            "functionSelector": "660db484",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setMethodologist",
+            "nameLocation": "2374:16:32",
+            "parameters": {
+              "id": 9713,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9712,
+                  "mutability": "mutable",
+                  "name": "_methodologist",
+                  "nameLocation": "2399:14:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9715,
+                  "src": "2391:22:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9711,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2391:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2390:24:32"
+            },
+            "returnParameters": {
+              "id": 9714,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2431:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9721,
+            "nodeType": "FunctionDefinition",
+            "src": "2591:69:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9716,
+              "nodeType": "StructuredDocumentation",
+              "src": "2440:145:32",
+              "text": "@notice Callable only by the methodoligst to store on chain data about the underlying weight of the token\n @param _methodology string"
+            },
+            "functionSelector": "91fe1b92",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setMethodology",
+            "nameLocation": "2600:14:32",
+            "parameters": {
+              "id": 9719,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9718,
+                  "mutability": "mutable",
+                  "name": "_methodology",
+                  "nameLocation": "2629:12:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9721,
+                  "src": "2615:26:32",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_memory_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 9717,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2615:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2614:28:32"
+            },
+            "returnParameters": {
+              "id": 9720,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2659:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9727,
+            "nodeType": "FunctionDefinition",
+            "src": "2861:67:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9722,
+              "nodeType": "StructuredDocumentation",
+              "src": "2668:187:32",
+              "text": "@notice Ownable function to set the fee rate\n @dev Given the annual fee rate this function sets and calculates the rate per second\n @param _feeRatePerDayScaled uint256"
+            },
+            "functionSelector": "45596e2e",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setFeeRate",
+            "nameLocation": "2870:10:32",
+            "parameters": {
+              "id": 9725,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9724,
+                  "mutability": "mutable",
+                  "name": "_feeRatePerDayScaled",
+                  "nameLocation": "2889:20:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9727,
+                  "src": "2881:28:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9723,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2881:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2880:30:32"
+            },
+            "returnParameters": {
+              "id": 9726,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2927:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9733,
+            "nodeType": "FunctionDefinition",
+            "src": "3027:63:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9728,
+              "nodeType": "StructuredDocumentation",
+              "src": "2936:85:32",
+              "text": "@notice Ownable function to set the receiver\n @param _feeReceiver address"
+            },
+            "functionSelector": "efdcd974",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setFeeReceiver",
+            "nameLocation": "3036:14:32",
+            "parameters": {
+              "id": 9731,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9730,
+                  "mutability": "mutable",
+                  "name": "_feeReceiver",
+                  "nameLocation": "3059:12:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9733,
+                  "src": "3051:20:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9729,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3051:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3050:22:32"
+            },
+            "returnParameters": {
+              "id": 9732,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3089:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9739,
+            "nodeType": "FunctionDefinition",
+            "src": "3206:53:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9734,
+              "nodeType": "StructuredDocumentation",
+              "src": "3098:102:32",
+              "text": "@notice Ownable function to set the contract that controls minting\n @param _minter address"
+            },
+            "functionSelector": "fca3b5aa",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setMinter",
+            "nameLocation": "3215:9:32",
+            "parameters": {
+              "id": 9737,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9736,
+                  "mutability": "mutable",
+                  "name": "_minter",
+                  "nameLocation": "3233:7:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9739,
+                  "src": "3225:15:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9735,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3225:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3224:17:32"
+            },
+            "returnParameters": {
+              "id": 9738,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3258:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9745,
+            "nodeType": "FunctionDefinition",
+            "src": "3397:67:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9740,
+              "nodeType": "StructuredDocumentation",
+              "src": "3267:124:32",
+              "text": "@notice Ownable function to set the limit at which the total supply cannot exceed\n @param _supplyCeiling uint256"
+            },
+            "functionSelector": "6e01a686",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setSupplyCeiling",
+            "nameLocation": "3406:16:32",
+            "parameters": {
+              "id": 9743,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9742,
+                  "mutability": "mutable",
+                  "name": "_supplyCeiling",
+                  "nameLocation": "3431:14:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9745,
+                  "src": "3423:22:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 9741,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3423:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3422:24:32"
+            },
+            "returnParameters": {
+              "id": 9744,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3463:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9749,
+            "nodeType": "FunctionDefinition",
+            "src": "3702:34:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9746,
+              "nodeType": "StructuredDocumentation",
+              "src": "3472:224:32",
+              "text": "=============================================================================================\n Pausable Logic\n============================================================================================="
+            },
+            "functionSelector": "8456cb59",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "pause",
+            "nameLocation": "3711:5:32",
+            "parameters": {
+              "id": 9747,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3716:2:32"
+            },
+            "returnParameters": {
+              "id": 9748,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3735:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9752,
+            "nodeType": "FunctionDefinition",
+            "src": "3744:36:32",
+            "nodes": [],
+            "functionSelector": "3f4ba83a",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "unpause",
+            "nameLocation": "3753:7:32",
+            "parameters": {
+              "id": 9750,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3760:2:32"
+            },
+            "returnParameters": {
+              "id": 9751,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3779:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 9758,
+            "nodeType": "FunctionDefinition",
+            "src": "4148:57:32",
+            "nodes": [],
+            "documentation": {
+              "id": 9753,
+              "nodeType": "StructuredDocumentation",
+              "src": "4012:130:32",
+              "text": "@notice Compliance feature to blacklist bad actors\n @dev Negates current restriction state\n @param who address"
+            },
+            "functionSelector": "aaa4a184",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "toggleRestriction",
+            "nameLocation": "4157:17:32",
+            "parameters": {
+              "id": 9756,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 9755,
+                  "mutability": "mutable",
+                  "name": "who",
+                  "nameLocation": "4183:3:32",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 9758,
+                  "src": "4175:11:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 9754,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4175:7:32",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4174:13:32"
+            },
+            "returnParameters": {
+              "id": 9757,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4204:0:32"
+            },
+            "scope": 9759,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "TokenInterface",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          9759
+        ],
+        "name": "TokenInterface",
+        "nameLocation": "70:14:32",
+        "scope": 9760,
+        "usedErrors": [],
+        "usedEvents": [
+          9639,
+          9643,
+          9647,
+          9651,
+          9655,
+          9659,
+          9669,
+          9675
+        ]
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 32
+}
