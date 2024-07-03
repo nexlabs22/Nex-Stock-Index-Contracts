@@ -1082,8 +1082,8 @@
       }
     },
     "contracts/factory/IndexFactory.sol": {
-      "lastModificationDate": 1719954016487,
-      "contentHash": "350f9f4ae6f372f6c5db1e07900a9861",
+      "lastModificationDate": 1720044684056,
+      "contentHash": "aaa6f34fe8547e1de0e1dab0ec451c56",
       "sourceName": "contracts/factory/IndexFactory.sol",
       "solcConfig": {
         "settings": {

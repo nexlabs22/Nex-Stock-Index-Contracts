@@ -326,6 +326,23 @@ contract IndexFactory is
         }
     }
 
+
+    function redemption(uint _inputAmount) public {
+        redemptionNonce += 1;
+        uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
+        token.burn(msg.sender, _inputAmount);
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint256 amount = tokenBurnPercent * IERC20(tokenAddress).balanceOf(address(this)) / 1e18;
+            uint requestId = requestSellOrder(tokenAddress, amount);
+            sellRequestAssetAmountById[requestId] = amount;
+            redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
+            redemptionRequesterByNonce[redemptionNonce] = msg.sender;
+            redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(this));
+            issuanceIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
+        }
+    }
+
     function pause() external onlyOwner {
         _pause();
     }
