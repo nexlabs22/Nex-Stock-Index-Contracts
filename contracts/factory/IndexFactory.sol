@@ -11,6 +11,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../chainlink/ChainlinkClient.sol";
 import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
+import "../coa/ContractOwnedAccount.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -72,9 +73,13 @@ contract IndexFactory is
     mapping(uint => mapping(address => uint)) public redemptionTokenPrimaryBalance;
 
     mapping(uint => uint) public issuanceIndexTokenPrimaryTotalSupply;
+    mapping(uint => uint) public redemptionIndexTokenPrimaryTotalSupply;
 
     mapping(uint => address) public issuanceRequesterByNonce;
     mapping(uint => address) public redemptionRequesterByNonce;
+
+    mapping(uint => address) public coaByIssuanceNonce;
+    mapping(uint => address) public coaByRedemptionNonce;
 
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
@@ -236,15 +241,15 @@ contract IndexFactory is
         });
     }
     
-    function requestBuyOrder(address _token, uint256 orderAmount) internal returns(uint) {
+    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
        
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, orderAmount);
+        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
         
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
-        order.recipient = address(this);
+        order.recipient = _receiver;
         order.assetToken = address(_token);
-        order.paymentTokenQuantity = orderAmount;
+        order.paymentTokenQuantity = _orderAmount;
         uint256 quantityIn = order.paymentTokenQuantity + fees;
 
         IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
@@ -257,11 +262,12 @@ contract IndexFactory is
     
 
 
-    function requestSellOrder(address _token, uint256 _orderAmount) internal returns(uint) {
+    function requestSellOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
         
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
         order.assetTokenQuantity = _orderAmount;
+        order.recipient = _receiver;
 
        IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
 
@@ -275,10 +281,12 @@ contract IndexFactory is
 
     function issuance(uint _inputAmount) public {
         issuanceNonce += 1;
+        ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
+        coaByIssuanceNonce[issuanceNonce] = address(coa);
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100;
-            uint requestId = requestBuyOrder(tokenAddress, amount);
+            uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100e18;
+            uint requestId = requestBuyOrder(tokenAddress, amount, address(coa));
             buyRequestPayedAmountById[requestId] = amount;
             issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
             issuanceRequesterByNonce[issuanceNonce] = msg.sender;
@@ -288,23 +296,25 @@ contract IndexFactory is
 
     }
 
-    function completeIssuance(uint issuanceNonce) public {
-        require(checkIssuance(issuanceNonce), "Issuance not completed");
-        address reqeuster = issuanceRequesterByNonce[issuanceNonce];
+    function completeIssuance(uint _issuanceNonce) public {
+        require(checkIssuance(_issuanceNonce), "Issuance not completed");
+        address reqeuster = issuanceRequesterByNonce[_issuanceNonce];
         uint primaryPortfolioValue;
         uint secondaryPortfolioValue;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint256 tokenRequestId = issuanceRequestId[issuanceNonce][tokenAddress];
+            uint256 tokenRequestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(tokenAddress, address(usdc));
-            uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
-            uint256 primaryBalance = issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress];
+            address coaAddress = coaByIssuanceNonce[_issuanceNonce];
+            uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
+            uint256 primaryBalance = issuanceTokenPrimaryBalance[_issuanceNonce][tokenAddress];
             uint256 primaryValue = primaryBalance*tokenPriceData.price;
             uint256 secondaryValue = primaryValue + buyRequestPayedAmountById[tokenRequestId];
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
+            ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
         }
-            uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[issuanceNonce];
+            uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce];
             uint256 secondaryTotalSupply = primaryTotalSupply * secondaryPortfolioValue / primaryPortfolioValue;
             uint256 mintAmount = secondaryTotalSupply - primaryTotalSupply;
             token.mint(reqeuster, mintAmount);
@@ -315,7 +325,7 @@ contract IndexFactory is
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 completedOrdersCount += 1;
             }
         }
@@ -329,18 +339,44 @@ contract IndexFactory is
 
     function redemption(uint _inputAmount) public {
         redemptionNonce += 1;
+        ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
+        coaByRedemptionNonce[issuanceNonce] = address(coa);
         uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
         token.burn(msg.sender, _inputAmount);
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint256 amount = tokenBurnPercent * IERC20(tokenAddress).balanceOf(address(this)) / 1e18;
-            uint requestId = requestSellOrder(tokenAddress, amount);
+            uint requestId = requestSellOrder(tokenAddress, amount, address(coa));
             sellRequestAssetAmountById[requestId] = amount;
             redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
             redemptionRequesterByNonce[redemptionNonce] = msg.sender;
             redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(this));
-            issuanceIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
+            redemptionIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
         }
+    }
+
+    function checkRedemption(uint256 _redemptionNonce) public view returns(bool) {
+        uint completedOrdersCount;
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
+                completedOrdersCount += 1;
+            }
+        }
+        if(completedOrdersCount == totalCurrentList){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    function completeRedemption(uint _redemptionNonce) public {
+        require(checkRedemption(_redemptionNonce), "Redemption not completed");
+        address reqeuster = redemptionRequesterByNonce[_redemptionNonce];
+        address coaAddress = coaByRedemptionNonce[_redemptionNonce];
+        uint256 balance = IERC20(usdc).balanceOf(coaAddress);
+        ContractOwnedAccount(address(coaAddress)).sendToken(usdc, reqeuster, balance);
     }
 
     function pause() external onlyOwner {
