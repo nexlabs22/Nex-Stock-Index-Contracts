@@ -8,6 +8,7 @@ import "../../contracts/test/MockApiOracle.sol";
 import "../../contracts/test/LinkToken.sol";
 import "../../contracts/test/Token.sol";
 import "../../contracts/token/IndexToken.sol";
+import "../../contracts/vault/NexVault.sol";
 import "../../contracts/factory/IndexFactory.sol";
 import {MockToken} from "./utils/mocks/MockToken.sol";
 import "./utils/mocks/GetMockDShareFactory.sol";
@@ -81,6 +82,7 @@ contract OrderProcessorTest is Test {
     LinkToken link;
     IndexFactory public factory;
     MockV3Aggregator public ethPriceOracle;
+    NexVault public vault;
 
 
     uint256 userPrivateKey;
@@ -162,12 +164,16 @@ contract OrderProcessorTest is Test {
             feeReceiver,
             1000000e18
         );
+
+        vault = new NexVault();
+        vault.initialize(address(0));
         
 
         factory = new IndexFactory();
         factory.initialize(
             address(issuer),
             payable(address(indexToken)),
+            address(vault),
             address(paymentToken),
             paymentToken.decimals(),
             // address(0),
@@ -178,6 +184,7 @@ contract OrderProcessorTest is Test {
         
 
         indexToken.setMinter(address(factory));
+        vault.setOperator(address(factory), true);
 
         Token[11] memory tokens = deployTokens();
         token0 = tokens[0];

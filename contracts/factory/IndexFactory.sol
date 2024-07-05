@@ -12,6 +12,7 @@ import "../chainlink/ChainlinkClient.sol";
 import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../coa/ContractOwnedAccount.sol";
+import "../vault/NexVault.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -47,6 +48,8 @@ contract IndexFactory is
 
 
     IndexToken public token;
+
+    NexVault public vault;
 
     address public custodianWallet;
     IOrderProcessor public issuer;
@@ -88,6 +91,7 @@ contract IndexFactory is
     function initialize(
         address _issuer,
         address _token,
+        address _vault,
         address _usdc,
         uint8 _usdcDecimals,
         address _chainlinkToken,
@@ -96,9 +100,9 @@ contract IndexFactory is
     ) external initializer {
         issuer = IOrderProcessor(_issuer);
         token = IndexToken(_token);
+        vault = NexVault(_vault);
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
-        // nft = RequestNFT(_nft);
         __Ownable_init(msg.sender);
         __Pausable_init();
         feeRate = 10;
@@ -241,6 +245,12 @@ contract IndexFactory is
         });
     }
     
+    function calculateIssuanceFee(uint _orderAmount) public view returns(uint256){
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
+        return fees;
+    }
+
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
        
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
@@ -251,10 +261,12 @@ contract IndexFactory is
         order.assetToken = address(_token);
         order.paymentTokenQuantity = _orderAmount;
         uint256 quantityIn = order.paymentTokenQuantity + fees;
-
+        
+        /**
         IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
-       
         IERC20(usdc).approve(address(issuer), quantityIn);
+        */
+
         uint256 id = issuer.createOrderStandardFees(order);
         return id;
     }
@@ -268,10 +280,10 @@ contract IndexFactory is
         order.assetToken = _token;
         order.assetTokenQuantity = _orderAmount;
         order.recipient = _receiver;
-
-       IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
-
-       IERC20(token).approve(address(issuer), _orderAmount);
+        /**
+        IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
+        IERC20(token).approve(address(issuer), _orderAmount);
+        */
 
         // balances before
         uint256 id = issuer.createOrderStandardFees(order);
@@ -280,6 +292,12 @@ contract IndexFactory is
     
 
     function issuance(uint _inputAmount) public {
+        
+        uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
+        uint256 quantityIn = orderProcessorFee + _inputAmount;
+        IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
+        IERC20(usdc).approve(address(issuer), quantityIn);
+
         issuanceNonce += 1;
         ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
         coaByIssuanceNonce[issuanceNonce] = address(coa);
@@ -290,7 +308,7 @@ contract IndexFactory is
             buyRequestPayedAmountById[requestId] = amount;
             issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
             issuanceRequesterByNonce[issuanceNonce] = msg.sender;
-            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(this));
+            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(vault));
             issuanceIndexTokenPrimaryTotalSupply[issuanceNonce] = IERC20(token).totalSupply();
         }
 
@@ -312,7 +330,7 @@ contract IndexFactory is
             uint256 secondaryValue = primaryValue + buyRequestPayedAmountById[tokenRequestId];
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
-            ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
+            ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(vault), balance);
         }
             uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce];
             uint256 secondaryTotalSupply = primaryTotalSupply * secondaryPortfolioValue / primaryPortfolioValue;
@@ -338,6 +356,8 @@ contract IndexFactory is
 
 
     function redemption(uint _inputAmount) public {
+        IERC20(token).transferFrom(msg.sender, address(this), _inputAmount);
+        IERC20(token).approve(address(issuer), _inputAmount);
         redemptionNonce += 1;
         ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
         coaByRedemptionNonce[issuanceNonce] = address(coa);
@@ -350,7 +370,7 @@ contract IndexFactory is
             sellRequestAssetAmountById[requestId] = amount;
             redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
             redemptionRequesterByNonce[redemptionNonce] = msg.sender;
-            redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(this));
+            redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(vault));
             redemptionIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
         }
     }
