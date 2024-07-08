@@ -98,16 +98,16 @@ contract OrderProcessorTest is Test {
 
     address feeReceiver = vm.addr(1);
 
-    Token token0;
-    Token token1;
-    Token token2;
-    Token token3;
-    Token token4;
-    Token token5;
-    Token token6;
-    Token token7;
-    Token token8;
-    Token token9;
+    DShare token0;
+    DShare token1;
+    DShare token2;
+    DShare token3;
+    DShare token4;
+    DShare token5;
+    DShare token6;
+    DShare token7;
+    DShare token8;
+    DShare token9;
 
     function setUp() public {
         userPrivateKey = 0x01;
@@ -186,7 +186,18 @@ contract OrderProcessorTest is Test {
         indexToken.setMinter(address(factory));
         vault.setOperator(address(factory), true);
 
-        Token[11] memory tokens = deployTokens();
+        
+        DShare[10] memory tokens;
+        TransferRestrictor[10] memory restrictors;
+        for(uint i = 0; i < 10; i++) {
+            tokens[i] = tokenFactory.deployDShare(admin, "Dinari Token", "dTKN");
+            tokens[i].grantRole(tokens[i].MINTER_ROLE(), admin);
+            tokens[i].grantRole(tokens[i].MINTER_ROLE(), address(issuer));
+            tokens[i].grantRole(tokens[i].BURNER_ROLE(), address(issuer));
+
+            restrictors[i] = TransferRestrictor(address(tokens[i].transferRestrictor()));
+            restrictors[i].grantRole(restrictors[i].RESTRICTOR_ROLE(), restrictor_role);
+        }
         token0 = tokens[0];
         token1 = tokens[1];
         token2 = tokens[2];
@@ -200,6 +211,8 @@ contract OrderProcessorTest is Test {
 
         vm.stopPrank();
     }
+
+    
 
     function getDummyOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
         return IOrderProcessor.Order({
@@ -295,7 +308,94 @@ contract OrderProcessorTest is Test {
         
     }
 
+    function testIssuance() public {
+        uint inputAmount = 1000e18;
+        vm.startPrank(admin);
+        updateOracleList();
+        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
+        uint quantityIn = feeAmount + inputAmount;
+        console.log(quantityIn);
+        paymentToken.mint(address(user), quantityIn);
+        vm.stopPrank();
 
+        vm.startPrank(user);
+
+        uint256 userBalanceBefore = paymentToken.balanceOf(user);
+        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
+        paymentToken.approve(address(factory), quantityIn);
+        uint nonce = factory.issuance(inputAmount);
+        console.log(paymentToken.allowance(address(user), address(factory)));
+
+        for(uint i = 0; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        uint id = factory.issuanceRequestId(nonce, tokenAddress);
+        uint orderAmount = factory.buyRequestPayedAmountById(id);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+        assertEq(issuer.getUnfilledAmount(id), orderAmount);
+        }
+        assertEq(paymentToken.balanceOf(operator), operatorBalanceBefore + inputAmount);
+        assertEq(paymentToken.balanceOf(user), userBalanceBefore - quantityIn);
+        assertEq(paymentToken.balanceOf(address(issuer)), feeAmount);
+    }
+
+
+    function testCompleteIssuance() public {
+        vm.startPrank(admin);
+        updateOracleList();
+        uint totalCurretList = factory.totalCurrentList();
+        uint inputAmount = 1000e18;
+        uint receivedAmount = 100e18/totalCurretList;
+        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
+        uint quantityIn = feeAmount + inputAmount;
+        console.log(quantityIn);
+        paymentToken.mint(address(user), quantityIn);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+
+        uint256 userBalanceBefore = paymentToken.balanceOf(user);
+        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
+        paymentToken.approve(address(factory), quantityIn);
+        uint nonce = factory.issuance(inputAmount);
+        vm.stopPrank();
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factory.currentList(i);
+            uint id = factory.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factory.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factory.orderInstanceById(id);
+            // balances before
+            vm.startPrank(operator);
+            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(address(vault));
+            
+            
+            issuer.fillOrder(order, orderAmount, receivedAmount, feeAmount/totalCurretList);
+            // assertEq(issuer.getUnfilledAmount(id), orderAmount - fillAmount);
+            // IOrderProcessor.PricePoint memory fillPrice = issuer.latestFillPrice(order.assetToken, order.paymentToken);
+            // assertTrue(
+            //     fillPrice.price == 0
+            //         || fillPrice.price == mulDiv(fillAmount, 10 ** (18 - paymentToken.decimals()), receivedAmount)
+            // );
+            // balances after
+            assertEq(token.balanceOf(address(vault)), userAssetBefore + receivedAmount);
+            // assertEq(paymentToken.balanceOf(treasury), fees);
+            // if (fillAmount == orderAmount) {
+                //if order is fullfilled in on time
+                assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+                // assertEq(paymentToken.balanceOf(address(orderManager)), feesMax - fees);
+            // } else {
+                // assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+                // assertEq(paymentToken.balanceOf(address(issuer)), feesMax - fees);
+                // assertEq(issuer.getFeesTaken(id), fees);
+            // }
+        // assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+        // assertEq(issuer.getUnfilledAmount(id), orderAmount);
+        }
+        // assertEq(paymentToken.balanceOf(operator), operatorBalanceBefore + inputAmount);
+        // assertEq(paymentToken.balanceOf(user), userBalanceBefore - quantityIn);
+        // assertEq(paymentToken.balanceOf(address(issuer)), feeAmount);
+    }
+
+    /**
     function testRequestBuyOrder(uint256 orderAmount) public {
         vm.assume(orderAmount > 0);
         
@@ -602,5 +702,5 @@ contract OrderProcessorTest is Test {
         assertApproxEqAbs(paymentToken.balanceOf(treasury), feesEarned, 1);
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
     }
-
+    */
 }

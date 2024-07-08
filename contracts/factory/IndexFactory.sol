@@ -84,6 +84,8 @@ contract IndexFactory is
     mapping(uint => address) public coaByIssuanceNonce;
     mapping(uint => address) public coaByRedemptionNonce;
 
+    mapping(uint =>  IOrderProcessor.Order) public orderInstanceById;
+
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
 
@@ -245,9 +247,15 @@ contract IndexFactory is
         });
     }
     
-    function calculateIssuanceFee(uint _orderAmount) public view returns(uint256){
+    function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
+        uint256 fees;
+        for(uint i; i < totalCurrentList; i++) {
+        address tokenAddress = currentList[i];
+        uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100e18;
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
+        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
+        fees += fee;
+        }
         return fees;
     }
 
@@ -266,9 +274,10 @@ contract IndexFactory is
         IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
         IERC20(usdc).approve(address(issuer), quantityIn);
         */
-
         uint256 id = issuer.createOrderStandardFees(order);
+        orderInstanceById[id] = order;
         return id;
+        // return 1;
     }
 
     
@@ -287,17 +296,19 @@ contract IndexFactory is
 
         // balances before
         uint256 id = issuer.createOrderStandardFees(order);
+        orderInstanceById[id] = order;
         return id;
     }
     
 
-    function issuance(uint _inputAmount) public {
+    function issuance(uint _inputAmount) public returns(uint256) {
         
         uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
         IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
         IERC20(usdc).approve(address(issuer), quantityIn);
-
+        
+        
         issuanceNonce += 1;
         ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
         coaByIssuanceNonce[issuanceNonce] = address(coa);
@@ -311,6 +322,9 @@ contract IndexFactory is
             issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(vault));
             issuanceIndexTokenPrimaryTotalSupply[issuanceNonce] = IERC20(token).totalSupply();
         }
+        
+        return issuanceNonce;
+
 
     }
 
