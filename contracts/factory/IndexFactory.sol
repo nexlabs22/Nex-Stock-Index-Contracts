@@ -13,6 +13,7 @@ import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../coa/ContractOwnedAccount.sol";
 import "../vault/NexVault.sol";
+import "../dinary/WrappedDShare.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -39,6 +40,7 @@ contract IndexFactory is
 
     mapping(uint => address) public oracleList;
     mapping(uint => address) public currentList;
+    mapping(address => address) public wrappedDshareAddress;
 
     mapping(address => uint) public tokenOracleListIndex;
     mapping(address => uint) public tokenCurrentListIndex;
@@ -167,7 +169,12 @@ contract IndexFactory is
     }
 
     
-   
+    function setDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
+        require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
+        for(uint i = 0; i < _dShares.length; i++){
+            wrappedDshareAddress[_dShares[i]] = _wrappedDShares[i];
+        }
+    }
 
 
     function concatenation(string memory a, string memory b) public pure returns (string memory) {
@@ -289,18 +296,21 @@ contract IndexFactory is
     
 
 
-    function requestSellOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
-        
+    function requestSellOrder(address _token, uint256 _amount, address _receiver) internal returns(uint) {
+        address wrappedDshare = wrappedDshareAddress[_token];
+        vault.withdrawFunds(wrappedDshare, address(this), _amount);
+        uint orderAmount = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
+
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
-        order.assetTokenQuantity = _orderAmount;
+        order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
         /**
         IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
         IERC20(token).approve(address(issuer), _orderAmount);
         */
-        vault.withdrawFunds(_token, address(this), _orderAmount);
-        IERC20(_token).approve(address(issuer), _orderAmount);
+        
+        IERC20(_token).approve(address(issuer), orderAmount);
         // balances before
         uint256 id = issuer.createOrderStandardFees(order);
         orderInstanceById[id] = order;
@@ -352,7 +362,9 @@ contract IndexFactory is
             uint256 secondaryValue = primaryValue + buyRequestPayedAmountById[tokenRequestId];
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
-            ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(vault), balance);
+            ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
+            // WrappedDShare(wrappedDshareAddress[tokenAddress]).mint(address(vault), balance);
+            WrappedDShare(wrappedDshareAddress[tokenAddress]).deposit(balance, address(vault));
         }
             uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce];
             if(primaryTotalSupply == 0){
@@ -391,7 +403,7 @@ contract IndexFactory is
         token.burn(msg.sender, _inputAmount);
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint256 amount = tokenBurnPercent * IERC20(tokenAddress).balanceOf(address(vault)) / 1e18;
+            uint256 amount = tokenBurnPercent * IERC20(wrappedDshareAddress[tokenAddress]).balanceOf(address(vault)) / 1e18;
             uint requestId = requestSellOrder(tokenAddress, amount, address(coa));
             sellRequestAssetAmountById[requestId] = amount;
             redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
