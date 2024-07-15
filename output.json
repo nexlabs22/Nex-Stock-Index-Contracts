@@ -1,0 +1,50 @@
+{
+    "timestamp": 1714521600000,
+    "date": "Wed May 01 2024",
+    "allocations": [
+      {
+        "symbol": "ARB",
+        "weight": 15
+      },
+      {
+        "symbol": "AAVE",
+        "weight": 12.5
+      },
+      {
+        "symbol": "CLIPPER",
+        "weight": 12.5
+      },
+      {
+        "symbol": "PENDLE",
+        "weight": 9.375
+      },
+      {
+        "symbol": "SILO_FINANCE",
+        "weight": 9.375
+      },
+      {
+        "symbol": "PANCAKESWAP_AMM",
+        "weight": 7.5
+      },
+      {
+        "symbol": "DODO",
+        "weight": 7.5
+      },
+      {
+        "symbol": "DXSALE",
+        "weight": 7.5
+      },
+      {
+        "symbol": "PENPIE",
+        "weight": 6.25
+      },
+      {
+        "symbol": "CONVEX_FINANCE",
+        "weight": 6.25
+      },
+      {
+        "symbol": "JOE_V21",
+        "weight": 6.25
+      }
+    ]
+  }
