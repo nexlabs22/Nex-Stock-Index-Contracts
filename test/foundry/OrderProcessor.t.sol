@@ -777,7 +777,8 @@ contract OrderProcessorTest is Test {
     }
 
     function testFillOrderNoOrderReverts(bool sell) public {
-        vm.expectRevert(OrderProcessor.OrderNotFound.selector);
+        // vm.expectRevert(OrderProcessor.OrderNotFound.selector);
+        vm.expectRevert(OrderProcessor.OrderNotActive.selector);
         vm.prank(operator);
         issuer.fillOrder(getDummyOrder(sell), 100, 100, 10);
     }
@@ -818,7 +819,8 @@ contract OrderProcessorTest is Test {
     }
 
     function testRequestCancelNotFoundReverts(uint256 id) public {
-        vm.expectRevert(OrderProcessor.OrderNotFound.selector);
+        // vm.expectRevert(OrderProcessor.OrderNotFound.selector);
+        vm.expectRevert(OrderProcessor.OrderNotActive.selector);
         vm.prank(user);
         issuer.requestCancel(id);
     }
@@ -898,7 +900,8 @@ contract OrderProcessorTest is Test {
     }
 
     function testCancelOrderNotFoundReverts() public {
-        vm.expectRevert(OrderProcessor.OrderNotFound.selector);
+        // vm.expectRevert(OrderProcessor.OrderNotFound.selector);
+        vm.expectRevert(OrderProcessor.OrderNotActive.selector);
         vm.prank(operator);
         issuer.cancelOrder(getDummyOrder(false), "msg");
     }

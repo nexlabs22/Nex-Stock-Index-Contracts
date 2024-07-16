@@ -51,6 +51,8 @@ contract IndexFactory is
     mapping(uint => bool) public issuanceIsCompleted;
     mapping(uint => bool) public redemptionIsCompleted;
 
+    mapping(uint => uint) public burnedTokenAmountByNonce;
+
 
 
     IndexToken public token;
@@ -92,6 +94,9 @@ contract IndexFactory is
 
     mapping(uint => address) public coaByIssuanceNonce;
     mapping(uint => address) public coaByRedemptionNonce;
+
+    mapping(uint => bool) public cancelIssuanceComplted;
+    mapping(uint => bool) public cancelRedemptionComplted;
 
     mapping(uint =>  IOrderProcessor.Order) public orderInstanceById;
 
@@ -339,7 +344,9 @@ contract IndexFactory is
             buyRequestPayedAmountById[requestId] = amount;
             issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
             issuanceRequesterByNonce[issuanceNonce] = msg.sender;
-            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(vault));
+            uint wrappedDsharesBalance = IERC20(wrappedDshareAddress[tokenAddress]).balanceOf(address(vault));
+            uint dShareBalance = WrappedDShare(wrappedDshareAddress[tokenAddress]).previewRedeem(wrappedDsharesBalance);
+            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = dShareBalance;
             issuanceIndexTokenPrimaryTotalSupply[issuanceNonce] = IERC20(token).totalSupply();
         }
         
@@ -390,9 +397,9 @@ contract IndexFactory is
             address tokenAddress = currentList[i];
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             IOrderProcessor.Order memory order = orderInstanceById[requestId];
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
-                issuer.cancelOrder(order, "");
-            }else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || IERC20(tokenAddress).balanceOf(coaAddress) > 0){
+            if(uiny8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
+                issuer.requestCancel(requestId);
+            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || IERC20(tokenAddress).balanceOf(coaAddress) > 0){
                 uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
                 ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
                 uint requestId = requestSellOrder(tokenAddress, balance, address(coaAddress));
@@ -403,10 +410,12 @@ contract IndexFactory is
 
     function completeCancelIssuance(uint256 _issuanceNonce) public {
         require(checkCancelIssuanceStatus(_issuanceNonce), "Cancel issuance is not completed");
+        require(!cancelIssuanceComplted[_issuanceNonce], "The process has been completed before");
         address requester = issuanceRequesterByNonce[_issuanceNonce];
         address coaAddress = coaByIssuanceNonce[_issuanceNonce];
         uint256 balance = IERC20(usdc).balanceOf(coaAddress);
         ContractOwnedAccount(coaAddress).sendToken(usdc, requester, balance);
+        cancelIssuanceComplted[_issuanceNonce] = true;
     }
 
     function checkCancelIssuanceStatus(uint256 _issuanceNonce) public view returns(bool) {
@@ -432,6 +441,17 @@ contract IndexFactory is
         }
     }
 
+    function isIssuanceOrderActive(uint256 _issuanceNonce) public view returns(bool) {
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     function checkIssuanceOrdersStatus(uint _issuanceNonce) public view returns(bool) {
         uint completedOrdersCount;
         for(uint i; i < totalCurrentList; i++) {
@@ -455,6 +475,7 @@ contract IndexFactory is
         coaByRedemptionNonce[redemptionNonce] = address(coa);
         uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
         token.burn(msg.sender, _inputAmount);
+        burnedTokenAmountByNonce[redemptionNonce] = _inputAmount;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint256 amount = tokenBurnPercent * IERC20(wrappedDshareAddress[tokenAddress]).balanceOf(address(vault)) / 1e18;
@@ -462,7 +483,9 @@ contract IndexFactory is
             sellRequestAssetAmountById[requestId] = amount;
             redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
             redemptionRequesterByNonce[redemptionNonce] = msg.sender;
-            redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = IERC20(tokenAddress).balanceOf(address(vault));
+            uint wrappedDsharesBalance = IERC20(wrappedDshareAddress[tokenAddress]).balanceOf(address(vault));
+            uint dShareBalance = WrappedDShare(wrappedDshareAddress[tokenAddress]).previewRedeem(wrappedDsharesBalance);
+            redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = dShareBalance;
             redemptionIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
         }
 
@@ -497,6 +520,7 @@ contract IndexFactory is
 
     function cancelRedemption(uint _redemptionNonce) public {
         require(!redemptionIsCompleted[_redemptionNonce], "Redemption is completed");
+        require(!isRedemptionOrderActive(_redemptionNonce), "You can not cancel order with active order");
         address reqeuster = redemptionRequesterByNonce[_redemptionNonce];
         address coaAddress = coaByRedemptionNonce[_redemptionNonce];
         require(msg.sender == reqeuster, "Only requester can cancel the redemption");
@@ -504,12 +528,11 @@ contract IndexFactory is
             address tokenAddress = currentList[i];
             uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
             IOrderProcessor.Order memory order = orderInstanceById[requestId];
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
-                issuer.cancelOrder(order, "");
-            }else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || IERC20(tokenAddress).balanceOf(coaAddress) > 0){
-                uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
-                ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
-                uint requestId = requestBuyOrder(tokenAddress, balance, address(coaAddress));
+            uint filledAmount = issuer.getReceivedAmount(requestId);
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || filledAmount > 0){
+                // uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
+                ContractOwnedAccount(coaAddress).sendToken(address(usdc), address(this), filledAmount);
+                uint requestId = requestBuyOrder(tokenAddress, filledAmount, address(coaAddress));
                 cancelRedemptionRequestId[_redemptionNonce][tokenAddress] = requestId;
             }
         }
@@ -517,12 +540,32 @@ contract IndexFactory is
 
     function completeCancelRedemption(uint256 _redemptionNonce) public {
         require(checkCancelRedemptionStatus(_redemptionNonce), "Cancel redemption is not completed");
+        require(!cancelRedemptionComplted[_redemptionNonce], "The process has been completed before");
+
         address requester = redemptionRequesterByNonce[_redemptionNonce];
         address coaAddress = coaByRedemptionNonce[_redemptionNonce];
         uint256 balance = IERC20(usdc).balanceOf(coaAddress);
-        ContractOwnedAccount(coaAddress).sendToken(usdc, requester, balance);
+        for(uint i; i < totalCurrentList; i++){
+            address tokenAddress = currentList[i];
+            uint tokenBalance = IERC20(tokenAddress).balanceOf(coaAddress);
+            if(tokenBalance > 0){
+                ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(vault), tokenBalance);
+            }
+        }
+        token.mint(requester, burnedTokenAmountByNonce[_redemptionNonce]);
+        cancelRedemptionComplted[_redemptionNonce] = true;
     }
 
+    function isRedemptionOrderActive(uint256 _redemptionNonce) public view returns(bool) {
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
+                return true;
+            }
+        }
+        return false;
+    }
     function checkCancelRedemptionStatus(uint256 _redemptionNonce) public view returns(bool) {
         uint completedCount;
         for(uint i; i < totalCurrentList; i++) {
