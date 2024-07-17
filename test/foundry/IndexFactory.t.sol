@@ -23,7 +23,7 @@ import {DShare} from "../../contracts/dinary/DShare.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-
+import {WrappedDShare} from "../../contracts/dinary/WrappedDShare.sol";
 
 contract OrderProcessorTest is Test {
    using GetMockDShareFactory for DShareFactory;
@@ -109,6 +109,18 @@ contract OrderProcessorTest is Test {
     DShare token8;
     DShare token9;
 
+    WrappedDShare wrappedToken0;
+    WrappedDShare wrappedToken1;
+    WrappedDShare wrappedToken2;
+    WrappedDShare wrappedToken3;
+    WrappedDShare wrappedToken4;
+    WrappedDShare wrappedToken5;
+    WrappedDShare wrappedToken6;
+    WrappedDShare wrappedToken7;
+    WrappedDShare wrappedToken8;
+    WrappedDShare wrappedToken9;
+
+
     function setUp() public {
         userPrivateKey = 0x01;
         adminPrivateKey = 0x02;
@@ -188,15 +200,32 @@ contract OrderProcessorTest is Test {
 
         
         DShare[10] memory tokens;
+        WrappedDShare[10] memory wrappedTokens;
         TransferRestrictor[10] memory restrictors;
         for(uint i = 0; i < 10; i++) {
             tokens[i] = tokenFactory.deployDShare(admin, "Dinari Token", "dTKN");
+            
             tokens[i].grantRole(tokens[i].MINTER_ROLE(), admin);
             tokens[i].grantRole(tokens[i].MINTER_ROLE(), address(issuer));
             tokens[i].grantRole(tokens[i].BURNER_ROLE(), address(issuer));
 
             restrictors[i] = TransferRestrictor(address(tokens[i].transferRestrictor()));
             restrictors[i].grantRole(restrictors[i].RESTRICTOR_ROLE(), restrictor_role);
+
+            //deploy wrapped dshare
+            WrappedDShare wrappedTokensImp = new WrappedDShare();
+            wrappedTokens[i] = WrappedDShare(
+            address(
+                new ERC1967Proxy(
+                    address(wrappedTokensImp),
+                    abi.encodeCall(wrappedTokensImp.initialize, (address(admin), tokens[i], "Wrapped Dinari Token", "wDTKN"))
+                )
+            )
+            );
+            //mint token to dshare
+            tokens[i].mint(address(admin), 1000e18);
+            tokens[i].approve(address(wrappedTokens[i]), 1000e18);
+            wrappedTokens[i].deposit(1000e18, address(admin));
         }
         token0 = tokens[0];
         token1 = tokens[1];
@@ -208,6 +237,18 @@ contract OrderProcessorTest is Test {
         token7 = tokens[7];
         token8 = tokens[8];
         token9 = tokens[9];
+
+        wrappedToken0 = wrappedTokens[0];
+        wrappedToken1 = wrappedTokens[1];
+        wrappedToken2 = wrappedTokens[2];
+        wrappedToken3 = wrappedTokens[3];
+        wrappedToken4 = wrappedTokens[4];
+        wrappedToken5 = wrappedTokens[5];
+        wrappedToken6 = wrappedTokens[6];
+        wrappedToken7 = wrappedTokens[7];
+        wrappedToken8 = wrappedTokens[8];
+        wrappedToken9 = wrappedTokens[9];
+
 
         vm.stopPrank();
     }
@@ -280,6 +321,35 @@ contract OrderProcessorTest is Test {
         oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
     }
 
+    function updateWrappedDshares() public {
+        address[] memory assetList = new address[](10);
+        assetList[0] = address(token0);
+        assetList[1] = address(token1);
+        assetList[2] = address(token2);
+        assetList[3] = address(token3);
+        assetList[4] = address(token4);
+        assetList[5] = address(token5);
+        assetList[6] = address(token6);
+        assetList[7] = address(token7);
+        assetList[8] = address(token8);
+        assetList[9] = address(token9);
+
+        address[] memory wrappedDshareList = new address[](10);
+        wrappedDshareList[0] = address(wrappedToken0);
+        wrappedDshareList[1] = address(wrappedToken1);
+        wrappedDshareList[2] = address(wrappedToken2);
+        wrappedDshareList[3] = address(wrappedToken3);
+        wrappedDshareList[4] = address(wrappedToken4);
+        wrappedDshareList[5] = address(wrappedToken5);
+        wrappedDshareList[6] = address(wrappedToken6);
+        wrappedDshareList[7] = address(wrappedToken7);
+        wrappedDshareList[8] = address(wrappedToken8);
+        wrappedDshareList[9] = address(wrappedToken9);
+
+
+        factory.setWrappedDShareAddresses(assetList, wrappedDshareList);
+    }
+
     
     function testOracleList() public {
         vm.startPrank(admin);
@@ -310,10 +380,33 @@ contract OrderProcessorTest is Test {
         
     }
 
+    function testWrappedDshareList() public {
+        vm.startPrank(admin);
+        updateOracleList();
+        updateWrappedDshares();
+        // token  wrapped list
+        assertEq(factory.wrappedDshareAddress(address(token0)), address(wrappedToken0));
+        assertEq(factory.wrappedDshareAddress(address(token1)), address(wrappedToken1));
+        assertEq(factory.wrappedDshareAddress(address(token2)), address(wrappedToken2));
+        assertEq(factory.wrappedDshareAddress(address(token3)), address(wrappedToken3));
+        assertEq(factory.wrappedDshareAddress(address(token4)), address(wrappedToken4));
+        assertEq(factory.wrappedDshareAddress(address(token9)), address(wrappedToken9));
+
+        //test wrapped asset address
+        assertEq(wrappedToken0.asset(), address(token0));
+        assertEq(wrappedToken1.asset(), address(token1));
+        assertEq(wrappedToken2.asset(), address(token2));
+        assertEq(wrappedToken3.asset(), address(token3));
+        assertEq(wrappedToken4.asset(), address(token4));
+        assertEq(wrappedToken9.asset(), address(token9));
+
+        vm.stopPrank();
+    }
     function testIssuance() public {
         uint inputAmount = 1000e18;
         vm.startPrank(admin);
         updateOracleList();
+        updateWrappedDshares();
         uint feeAmount = factory.calculateIssuanceFee(inputAmount);
         uint quantityIn = feeAmount + inputAmount;
         
@@ -339,10 +432,10 @@ contract OrderProcessorTest is Test {
         assertEq(paymentToken.balanceOf(address(issuer)), feeAmount);
     }
 
-
     function testCompleteIssuance() public {
         vm.startPrank(admin);
         updateOracleList();
+        updateWrappedDshares();
         // uint totalCurretList = factory.totalCurrentList();
         uint inputAmount = 1000e18;
         uint receivedAmount = 100e18/factory.totalCurrentList();
@@ -362,14 +455,13 @@ contract OrderProcessorTest is Test {
             address tokenAddress = factory.currentList(i);
             uint id = factory.issuanceRequestId(nonce, tokenAddress);
             uint orderAmount = factory.buyRequestPayedAmountById(id);
-            IOrderProcessor.Order memory order = factory.getOrderInctanceById(id);
+            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
             uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce));
             
             
             issuer.fillOrder(order, orderAmount, receivedAmount, feeAmount/factory.totalCurrentList());
-            // assertEq(issuer.getUnfilledAmount(id), orderAmount - fillAmount);
             IOrderProcessor.PricePoint memory fillPrice = issuer.latestFillPrice(order.assetToken, order.paymentToken);
             assertTrue(
                 fillPrice.price == 0
@@ -385,13 +477,59 @@ contract OrderProcessorTest is Test {
         assertEq(factory.issuanceIsCompleted(nonce), true);
     }
 
+    function testCancelIssuance() public {
+        vm.startPrank(admin);
+        updateOracleList();
+        updateWrappedDshares();
+        uint inputAmount = 1000e18;
+        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
+        uint quantityIn = feeAmount + inputAmount;
+        paymentToken.mint(address(user), quantityIn);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), quantityIn);
+        uint nonce = factory.issuance(inputAmount);
+        
+
+        for(uint i = 0; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        uint id = factory.issuanceRequestId(nonce, tokenAddress);
+        uint orderAmount = factory.buyRequestPayedAmountById(id);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+        assertEq(issuer.getUnfilledAmount(id), orderAmount);
+        }
+        assertEq(factory.checkIssuanceOrdersStatus(nonce), false);
+
+        factory.cancelIssuance(nonce);
+        vm.stopPrank();
+        vm.startPrank(operator);
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factory.currentList(i);
+            uint id = factory.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factory.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            paymentToken.approve(address(issuer), orderAmount);
+            issuer.cancelOrder(order, " ");
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
+        }
+        factory.completeCancelIssuance(nonce);
+        assertEq(factory.cancelIssuanceComplted(nonce), true);
+    }
+
     function testRedemption() public {
         vm.startPrank(admin);
         updateOracleList();
-        
+        updateWrappedDshares();
         for(uint i; i < 10; i++) {
         address tokenAddress = factory.currentList(i);
-        DShare(tokenAddress).mint(address(vault), 100e18);
+        address wrappedTokenAddress = factory.wrappedDshareAddress(tokenAddress);
+        DShare(tokenAddress).mint(address(admin), 100e18);
+        DShare(tokenAddress).approve(
+            wrappedTokenAddress,
+            100e18
+        );
+        WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
         }
         
         indexToken.setMinter(address(admin));
@@ -414,17 +552,22 @@ contract OrderProcessorTest is Test {
 
     }
 
-
+    
     function testCompleteRedemption() public {
         vm.startPrank(admin);
         updateOracleList();
-
+        updateWrappedDshares();
         
         
         
         for(uint i; i < 10; i++) {
         address tokenAddress = factory.currentList(i);
-        DShare(tokenAddress).mint(address(vault), 1000e18);
+        DShare(tokenAddress).mint(address(admin), 1000e18);
+        DShare(tokenAddress).approve(
+            factory.wrappedDshareAddress(tokenAddress),
+            1000e18
+        );
+        WrappedDShare(factory.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
         }
         
         indexToken.setMinter(address(admin));
@@ -439,15 +582,13 @@ contract OrderProcessorTest is Test {
         address tokenAddress = factory.currentList(i);
         uint id = factory.redemptionRequestId(nonce, tokenAddress);
         uint orderAmount = factory.sellRequestAssetAmountById(id);
-        IOrderProcessor.Order memory order = factory.getOrderInctanceById(id);
+        IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
         vm.stopPrank();
         vm.prank(admin);
         paymentToken.mint(operator, 100e18);
         vm.prank(operator);
         paymentToken.approve(address(issuer), 100e18);
 
-        // uint256 userPaymentBefore = paymentToken.balanceOf(address());
-        // uint256 operatorPaymentBefore = paymentToken.balanceOf(operator);
         vm.prank(operator);
         issuer.fillOrder(order, 1000e18, 100e18, 1e18);
         assertEq(issuer.getUnfilledAmount(id), 0);
@@ -461,5 +602,54 @@ contract OrderProcessorTest is Test {
         assertEq(factory.redemptionIsCompleted(nonce), true);
     }
 
+    function testCancelRdemption() public {
+        vm.startPrank(admin);
+        updateOracleList();
+        updateWrappedDshares();
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        address wrappedTokenAddress = factory.wrappedDshareAddress(tokenAddress);
+        DShare(tokenAddress).mint(address(admin), 100e18);
+        DShare(tokenAddress).approve(
+            wrappedTokenAddress,
+            100e18
+        );
+        WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin));
+        indexToken.mint(address(user), 100e18);
+        indexToken.setMinter(address(factory));
+        
+        vm.stopPrank();
+        vm.startPrank(user);
+        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
+
+
+        for(uint i = 0; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        uint id = factory.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factory.sellRequestAssetAmountById(id);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+        assertEq(issuer.getUnfilledAmount(id), orderAmount);
+        }
+
+        factory.cancelRedemption(nonce);
+        vm.stopPrank();
+        vm.startPrank(operator);
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factory.currentList(i);
+            uint id = factory.redemptionRequestId(nonce, tokenAddress);
+            uint orderAmount = factory.sellRequestAssetAmountById(id);
+            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            paymentToken.approve(address(issuer), orderAmount);
+            issuer.cancelOrder(order, " ");
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
+        }
+
+        factory.completeCancelRedemption(nonce);
+        assertEq(factory.cancelRedemptionComplted(nonce), true);
+    }
+     
     
 }

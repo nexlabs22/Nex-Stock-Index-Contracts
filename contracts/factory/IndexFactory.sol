@@ -177,7 +177,7 @@ contract IndexFactory is
     }
 
     
-    function setDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
+    function setWrappedDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
         require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
         for(uint i = 0; i < _dShares.length; i++){
             wrappedDshareAddress[_dShares[i]] = _wrappedDShares[i];
@@ -249,7 +249,7 @@ contract IndexFactory is
     {
         _initData(_tokens, _marketShares);
     }
-    function getOrderInctanceById(uint256 id) external view returns(IOrderProcessor.Order memory){
+    function getOrderInstanceById(uint256 id) external view returns(IOrderProcessor.Order memory){
         return orderInstanceById[id];
     }
     
@@ -373,7 +373,7 @@ contract IndexFactory is
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
             ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
-            // WrappedDShare(wrappedDshareAddress[tokenAddress]).mint(address(vault), balance);
+            IERC20(tokenAddress).approve(wrappedDshareAddress[tokenAddress], balance);
             WrappedDShare(wrappedDshareAddress[tokenAddress]).deposit(balance, address(vault));
         }
             uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce];
@@ -397,13 +397,13 @@ contract IndexFactory is
             address tokenAddress = currentList[i];
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             IOrderProcessor.Order memory order = orderInstanceById[requestId];
-            if(uiny8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
                 issuer.requestCancel(requestId);
             } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || IERC20(tokenAddress).balanceOf(coaAddress) > 0){
                 uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
                 ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
-                uint requestId = requestSellOrder(tokenAddress, balance, address(coaAddress));
-                cancelIssuanceRequestId[_issuanceNonce][tokenAddress] = requestId;
+                uint cancelRequestId = requestSellOrder(tokenAddress, balance, address(coaAddress));
+                cancelIssuanceRequestId[_issuanceNonce][tokenAddress] = cancelRequestId;
             }
         }
     }
@@ -520,7 +520,6 @@ contract IndexFactory is
 
     function cancelRedemption(uint _redemptionNonce) public {
         require(!redemptionIsCompleted[_redemptionNonce], "Redemption is completed");
-        require(!isRedemptionOrderActive(_redemptionNonce), "You can not cancel order with active order");
         address reqeuster = redemptionRequesterByNonce[_redemptionNonce];
         address coaAddress = coaByRedemptionNonce[_redemptionNonce];
         require(msg.sender == reqeuster, "Only requester can cancel the redemption");
@@ -530,9 +529,8 @@ contract IndexFactory is
             IOrderProcessor.Order memory order = orderInstanceById[requestId];
             uint filledAmount = issuer.getReceivedAmount(requestId);
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || filledAmount > 0){
-                // uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
                 ContractOwnedAccount(coaAddress).sendToken(address(usdc), address(this), filledAmount);
-                uint requestId = requestBuyOrder(tokenAddress, filledAmount, address(coaAddress));
+                uint cancelRequestId = requestBuyOrder(tokenAddress, filledAmount, address(coaAddress));
                 cancelRedemptionRequestId[_redemptionNonce][tokenAddress] = requestId;
             }
         }
