@@ -14,6 +14,7 @@ import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../coa/ContractOwnedAccount.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -74,6 +75,8 @@ contract IndexFactory is
     // mapping between a burn request hash and the corresponding request nonce.
     uint public redemptionNonce;
 
+    uint public rebalanceNonce;
+
     mapping(uint => mapping(address => uint)) public cancelIssuanceRequestId;
     mapping(uint => mapping(address => uint)) public cancelRedemptionRequestId;
 
@@ -99,6 +102,11 @@ contract IndexFactory is
     mapping(uint => bool) public cancelRedemptionComplted;
 
     mapping(uint =>  IOrderProcessor.Order) public orderInstanceById;
+
+    mapping(address => address) public priceFeedByTokenAddress;
+
+    mapping(uint => uint) public portfolioValueByNonce;
+    mapping(uint => uint) public tokenValueByNonce;
 
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
@@ -184,6 +192,13 @@ contract IndexFactory is
         }
     }
 
+    function setPriceFeedAddresses(address[] memory _dShares, address[] memory _priceFeedAddresses) public onlyOwner {
+        require(_dShares.length == _priceFeedAddresses.length, "Array length mismatch");
+        for(uint i = 0; i < _dShares.length; i++){
+            priceFeedByTokenAddress[_dShares[i]] = _priceFeedAddresses[i];
+        }
+    }
+
 
     function concatenation(string memory a, string memory b) public pure returns (string memory) {
         return string(bytes.concat(bytes(a), bytes(b)));
@@ -251,6 +266,21 @@ contract IndexFactory is
     }
     function getOrderInstanceById(uint256 id) external view returns(IOrderProcessor.Order memory){
         return orderInstanceById[id];
+    }
+
+    function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {        
+        if (_chainDecimals > _amountDecimals){
+            return _amount * int256(10 **(_chainDecimals - _amountDecimals));
+        }else{
+            return _amount * int256(10 **(_amountDecimals - _chainDecimals));
+        }
+    }
+
+    function priceInWei(address _feedAddress) public view returns (uint256) {
+        (,int price,,,) = AggregatorV3Interface(_feedAddress).latestRoundData();
+        uint8 priceFeedDecimals = AggregatorV3Interface(_feedAddress).decimals();
+        price = _toWei(price, priceFeedDecimals, 18);
+        return uint256(price);
     }
     
     function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
@@ -584,6 +614,30 @@ contract IndexFactory is
             return true;
         }else{
             return false;
+        }
+    }
+
+    function firstRebalanceAction() public onlyOwner {
+        rebalanceNonce += 1;
+        uint portfolioValue;
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint tokenPrice = priceInWei(priceFeedByTokenAddress[tokenAddress]);
+            uint tokenBalance = IERC20(tokenAddress).balanceOf(address(vault));
+            uint tokenValue = tokenBalance * tokenPrice;
+            tokenValueByNonce[rebalanceNonce] += tokenValue;
+            portfolioValue += tokenValue;
+        }
+        portfolioValueByNonce[rebalanceNonce] = portfolioValue;
+        for(uint i; i< totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint tokenValue = tokenValueByNonce[rebalanceNonce];
+            uint tokenValuePercent = tokenValue * 100e18 / portfolioValue;
+            if(tokenValuePercent > tokenOracleMarketShare[tokenAddress]){
+            uint tokenValuePercentDiff = tokenOracleMarketShare[tokenAddress] - tokenValuePercent;
+            uint amount = tokenValuePercentDiff * portfolioValue / 100e18;
+            requestSellOrder(tokenAddress, amount, address(this));
+            }
         }
     }
 
