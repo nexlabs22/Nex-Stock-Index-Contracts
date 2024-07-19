@@ -112,6 +112,12 @@ contract OrderManager is
             tif: IOrderProcessor.TIF.GTC
         });
     }
+
+    function calculateFees(uint256 orderAmount) public view returns (uint256) {
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, orderAmount);
+        return fees;
+    }
     
     function requestBuyOrder(address _token, uint256 orderAmount) public returns(uint) {
        

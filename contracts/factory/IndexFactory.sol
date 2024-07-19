@@ -77,11 +77,15 @@ contract IndexFactory is
 
     uint public rebalanceNonce;
 
+    bool public isMainnet;
+
     mapping(uint => mapping(address => uint)) public cancelIssuanceRequestId;
     mapping(uint => mapping(address => uint)) public cancelRedemptionRequestId;
 
     mapping(uint => mapping(address => uint)) public issuanceRequestId;
     mapping(uint => mapping(address => uint)) public redemptionRequestId;
+
+    mapping(uint => mapping(address => uint)) public rebalanceRequestId;
 
     mapping(uint => uint) public buyRequestPayedAmountById;
     mapping(uint => uint) public sellRequestAssetAmountById;
@@ -120,7 +124,8 @@ contract IndexFactory is
         uint8 _usdcDecimals,
         address _chainlinkToken,
         address _oracleAddress,
-        bytes32 _externalJobId
+        bytes32 _externalJobId,
+        bool _isMainnet
     ) external initializer {
         issuer = IOrderProcessor(_issuer);
         token = IndexToken(_token);
@@ -137,6 +142,7 @@ contract IndexFactory is
         oraclePayment = ((1 * LINK_DIVISIBILITY) / 10); // n * 10**18
         baseUrl = "https://app.nexlabs.io/api/allFundingRates";
         urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
+        isMainnet = _isMainnet;
     }
 
     
@@ -268,6 +274,27 @@ contract IndexFactory is
         return orderInstanceById[id];
     }
 
+    function getVaultDshareBalance(address _token) public view returns(uint){
+        address wrappedDshareAddress = wrappedDshareAddress[_token];
+        uint wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
+        return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
+    }
+
+    function getVaultDshareValue(address _token) public view returns(uint){
+        uint tokenPrice = priceInWei(_token);
+        uint dshareBalance = getVaultDshareBalance(_token);
+        return (dshareBalance * tokenPrice)/1e18;
+    }
+
+    function getPortfolioValue() public view returns(uint){
+        uint portfolioValue;
+        for(uint i; i < totalCurrentList; i++) {
+            uint tokenValue = getVaultDshareValue(currentList[i]);
+            portfolioValue += tokenValue;
+        }
+        return portfolioValue;
+    }
+
     function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {        
         if (_chainDecimals > _amountDecimals){
             return _amount * int256(10 **(_chainDecimals - _amountDecimals));
@@ -276,11 +303,18 @@ contract IndexFactory is
         }
     }
 
-    function priceInWei(address _feedAddress) public view returns (uint256) {
-        (,int price,,,) = AggregatorV3Interface(_feedAddress).latestRoundData();
-        uint8 priceFeedDecimals = AggregatorV3Interface(_feedAddress).decimals();
+    function priceInWei(address _tokenAddress) public view returns (uint256) {
+        
+        if(isMainnet){
+        address feedAddress = priceFeedByTokenAddress[_tokenAddress];
+        (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
+        uint8 priceFeedDecimals = AggregatorV3Interface(feedAddress).decimals();
         price = _toWei(price, priceFeedDecimals, 18);
         return uint256(price);
+        } else{
+        IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(_tokenAddress, address(usdc));
+        return tokenPriceData.price;
+        }
     }
     
     function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
@@ -639,6 +673,35 @@ contract IndexFactory is
             requestSellOrder(tokenAddress, amount, address(this));
             }
         }
+    }
+
+
+    function secondRebalanceAction() public onlyOwner {
+        // require(checkRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
+        uint portfolioValue = portfolioValueByNonce[rebalanceNonce];
+        for(uint i; i< totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint tokenValue = tokenValueByNonce[rebalanceNonce];
+            uint tokenValuePercent = tokenValue * 100e18 / portfolioValue;
+            if(tokenValuePercent < tokenOracleMarketShare[tokenAddress]){
+            uint tokenValuePercentDiff = tokenOracleMarketShare[tokenAddress] - tokenValuePercent;
+            uint amount = tokenValuePercentDiff * portfolioValue / 100e18;
+            uint reqeustId = requestBuyOrder(tokenAddress, amount, address(this));
+            rebalanceRequestId[rebalanceNonce][tokenAddress] = reqeustId;
+            }
+        }
+    }
+
+    function checkFirstRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns(bool) {
+        uint completedOrdersCount;
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint requestId = redemptionRequestId[_rebalanceNonce][tokenAddress];
+            if(requestId > 0 && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
+                return false;
+            }
+        }
+        return true;
     }
 
     function pause() external onlyOwner {
