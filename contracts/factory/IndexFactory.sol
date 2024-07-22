@@ -90,6 +90,9 @@ contract IndexFactory is
     mapping(uint => uint) public buyRequestPayedAmountById;
     mapping(uint => uint) public sellRequestAssetAmountById;
 
+    mapping(uint => uint) public rebalanceBuyPayedAmountById;
+    mapping(uint => uint) public rebalanceSellAssetAmountById;
+
     mapping(uint => mapping(address => uint)) public issuanceTokenPrimaryBalance;
     mapping(uint => mapping(address => uint)) public redemptionTokenPrimaryBalance;
 
@@ -110,7 +113,7 @@ contract IndexFactory is
     mapping(address => address) public priceFeedByTokenAddress;
 
     mapping(uint => uint) public portfolioValueByNonce;
-    mapping(uint => uint) public tokenValueByNonce;
+    mapping(uint => mapping(address => uint)) public tokenValueByNonce;
 
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
@@ -651,28 +654,34 @@ contract IndexFactory is
         }
     }
 
-    function firstRebalanceAction() public onlyOwner {
+    function firstRebalanceAction() public onlyOwner returns(uint) {
         rebalanceNonce += 1;
         uint portfolioValue;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint tokenPrice = priceInWei(priceFeedByTokenAddress[tokenAddress]);
-            uint tokenBalance = IERC20(tokenAddress).balanceOf(address(vault));
-            uint tokenValue = tokenBalance * tokenPrice;
-            tokenValueByNonce[rebalanceNonce] += tokenValue;
+            uint tokenPrice = priceInWei(tokenAddress);
+            // uint tokenBalance = IERC20(tokenAddress).balanceOf(address(vault));
+            // uint tokenValue = tokenBalance * tokenPrice;
+            uint tokenValue = getVaultDshareValue(tokenAddress);
+            tokenValueByNonce[rebalanceNonce][tokenAddress] = tokenValue;
             portfolioValue += tokenValue;
         }
         portfolioValueByNonce[rebalanceNonce] = portfolioValue;
         for(uint i; i< totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint tokenValue = tokenValueByNonce[rebalanceNonce];
-            uint tokenValuePercent = tokenValue * 100e18 / portfolioValue;
+            uint tokenValue = tokenValueByNonce[rebalanceNonce][tokenAddress];
+            uint tokenBalance = getVaultDshareBalance(tokenAddress);
+            uint tokenValuePercent = (tokenValue * 100e18) / portfolioValue;
             if(tokenValuePercent > tokenOracleMarketShare[tokenAddress]){
-            uint tokenValuePercentDiff = tokenOracleMarketShare[tokenAddress] - tokenValuePercent;
-            uint amount = tokenValuePercentDiff * portfolioValue / 100e18;
-            requestSellOrder(tokenAddress, amount, address(this));
+            uint amount = tokenBalance - (tokenBalance * tokenOracleMarketShare[tokenAddress] / tokenValuePercent);
+            // uint amount = tokenBalance - (tokenBalance * 5e18 / tokenValuePercent);
+            uint requestId = requestSellOrder(tokenAddress, amount, address(this));
+            rebalanceRequestId[rebalanceNonce][tokenAddress] = requestId;
+            rebalanceSellAssetAmountById[requestId] = amount;
             }
         }
+
+        return rebalanceNonce;
     }
 
 
@@ -681,7 +690,7 @@ contract IndexFactory is
         uint portfolioValue = portfolioValueByNonce[rebalanceNonce];
         for(uint i; i< totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint tokenValue = tokenValueByNonce[rebalanceNonce];
+            uint tokenValue = tokenValueByNonce[rebalanceNonce][tokenAddress];
             uint tokenValuePercent = tokenValue * 100e18 / portfolioValue;
             if(tokenValuePercent < tokenOracleMarketShare[tokenAddress]){
             uint tokenValuePercentDiff = tokenOracleMarketShare[tokenAddress] - tokenValuePercent;

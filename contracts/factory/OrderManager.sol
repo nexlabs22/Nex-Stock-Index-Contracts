@@ -50,6 +50,9 @@ contract OrderManager is
     // mapping between a burn request hash and the corresponding request nonce.
     mapping(bytes32 => uint256) public burnRequestNonce;
 
+    event BuyRequest(uint indexed id, uint time, uint inutAmount);
+    event SellRequest(uint indexed id, uint time, uint inutAmount);
+
     Request[] public mintRequests;
     Request[] public burnRequests;
 
@@ -134,6 +137,7 @@ contract OrderManager is
        
         IERC20(usdc).approve(address(issuer), quantityIn);
         uint256 id = issuer.createOrderStandardFees(order);
+        emit BuyRequest(id, block.timestamp, quantityIn);
         return id;
     }
 
@@ -150,6 +154,7 @@ contract OrderManager is
 
         // balances before
         uint256 id = issuer.createOrderStandardFees(order);
+        emit SellRequest(id, block.timestamp, _orderAmount);
         return id;
     }
     

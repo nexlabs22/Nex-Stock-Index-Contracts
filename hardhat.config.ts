@@ -1,6 +1,8 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 require("@nomicfoundation/hardhat-foundry");
+require("@openzeppelin/hardhat-upgrades");
+require("dotenv").config()
 
 const config: HardhatUserConfig = {
   // solidity: "0.8.24",
@@ -43,6 +45,22 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+  },
+  networks: {
+    sepolia: {
+      url: process.env.ETHEREUM_SEPOLIA_RPC_URL !== undefined ? process.env.ETHEREUM_SEPOLIA_RPC_URL : '',
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 11155111
+    }
+  },
+  etherscan: {
+    // apiKey: {
+    //   sepolia: process.env.ETHERSCAN_API_KEY as string,
+    //   polygonMumbai: process.env.POLYGONSCAN_API_KEY as string,
+    //   arbitrumSepolia: process.env.ARBITRUMSCAN_API_KEY as string
+    //   // arbitrumTestnet: process.env.ARBITRUMSCAN_API_KEY as string
+    // }
+    apiKey: process.env.ETHERSCAN_API_KEY as string
   },
 };
 
