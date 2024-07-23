@@ -15,6 +15,7 @@ import "../coa/ContractOwnedAccount.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "../libraries/Commen.sol" as PrbMath;
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -114,6 +115,8 @@ contract IndexFactory is
 
     mapping(uint => uint) public portfolioValueByNonce;
     mapping(uint => mapping(address => uint)) public tokenValueByNonce;
+    mapping(uint => mapping(address => uint)) public tokenShortagePercentByNonce;
+    mapping(uint => uint) public totalShortagePercentByNonce;
 
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
@@ -283,6 +286,10 @@ contract IndexFactory is
         return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
     }
 
+    function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
+        return percentageFeeRate != 0 ? PrbMath.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
+    }
+    
     function getVaultDshareValue(address _token) public view returns(uint){
         uint tokenPrice = priceInWei(_token);
         uint dshareBalance = getVaultDshareBalance(_token);
@@ -335,6 +342,12 @@ contract IndexFactory is
         });
     }
     
+    function calculateBuyRequestFee(uint _amount) public view returns(uint){
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _amount);
+        return fee;
+    }
+
     function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
         uint256 fees;
         for(uint i; i < totalCurrentList; i++) {
@@ -349,14 +362,14 @@ contract IndexFactory is
 
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
        
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
+        // (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        // uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
         
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
         order.recipient = _receiver;
         order.assetToken = address(_token);
         order.paymentTokenQuantity = _orderAmount;
-        uint256 quantityIn = order.paymentTokenQuantity + fees;
+        // uint256 quantityIn = order.paymentTokenQuantity + fees;
         
         /**
         IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
@@ -659,7 +672,7 @@ contract IndexFactory is
         uint portfolioValue;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint tokenPrice = priceInWei(tokenAddress);
+            // uint tokenPrice = priceInWei(tokenAddress);
             // uint tokenBalance = IERC20(tokenAddress).balanceOf(address(vault));
             // uint tokenValue = tokenBalance * tokenPrice;
             uint tokenValue = getVaultDshareValue(tokenAddress);
@@ -674,29 +687,56 @@ contract IndexFactory is
             uint tokenValuePercent = (tokenValue * 100e18) / portfolioValue;
             if(tokenValuePercent > tokenOracleMarketShare[tokenAddress]){
             uint amount = tokenBalance - (tokenBalance * tokenOracleMarketShare[tokenAddress] / tokenValuePercent);
-            // uint amount = tokenBalance - (tokenBalance * 5e18 / tokenValuePercent);
             uint requestId = requestSellOrder(tokenAddress, amount, address(this));
             rebalanceRequestId[rebalanceNonce][tokenAddress] = requestId;
             rebalanceSellAssetAmountById[requestId] = amount;
+            }else{
+            uint shortagePercent = tokenOracleMarketShare[tokenAddress] - tokenValuePercent;
+            tokenShortagePercentByNonce[rebalanceNonce][tokenAddress] = shortagePercent;
+            totalShortagePercentByNonce[rebalanceNonce] += shortagePercent;
             }
         }
 
         return rebalanceNonce;
     }
 
-
-    function secondRebalanceAction() public onlyOwner {
+    uint public vall;
+    function secondRebalanceAction(uint _rebalanceNonce) public onlyOwner {
         // require(checkRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
-        uint portfolioValue = portfolioValueByNonce[rebalanceNonce];
+        uint portfolioValue = portfolioValueByNonce[_rebalanceNonce];
+        uint totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
+        uint usdcBalance = IERC20(usdc).balanceOf(address(this));
         for(uint i; i< totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint tokenValue = tokenValueByNonce[rebalanceNonce][tokenAddress];
-            uint tokenValuePercent = tokenValue * 100e18 / portfolioValue;
-            if(tokenValuePercent < tokenOracleMarketShare[tokenAddress]){
-            uint tokenValuePercentDiff = tokenOracleMarketShare[tokenAddress] - tokenValuePercent;
-            uint amount = tokenValuePercentDiff * portfolioValue / 100e18;
-            uint reqeustId = requestBuyOrder(tokenAddress, amount, address(this));
-            rebalanceRequestId[rebalanceNonce][tokenAddress] = reqeustId;
+            uint tokenShortagePercent = tokenShortagePercentByNonce[_rebalanceNonce][tokenAddress];
+            if(tokenShortagePercent > 0){
+            uint paymentAmount = (tokenShortagePercent * usdcBalance) / totalShortagePercent;
+            (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+            uint amountAfterFee = getAmountAfterFee(percentageFeeRate, paymentAmount) - flatFee;
+            uint256 esFee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amountAfterFee);
+            IERC20(usdc).approve(address(issuer), paymentAmount);
+            uint requestId = requestBuyOrder(tokenAddress, amountAfterFee, address(this));
+            vall = esFee;
+            rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
+            rebalanceBuyPayedAmountById[requestId] = amountAfterFee;
+            }
+        }
+    }
+
+    function estimateAmountAfterFee(uint _amount) public view returns(uint256){
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint amountAfterFee = getAmountAfterFee(percentageFeeRate, _amount) - flatFee;
+        return amountAfterFee;
+    }
+
+    function completeRebalanceActions(uint _rebalanceNonce) public onlyOwner {
+        require(checkFirstRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
+        for(uint i; i< totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint tokenBalance = IERC20(tokenAddress).balanceOf(address(this));
+            if(tokenBalance > 0){
+            IERC20(tokenAddress).approve(wrappedDshareAddress[tokenAddress], tokenBalance);
+            WrappedDShare(wrappedDshareAddress[tokenAddress]).deposit(tokenBalance, address(vault));
             }
         }
     }
