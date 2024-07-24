@@ -538,7 +538,7 @@ contract OrderProcessorTest is Test {
         uint inputAmount = 1000e18;
         uint receivedAmount = 100e18/factory.totalCurrentList();
         uint feeAmount = factory.calculateIssuanceFee(inputAmount);
-        // uint quantityIn = feeAmount + inputAmount;
+        // uint expectedAmountOut = factory.getIssuanceAmountOut(inputAmount);
         paymentToken.mint(address(user), feeAmount + inputAmount);
         vm.stopPrank();
 
@@ -574,6 +574,8 @@ contract OrderProcessorTest is Test {
         factory.completeIssuance(nonce);
         assertEq(factory.issuanceIsCompleted(nonce), true);
     }
+
+    
 
     function testCancelIssuance() public {
         vm.startPrank(admin);
@@ -844,8 +846,10 @@ contract OrderProcessorTest is Test {
         }
         
         vm.stopPrank();
-        vm.prank(admin);
 
+        assertEq(factory.checkSecondRebalanceOrdersStatus(nonce), true);
+
+        vm.prank(admin);
         factory.completeRebalanceActions(nonce);
 
         assertEq(factory.getVaultDshareValue(factory.currentList(0))/1e18, 19950);
@@ -859,8 +863,25 @@ contract OrderProcessorTest is Test {
         assertEq(factory.getVaultDshareValue(factory.currentList(8))/1e18, 10000);
         assertEq(factory.getVaultDshareValue(factory.currentList(9))/1e18, 10000);
         
-        console.log(factory.vall());
         assertEq(paymentToken.balanceOf(address(factory))/1e18, 0);
+
+
+        //check to see current list is updated
+         // token current list
+        assertEq(factory.currentList(0), address(token0));
+        assertEq(factory.currentList(1), address(token1));
+        assertEq(factory.currentList(2), address(token2));
+        assertEq(factory.currentList(3), address(token3));
+        assertEq(factory.currentList(4), address(token4));
+        assertEq(factory.currentList(9), address(token9));
+        // token shares
+        assertEq(factory.tokenCurrentMarketShare(address(token0)), 20e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token1)), 5e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token2)), 5e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token3)), 10e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token4)), 10e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token9)), 10e18);
+
 
     }
      

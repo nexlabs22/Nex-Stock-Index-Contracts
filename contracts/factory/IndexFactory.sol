@@ -118,9 +118,47 @@ contract IndexFactory is
     mapping(uint => mapping(address => uint)) public tokenShortagePercentByNonce;
     mapping(uint => uint) public totalShortagePercentByNonce;
 
+    mapping(uint => uint) public issuanceInputAmount;
+    mapping(uint => uint) public redemptionInputAmount;
+
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
 
+    event RequestIssuance(
+        uint indexed nonce,
+        address indexed user,
+        address inputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
+
+    event Issuanced(
+        uint indexed nonce,
+        address indexed user,
+        address inputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
+
+    event RequestRedemption(
+        uint indexed nonce,
+        address indexed user,
+        address outputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
+
+    event Redemption(
+        uint indexed nonce,
+        address indexed user,
+        address outputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
 
     function initialize(
         address _issuer,
@@ -196,6 +234,7 @@ contract IndexFactory is
         return true;
     }
 
+
     
     function setWrappedDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
         require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
@@ -269,6 +308,15 @@ contract IndexFactory is
         lastUpdateTime = block.timestamp;
     }
 
+    function _updateCurrentList() internal {
+        totalCurrentList = totalOracleList;
+        for(uint i = 0; i < totalOracleList; i++){
+            address tokenAddress = oracleList[i];
+            currentList[i] = tokenAddress;
+            tokenCurrentMarketShare[tokenAddress] = tokenOracleMarketShare[tokenAddress];
+            tokenCurrentListIndex[tokenAddress] = i;
+        }
+    }
 
     function mockFillAssetsList(address[] memory _tokens, uint256[] memory _marketShares)
     public
@@ -342,6 +390,22 @@ contract IndexFactory is
         });
     }
     
+    function getIssuanceAmountOut(uint _amount) public view returns(uint){
+        uint portfolioValue = getPortfolioValue();
+        uint totalSupply = token.totalSupply();
+        uint amountOut = _amount * totalSupply / portfolioValue;
+        return amountOut;
+    }
+
+    function getRdemptionAmountOut(uint _amount) public view returns(uint){
+        uint portfolioValue = getPortfolioValue();
+        uint totalSupply = token.totalSupply();
+        uint amountOut = _amount * portfolioValue / totalSupply;
+        return amountOut;
+    }
+
+    
+
     function calculateBuyRequestFee(uint _amount) public view returns(uint){
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _amount);
@@ -406,6 +470,7 @@ contract IndexFactory is
     }
     
 
+
     function issuance(uint _inputAmount) public returns(uint256) {
         
         uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
@@ -417,6 +482,7 @@ contract IndexFactory is
         issuanceNonce += 1;
         ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
         coaByIssuanceNonce[issuanceNonce] = address(coa);
+        issuanceInputAmount[issuanceNonce] = _inputAmount;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100e18;
@@ -429,10 +495,8 @@ contract IndexFactory is
             issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = dShareBalance;
             issuanceIndexTokenPrimaryTotalSupply[issuanceNonce] = IERC20(token).totalSupply();
         }
-        
+        emit RequestIssuance(issuanceNonce, msg.sender, usdc, _inputAmount, 0, block.timestamp);
         return issuanceNonce;
-
-
     }
 
     function completeIssuance(uint _issuanceNonce) public {
@@ -460,10 +524,12 @@ contract IndexFactory is
             if(primaryTotalSupply == 0){
                 uint256 mintAmount = secondaryPortfolioValue*100;
                 token.mint(reqeuster, mintAmount);
+                emit Issuanced(_issuanceNonce, reqeuster, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
             }else{
                 uint256 secondaryTotalSupply = primaryTotalSupply * secondaryPortfolioValue / primaryPortfolioValue;
                 uint256 mintAmount = secondaryTotalSupply - primaryTotalSupply;
                 token.mint(reqeuster, mintAmount);
+                emit Issuanced(_issuanceNonce, reqeuster, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
             }
             issuanceIsCompleted[issuanceNonce] = true;
     }
@@ -553,6 +619,7 @@ contract IndexFactory is
         redemptionNonce += 1;
         ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
         coaByRedemptionNonce[redemptionNonce] = address(coa);
+        redemptionInputAmount[redemptionNonce] = _inputAmount;
         uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
         token.burn(msg.sender, _inputAmount);
         burnedTokenAmountByNonce[redemptionNonce] = _inputAmount;
@@ -568,7 +635,7 @@ contract IndexFactory is
             redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = dShareBalance;
             redemptionIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
         }
-
+        emit RequestRedemption(redemptionNonce, msg.sender, usdc, _inputAmount, 0, block.timestamp);
         return redemptionNonce;
     }
 
@@ -596,6 +663,7 @@ contract IndexFactory is
         uint256 balance = IERC20(usdc).balanceOf(coaAddress);
         ContractOwnedAccount(address(coaAddress)).sendToken(usdc, reqeuster, balance);
         redemptionIsCompleted[_redemptionNonce] = true;
+        emit Redemption(_redemptionNonce, reqeuster, usdc, redemptionInputAmount[_redemptionNonce], balance, block.timestamp);
     }
 
     function cancelRedemption(uint _redemptionNonce) public {
@@ -700,9 +768,8 @@ contract IndexFactory is
         return rebalanceNonce;
     }
 
-    uint public vall;
     function secondRebalanceAction(uint _rebalanceNonce) public onlyOwner {
-        // require(checkRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
+        require(checkFirstRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
         uint portfolioValue = portfolioValueByNonce[_rebalanceNonce];
         uint totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
         uint usdcBalance = IERC20(usdc).balanceOf(address(this));
@@ -716,7 +783,6 @@ contract IndexFactory is
             uint256 esFee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amountAfterFee);
             IERC20(usdc).approve(address(issuer), paymentAmount);
             uint requestId = requestBuyOrder(tokenAddress, amountAfterFee, address(this));
-            vall = esFee;
             rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
             rebalanceBuyPayedAmountById[requestId] = amountAfterFee;
             }
@@ -730,7 +796,7 @@ contract IndexFactory is
     }
 
     function completeRebalanceActions(uint _rebalanceNonce) public onlyOwner {
-        require(checkFirstRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
+        require(checkSecondRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
         for(uint i; i< totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint tokenBalance = IERC20(tokenAddress).balanceOf(address(this));
@@ -739,13 +805,27 @@ contract IndexFactory is
             WrappedDShare(wrappedDshareAddress[tokenAddress]).deposit(tokenBalance, address(vault));
             }
         }
+        _updateCurrentList();
     }
+
 
     function checkFirstRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns(bool) {
         uint completedOrdersCount;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint requestId = redemptionRequestId[_rebalanceNonce][tokenAddress];
+            uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
+            if(requestId > 0 && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function checkSecondRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns(bool) {
+        uint completedOrdersCount;
+        for(uint i; i < totalCurrentList; i++) {
+            address tokenAddress = currentList[i];
+            uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if(requestId > 0 && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 return false;
             }
