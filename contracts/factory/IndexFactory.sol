@@ -31,7 +31,10 @@ contract IndexFactory is
     string baseUrl;
     string urlParams;
 
-    
+    struct ActionInfo {
+        uint actionType;
+        uint nonce; 
+    }
 
     bytes32 public externalJobId;
     uint256 public oraclePayment;
@@ -121,6 +124,7 @@ contract IndexFactory is
     mapping(uint => uint) public issuanceInputAmount;
     mapping(uint => uint) public redemptionInputAmount;
 
+    mapping(uint => ActionInfo) public actionInfoById; 
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
 
@@ -397,7 +401,7 @@ contract IndexFactory is
         return amountOut;
     }
 
-    function getRdemptionAmountOut(uint _amount) public view returns(uint){
+    function getRedemptionAmountOut(uint _amount) public view returns(uint){
         uint portfolioValue = getPortfolioValue();
         uint totalSupply = token.totalSupply();
         uint amountOut = _amount * portfolioValue / totalSupply;
@@ -487,6 +491,7 @@ contract IndexFactory is
             address tokenAddress = currentList[i];
             uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100e18;
             uint requestId = requestBuyOrder(tokenAddress, amount, address(coa));
+            actionInfoById[requestId] = ActionInfo(1, issuanceNonce);
             buyRequestPayedAmountById[requestId] = amount;
             issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
             issuanceRequesterByNonce[issuanceNonce] = msg.sender;
@@ -502,7 +507,7 @@ contract IndexFactory is
     function completeIssuance(uint _issuanceNonce) public {
         require(checkIssuanceOrdersStatus(_issuanceNonce), "Orders are not completed");
         require(!issuanceIsCompleted[_issuanceNonce], "Issuance is completed");
-        address reqeuster = issuanceRequesterByNonce[_issuanceNonce];
+        address requester = issuanceRequesterByNonce[_issuanceNonce];
         uint primaryPortfolioValue;
         uint secondaryPortfolioValue;
         for(uint i; i < totalCurrentList; i++) {
@@ -523,22 +528,22 @@ contract IndexFactory is
             uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce];
             if(primaryTotalSupply == 0){
                 uint256 mintAmount = secondaryPortfolioValue*100;
-                token.mint(reqeuster, mintAmount);
-                emit Issuanced(_issuanceNonce, reqeuster, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
+                token.mint(requester, mintAmount);
+                emit Issuanced(_issuanceNonce, requester, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
             }else{
                 uint256 secondaryTotalSupply = primaryTotalSupply * secondaryPortfolioValue / primaryPortfolioValue;
                 uint256 mintAmount = secondaryTotalSupply - primaryTotalSupply;
-                token.mint(reqeuster, mintAmount);
-                emit Issuanced(_issuanceNonce, reqeuster, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
+                token.mint(requester, mintAmount);
+                emit Issuanced(_issuanceNonce, requester, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
             }
             issuanceIsCompleted[issuanceNonce] = true;
     }
 
     function cancelIssuance(uint256 _issuanceNonce) public {
         require(!issuanceIsCompleted[_issuanceNonce], "Issuance is completed");
-        address reqeuster = issuanceRequesterByNonce[_issuanceNonce];
+        address requester = issuanceRequesterByNonce[_issuanceNonce];
         address coaAddress = coaByIssuanceNonce[_issuanceNonce];
-        require(msg.sender == reqeuster, "Only requester can cancel the issuance");
+        require(msg.sender == requester, "Only requester can cancel the issuance");
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
@@ -549,6 +554,8 @@ contract IndexFactory is
                 uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
                 ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
                 uint cancelRequestId = requestSellOrder(tokenAddress, balance, address(coaAddress));
+                actionInfoById[cancelRequestId] = ActionInfo(3, _issuanceNonce);
+
                 cancelIssuanceRequestId[_issuanceNonce][tokenAddress] = cancelRequestId;
             }
         }
@@ -627,6 +634,7 @@ contract IndexFactory is
             address tokenAddress = currentList[i];
             uint256 amount = tokenBurnPercent * IERC20(wrappedDshareAddress[tokenAddress]).balanceOf(address(vault)) / 1e18;
             uint requestId = requestSellOrder(tokenAddress, amount, address(coa));
+            actionInfoById[requestId] = ActionInfo(2, redemptionNonce);
             sellRequestAssetAmountById[requestId] = amount;
             redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
             redemptionRequesterByNonce[redemptionNonce] = msg.sender;
@@ -658,19 +666,19 @@ contract IndexFactory is
     function completeRedemption(uint _redemptionNonce) public {
         require(checkRedemptionOrdersStatus(_redemptionNonce), "Redemption orders are not completed");
         require(!redemptionIsCompleted[_redemptionNonce], "Redemption is completed");
-        address reqeuster = redemptionRequesterByNonce[_redemptionNonce];
+        address requester = redemptionRequesterByNonce[_redemptionNonce];
         address coaAddress = coaByRedemptionNonce[_redemptionNonce];
         uint256 balance = IERC20(usdc).balanceOf(coaAddress);
-        ContractOwnedAccount(address(coaAddress)).sendToken(usdc, reqeuster, balance);
+        ContractOwnedAccount(address(coaAddress)).sendToken(usdc, requester, balance);
         redemptionIsCompleted[_redemptionNonce] = true;
-        emit Redemption(_redemptionNonce, reqeuster, usdc, redemptionInputAmount[_redemptionNonce], balance, block.timestamp);
+        emit Redemption(_redemptionNonce, requester, usdc, redemptionInputAmount[_redemptionNonce], balance, block.timestamp);
     }
 
     function cancelRedemption(uint _redemptionNonce) public {
         require(!redemptionIsCompleted[_redemptionNonce], "Redemption is completed");
-        address reqeuster = redemptionRequesterByNonce[_redemptionNonce];
+        address requester = redemptionRequesterByNonce[_redemptionNonce];
         address coaAddress = coaByRedemptionNonce[_redemptionNonce];
-        require(msg.sender == reqeuster, "Only requester can cancel the redemption");
+        require(msg.sender == requester, "Only requester can cancel the redemption");
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
@@ -679,6 +687,7 @@ contract IndexFactory is
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || filledAmount > 0){
                 ContractOwnedAccount(coaAddress).sendToken(address(usdc), address(this), filledAmount);
                 uint cancelRequestId = requestBuyOrder(tokenAddress, filledAmount, address(coaAddress));
+                actionInfoById[cancelRequestId] = ActionInfo(4, _redemptionNonce);
                 cancelRedemptionRequestId[_redemptionNonce][tokenAddress] = requestId;
             }
         }
@@ -756,6 +765,7 @@ contract IndexFactory is
             if(tokenValuePercent > tokenOracleMarketShare[tokenAddress]){
             uint amount = tokenBalance - (tokenBalance * tokenOracleMarketShare[tokenAddress] / tokenValuePercent);
             uint requestId = requestSellOrder(tokenAddress, amount, address(this));
+            actionInfoById[requestId] = ActionInfo(5, rebalanceNonce);
             rebalanceRequestId[rebalanceNonce][tokenAddress] = requestId;
             rebalanceSellAssetAmountById[requestId] = amount;
             }else{
@@ -783,6 +793,7 @@ contract IndexFactory is
             uint256 esFee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amountAfterFee);
             IERC20(usdc).approve(address(issuer), paymentAmount);
             uint requestId = requestBuyOrder(tokenAddress, amountAfterFee, address(this));
+            actionInfoById[requestId] = ActionInfo(6, _rebalanceNonce);
             rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
             rebalanceBuyPayedAmountById[requestId] = amountAfterFee;
             }
@@ -831,6 +842,42 @@ contract IndexFactory is
             }
         }
         return true;
+    }
+
+
+    function checkMultical(uint _reqeustId) public view returns (bool){
+        ActionInfo memory actionInfo = actionInfoById[_reqeustId];
+        if(actionInfo.actionType == 1){
+            return checkIssuanceOrdersStatus(actionInfo.nonce);
+        }else if(actionInfo.actionType == 2){
+            return checkRedemptionOrdersStatus(actionInfo.nonce);
+        }else if(actionInfo.actionType == 3){
+            return checkCancelIssuanceStatus(actionInfo.nonce);
+        }else if(actionInfo.actionType == 4){
+            return checkCancelRedemptionStatus(actionInfo.nonce);
+        }else if(actionInfo.actionType == 5){
+            return checkFirstRebalanceOrdersStatus(actionInfo.nonce);
+        }else if(actionInfo.actionType == 6){
+            return checkSecondRebalanceOrdersStatus(actionInfo.nonce);
+        }
+        return false;
+    }
+
+    function multical(uint _requestId) public {
+        ActionInfo memory actionInfo = actionInfoById[_requestId];
+        if(actionInfo.actionType == 1){
+            completeIssuance(actionInfo.nonce);
+        }else if(actionInfo.actionType == 2){
+            completeRedemption(actionInfo.nonce);
+        }else if(actionInfo.actionType == 3){
+            completeCancelIssuance(actionInfo.nonce);
+        }else if(actionInfo.actionType == 4){
+            completeCancelRedemption(actionInfo.nonce);
+        }else if(actionInfo.actionType == 5){
+            secondRebalanceAction(actionInfo.nonce);
+        }else if(actionInfo.actionType == 6){
+            completeRebalanceActions(actionInfo.nonce);
+        }
     }
 
     function pause() external onlyOwner {

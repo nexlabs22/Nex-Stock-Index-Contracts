@@ -575,6 +575,52 @@ contract OrderProcessorTest is Test {
         assertEq(factory.issuanceIsCompleted(nonce), true);
     }
 
+    function testCompleteIssuanceMultical() public {
+        vm.startPrank(admin);
+        // uint totalCurretList = factory.totalCurrentList();
+        uint inputAmount = 1000e18;
+        uint receivedAmount = 100e18/factory.totalCurrentList();
+        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
+        // uint expectedAmountOut = factory.getIssuanceAmountOut(inputAmount);
+        paymentToken.mint(address(user), feeAmount + inputAmount);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+
+        uint256 userBalanceBefore = paymentToken.balanceOf(user);
+        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
+        paymentToken.approve(address(factory), feeAmount + inputAmount);
+        uint nonce = factory.issuance(inputAmount);
+        vm.stopPrank();
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factory.currentList(i);
+            uint id = factory.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factory.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            // balances before
+            vm.startPrank(operator);
+            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce));
+            
+            
+            issuer.fillOrder(order, orderAmount, receivedAmount, feeAmount/factory.totalCurrentList());
+            IOrderProcessor.PricePoint memory fillPrice = issuer.latestFillPrice(order.assetToken, order.paymentToken);
+            assertTrue(
+                fillPrice.price == 0
+                    || fillPrice.price == mulDiv(orderAmount, 10 ** (18 - paymentToken.decimals()), receivedAmount)
+            );
+            // balances after
+            assertEq(IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce)), userAssetBefore + receivedAmount);
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+            //multical
+            if(factory.checkMultical(id)){
+                factory.multical(id);
+            }
+        }
+        // assertEq(factory.checkIssuanceOrdersStatus(nonce), true);
+        // factory.completeIssuance(nonce);
+        assertEq(factory.issuanceIsCompleted(nonce), true);
+    }
+
     
 
     function testCancelIssuance() public {
@@ -693,6 +739,60 @@ contract OrderProcessorTest is Test {
         assertEq(factory.checkRedemptionOrdersStatus(nonce), true);
         assertEq(factory.redemptionIsCompleted(nonce), false);
         factory.completeRedemption(nonce);
+        assertEq(factory.redemptionIsCompleted(nonce), true);
+    }
+
+
+    function testCompleteRedemptionMultical() public {
+        
+        vm.startPrank(admin);
+        
+        
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        DShare(tokenAddress).mint(address(admin), 1000e18);
+        DShare(tokenAddress).approve(
+            factory.wrappedDshareAddress(tokenAddress),
+            1000e18
+        );
+        WrappedDShare(factory.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin));
+        indexToken.mint(address(user), 10000e18);
+        indexToken.setMinter(address(factory));
+        
+        vm.stopPrank();
+        vm.startPrank(user);
+        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
+
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        uint id = factory.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factory.sellRequestAssetAmountById(id);
+        IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+        vm.stopPrank();
+        vm.prank(admin);
+        paymentToken.mint(operator, 100e18);
+        vm.prank(operator);
+        paymentToken.approve(address(issuer), 100e18);
+
+        vm.prank(operator);
+        issuer.fillOrder(order, 1000e18, 100e18, 1e18);
+        assertEq(issuer.getUnfilledAmount(id), 0);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+        
+        //check multical
+        if(factory.checkMultical(id)){
+            assertEq(factory.checkRedemptionOrdersStatus(nonce), true);
+            assertEq(factory.redemptionIsCompleted(nonce), false);
+            factory.multical(id);
+        }
+        }
+
+        // assertEq(factory.checkRedemptionOrdersStatus(nonce), true);
+        // assertEq(factory.redemptionIsCompleted(nonce), false);
+        // factory.completeRedemption(nonce);
         assertEq(factory.redemptionIsCompleted(nonce), true);
     }
 
@@ -883,6 +983,152 @@ contract OrderProcessorTest is Test {
         assertEq(factory.tokenCurrentMarketShare(address(token9)), 10e18);
 
 
+    }
+
+
+    function testRebalancingMultical() public {
+        vm.startPrank(admin);
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        DShare(tokenAddress).mint(address(admin), 1000e18);
+        DShare(tokenAddress).approve(
+            factory.wrappedDshareAddress(tokenAddress),
+            1000e18
+        );
+        WrappedDShare(factory.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin));
+        indexToken.mint(address(user), 10000e18);
+        indexToken.setMinter(address(factory));
+        
+        
+        uint portfolioValue = factory.getPortfolioValue();
+        assertEq(portfolioValue, 10000e18*10);
+        assertEq(factory.getVaultDshareValue(factory.currentList(0)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(1)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(2)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(3)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(4)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(5)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(6)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(7)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(8)), 10000e18);
+        assertEq(factory.getVaultDshareValue(factory.currentList(9)), 10000e18);
+
+        assertEq(factory.getVaultDshareBalance(factory.currentList(1)), 1000e18);
+
+
+        updateOracleList2();
+
+        uint nonce = factory.firstRebalanceAction();
+
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factory.currentList(i);
+        uint id = factory.rebalanceRequestId(nonce, tokenAddress);
+        if(id > 0){
+        uint orderAmount = factory.rebalanceSellAssetAmountById(id);
+        uint payingAmount = orderAmount*10;
+        IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+        vm.stopPrank();
+        vm.prank(admin);
+        paymentToken.mint(operator, payingAmount);
+        vm.prank(operator);
+        paymentToken.approve(address(issuer), payingAmount);
+
+        vm.prank(operator);
+        issuer.fillOrder(order, orderAmount, payingAmount, 0);
+        assertEq(issuer.getUnfilledAmount(id), 0);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+        if(factory.checkMultical(id)){
+            assertEq(factory.getVaultDshareValue(factory.currentList(0)), 10000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(1)), 5000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(2)), 5000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(3)), 10000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(4)), 10000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(5)), 10000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(6)), 10000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(7)), 10000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(8)), 10000e18);
+            assertEq(factory.getVaultDshareValue(factory.currentList(9)), 10000e18);
+            assertEq(paymentToken.balanceOf(address(factory)), 10000e18);
+            vm.prank(admin);
+            factory.multical(id);
+        }
+        }
+        // assertEq(factory.checkFirstRebalanceOrdersStatus(nonce), true);
+
+        
+
+        // vm.prank(admin);
+        // factory.secondRebalanceAction(nonce);
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factory.currentList(i);
+            uint id = factory.rebalanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factory.rebalanceBuyPayedAmountById(id);
+            if(id > 0 && orderAmount > 0){
+            uint receivedAmount = orderAmount/10;
+            uint fees = factory.calculateBuyRequestFee(orderAmount);
+            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            // balances before
+            vm.startPrank(operator);
+            
+            
+            issuer.fillOrder(order, orderAmount, receivedAmount, fees);
+            IOrderProcessor.PricePoint memory fillPrice = issuer.latestFillPrice(order.assetToken, order.paymentToken);
+            assertTrue(
+                fillPrice.price == 0
+                    || fillPrice.price == mulDiv(orderAmount, 10 ** (18 - paymentToken.decimals()), receivedAmount)
+            );
+            // balances after
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+            }
+            // if(factory.checkMultical(id)){
+                // vm.stopPrank();
+                // vm.prank(admin);
+                // factory.multical(id);
+            // }
+        }
+        /**
+        vm.stopPrank();
+
+        assertEq(factory.checkSecondRebalanceOrdersStatus(nonce), true);
+
+        vm.prank(admin);
+        factory.completeRebalanceActions(nonce);
+
+        assertEq(factory.getVaultDshareValue(factory.currentList(0))/1e18, 19950);
+        assertEq(factory.getVaultDshareValue(factory.currentList(1))/1e18, 5000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(2))/1e18, 5000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(3))/1e18, 10000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(4))/1e18, 10000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(5))/1e18, 10000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(6))/1e18, 10000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(7))/1e18, 10000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(8))/1e18, 10000);
+        assertEq(factory.getVaultDshareValue(factory.currentList(9))/1e18, 10000);
+        
+        assertEq(paymentToken.balanceOf(address(factory))/1e18, 0);
+
+
+        //check to see current list is updated
+         // token current list
+        assertEq(factory.currentList(0), address(token0));
+        assertEq(factory.currentList(1), address(token1));
+        assertEq(factory.currentList(2), address(token2));
+        assertEq(factory.currentList(3), address(token3));
+        assertEq(factory.currentList(4), address(token4));
+        assertEq(factory.currentList(9), address(token9));
+        // token shares
+        assertEq(factory.tokenCurrentMarketShare(address(token0)), 20e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token1)), 5e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token2)), 5e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token3)), 10e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token4)), 10e18);
+        assertEq(factory.tokenCurrentMarketShare(address(token9)), 10e18);
+
+        */
+        }
     }
      
     
