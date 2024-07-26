@@ -17,6 +17,7 @@
     "@thirdweb-dev/contracts": "^3.10.0",
     "base64-sol": "^1.1.0",
     "dotenv": "^16.4.5",
+    "hardhat-contract-sizer": "^2.10.0",
     "prb-math": "^2.4.3"
   }
 }

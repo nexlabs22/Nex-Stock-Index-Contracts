@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 require("@nomicfoundation/hardhat-foundry");
 require("@openzeppelin/hardhat-upgrades");
+import "hardhat-contract-sizer"
 require("dotenv").config()
 
 const config: HardhatUserConfig = {
@@ -61,6 +62,13 @@ const config: HardhatUserConfig = {
     //   // arbitrumTestnet: process.env.ARBITRUMSCAN_API_KEY as string
     // }
     apiKey: process.env.ETHERSCAN_API_KEY as string
+  },
+  contractSizer: {
+    // alphaSort: true,
+    // disambiguatePaths: false,
+    runOnCompile: true,
+    // strict: true,
+    // only: [':ERC20$'],
   },
 };
 

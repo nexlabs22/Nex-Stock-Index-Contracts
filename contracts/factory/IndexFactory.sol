@@ -825,7 +825,8 @@ contract IndexFactory is
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
-            if(requestId > 0 && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
+            uint assetAmount = rebalanceSellAssetAmountById[requestId];
+            if(requestId > 0 && assetAmount > 0 && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 return false;
             }
         }
@@ -837,7 +838,8 @@ contract IndexFactory is
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
             uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
-            if(requestId > 0 && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
+            uint payedAmount = rebalanceBuyPayedAmountById[requestId];
+            if(requestId > 0 && payedAmount > 0 && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 return false;
             }
         }
