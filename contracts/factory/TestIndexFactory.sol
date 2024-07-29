@@ -15,14 +15,14 @@ import "../coa/ContractOwnedAccount.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "../libraries/Commen.sol" as PrbMath;
+import "../libraries/Commen.sol" as PrbMath3;
 import "./IndexFactoryStorage.sol";
 import "./OrderManager.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract IndexFactory is
+contract TestIndexFactory is
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable
@@ -226,7 +226,7 @@ contract IndexFactory is
     }
 
     function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
-        return percentageFeeRate != 0 ? PrbMath.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
+        return percentageFeeRate != 0 ? PrbMath3.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
     }
     
     function getVaultDshareValue(address _token) public view returns(uint){
@@ -282,17 +282,19 @@ contract IndexFactory is
     }
     
     function getIssuanceAmountOut(uint _amount) public view returns(uint){
-        uint portfolioValue = getPortfolioValue();
-        uint totalSupply = token.totalSupply();
-        uint amountOut = _amount * totalSupply / portfolioValue;
-        return amountOut;
+        // uint portfolioValue = getPortfolioValue();
+        // uint totalSupply = token.totalSupply();
+        // uint amountOut = _amount * totalSupply / portfolioValue;
+        // return amountOut;
+        return _amount*12;
     }
 
     function getRedemptionAmountOut(uint _amount) public view returns(uint){
-        uint portfolioValue = getPortfolioValue();
-        uint totalSupply = token.totalSupply();
-        uint amountOut = _amount * portfolioValue / totalSupply;
-        return amountOut;
+        // uint portfolioValue = getPortfolioValue();
+        // uint totalSupply = token.totalSupply();
+        // uint amountOut = _amount * portfolioValue / totalSupply;
+        // return amountOut;
+        return _amount/12;
     }
 
     
@@ -360,33 +362,43 @@ contract IndexFactory is
     
 
 
-    function issuance(uint _inputAmount) public returns(uint256) {
+    function issuanceIndexTokens(uint _inputAmount) public returns(uint256) {
         
-        uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
-        uint256 quantityIn = orderProcessorFee + _inputAmount;
-        IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
-        IERC20(usdc).approve(address(orderManager), quantityIn);
+        // uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
+        // uint256 quantityIn = orderProcessorFee + _inputAmount;
+        IERC20(usdc).transferFrom(msg.sender, address(this), _inputAmount);
+        // IERC20(usdc).approve(address(orderManager), _inputAmount);
         
         
         issuanceNonce += 1;
-        ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
-        coaByIssuanceNonce[issuanceNonce] = address(coa);
+        // ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
+        // coaByIssuanceNonce[issuanceNonce] = address(coa);
         issuanceInputAmount[issuanceNonce] = _inputAmount;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
-            uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
-            uint requestId = requestBuyOrder(tokenAddress, amount, address(coa));
-            actionInfoById[requestId] = ActionInfo(1, issuanceNonce);
-            buyRequestPayedAmountById[requestId] = amount;
-            issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
-            issuanceRequesterByNonce[issuanceNonce] = msg.sender;
-            uint wrappedDsharesBalance = IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(vault));
-            uint dShareBalance = WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).previewRedeem(wrappedDsharesBalance);
-            issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = dShareBalance;
-            issuanceIndexTokenPrimaryTotalSupply[issuanceNonce] = IERC20(token).totalSupply();
-        }
+        issuanceRequesterByNonce[issuanceNonce] = msg.sender;
+        // for(uint i; i < factoryStorage.totalCurrentList(); i++) {
+        //     address tokenAddress = factoryStorage.currentList(i);
+        //     uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
+        //     uint requestId = requestBuyOrder(tokenAddress, amount, address(coa));
+        //     actionInfoById[requestId] = ActionInfo(1, issuanceNonce);
+        //     buyRequestPayedAmountById[requestId] = amount;
+        //     issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
+        //     issuanceRequesterByNonce[issuanceNonce] = msg.sender;
+        //     uint wrappedDsharesBalance = IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(vault));
+        //     uint dShareBalance = WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).previewRedeem(wrappedDsharesBalance);
+        //     issuanceTokenPrimaryBalance[issuanceNonce][tokenAddress] = dShareBalance;
+        //     issuanceIndexTokenPrimaryTotalSupply[issuanceNonce] = IERC20(token).totalSupply();
+        // }
         emit RequestIssuance(issuanceNonce, msg.sender, usdc, _inputAmount, 0, block.timestamp);
         return issuanceNonce;
+    }
+
+    
+
+    function mockCompleteIssuance(uint256 _issuanceNonce, uint256 _mintAmount) public {
+        address requester = issuanceRequesterByNonce[_issuanceNonce];
+        uint256 mintAmount = _mintAmount;
+        issuanceIsCompleted[_issuanceNonce] = true;
+        emit Issuanced(_issuanceNonce, requester, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
     }
 
     function completeIssuance(uint _issuanceNonce) public {
@@ -423,6 +435,7 @@ contract IndexFactory is
             }
             issuanceIsCompleted[issuanceNonce] = true;
     }
+    
 
     function cancelIssuance(uint256 _issuanceNonce) public {
         require(!issuanceIsCompleted[_issuanceNonce], "Issuance is completed");
@@ -461,25 +474,26 @@ contract IndexFactory is
 
     function redemption(uint _inputAmount) public returns(uint) {
         redemptionNonce += 1;
-        ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
-        coaByRedemptionNonce[redemptionNonce] = address(coa);
+        // ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
+        // coaByRedemptionNonce[redemptionNonce] = address(coa);
         redemptionInputAmount[redemptionNonce] = _inputAmount;
-        uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
-        token.burn(msg.sender, _inputAmount);
+        // uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
+        // token.burn(msg.sender, _inputAmount);
         burnedTokenAmountByNonce[redemptionNonce] = _inputAmount;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
-            uint256 amount = tokenBurnPercent * IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(vault)) / 1e18;
-            uint requestId = requestSellOrder(tokenAddress, amount, address(coa));
-            actionInfoById[requestId] = ActionInfo(2, redemptionNonce);
-            sellRequestAssetAmountById[requestId] = amount;
-            redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
-            redemptionRequesterByNonce[redemptionNonce] = msg.sender;
-            uint wrappedDsharesBalance = IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(vault));
-            uint dShareBalance = WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).previewRedeem(wrappedDsharesBalance);
-            redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = dShareBalance;
-            redemptionIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
-        }
+        redemptionRequesterByNonce[redemptionNonce] = msg.sender;
+        // for(uint i; i < factoryStorage.totalCurrentList(); i++) {
+        //     address tokenAddress = factoryStorage.currentList(i);
+        //     uint256 amount = tokenBurnPercent * IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(vault)) / 1e18;
+        //     uint requestId = requestSellOrder(tokenAddress, amount, address(coa));
+        //     actionInfoById[requestId] = ActionInfo(2, redemptionNonce);
+        //     sellRequestAssetAmountById[requestId] = amount;
+        //     redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
+        //     redemptionRequesterByNonce[redemptionNonce] = msg.sender;
+        //     uint wrappedDsharesBalance = IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(vault));
+        //     uint dShareBalance = WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).previewRedeem(wrappedDsharesBalance);
+        //     redemptionTokenPrimaryBalance[redemptionNonce][tokenAddress] = dShareBalance;
+        //     redemptionIndexTokenPrimaryTotalSupply[redemptionNonce] = IERC20(token).totalSupply();
+        // }
         emit RequestRedemption(redemptionNonce, msg.sender, usdc, _inputAmount, 0, block.timestamp);
         return redemptionNonce;
     }
@@ -495,6 +509,12 @@ contract IndexFactory is
         ContractOwnedAccount(address(coaAddress)).sendToken(usdc, requester, balance);
         redemptionIsCompleted[_redemptionNonce] = true;
         emit Redemption(_redemptionNonce, requester, usdc, redemptionInputAmount[_redemptionNonce], balance, block.timestamp);
+    }
+
+    function mockCompleteRedemption(uint _redemptionNonce, uint _amount) public {
+        address requester = redemptionRequesterByNonce[_redemptionNonce];
+        redemptionIsCompleted[_redemptionNonce] = true;
+        emit Redemption(_redemptionNonce, requester, usdc, redemptionInputAmount[_redemptionNonce], _amount, block.timestamp);
     }
 
     function cancelRedemption(uint _redemptionNonce) public {

@@ -12,7 +12,7 @@ import {FeeLib} from "../dinary/common/FeeLib.sol";
 /// @title Order Manager
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract OrderManager is
+contract TestOrderManager is
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable
@@ -34,28 +34,39 @@ contract OrderManager is
         RequestStatus status; // status of the request.
     }
 
+    address public custodianWallet;
     IOrderProcessor public issuer;
 
     address public usdc;
     uint8 public usdcDecimals;
 
-    mapping(address => bool) public isOperator;
-    
+    address public token;
 
     
+
+    // mapping between a mint request hash and the corresponding request nonce.
+    mapping(bytes32 => uint256) public mintRequestNonce;
+
+    // mapping between a burn request hash and the corresponding request nonce.
+    mapping(bytes32 => uint256) public burnRequestNonce;
+
     event BuyRequest(uint indexed id, uint time, uint inutAmount);
     event SellRequest(uint indexed id, uint time, uint inutAmount);
 
-    
+    Request[] public mintRequests;
+    Request[] public burnRequests;
+
     
     function initialize(
         address _usdc,
         uint8 _usdcDecimals,
+        address _token,
         address _issuer
     ) external initializer {
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         issuer = IOrderProcessor(_issuer);
+        token = _token;
         __Ownable_init(msg.sender);
         __Pausable_init();
     }
@@ -72,17 +83,29 @@ contract OrderManager is
     }
 
     
-    function setOperator(address _operator, bool _status) public onlyOwner {
-        isOperator[_operator] = _status;
+
+    function getAllMintRequests() public view returns (Request[] memory) {
+        return mintRequests;
+    }
+
+    function getAllBurnRequests() public view returns (Request[] memory) {
+        return burnRequests;
     }
 
     
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
         return IOrderProcessor.Order({
             requestTimestamp: uint64(block.timestamp),
             recipient: address(this),
-            assetToken: address(0),
+            assetToken: address(token),
             paymentToken: address(usdc),
             sell: sell,
             orderType: IOrderProcessor.OrderType.MARKET,
@@ -99,47 +122,39 @@ contract OrderManager is
         return fees;
     }
     
-    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) external returns(uint) {
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+    function requestBuyOrder(address _token, uint256 orderAmount) public returns(uint) {
+       
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
+        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, orderAmount);
         
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
-        order.recipient = _receiver;
+        order.recipient = address(this);
         order.assetToken = address(_token);
-        order.paymentTokenQuantity = _orderAmount;
+        order.paymentTokenQuantity = orderAmount;
         uint256 quantityIn = order.paymentTokenQuantity + fees;
-       
-        
+
         IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
+       
         IERC20(usdc).approve(address(issuer), quantityIn);
-        
         uint256 id = issuer.createOrderStandardFees(order);
-        // orderInstanceById[id] = order;
-        emit BuyRequest(id, block.timestamp, _orderAmount);
+        emit BuyRequest(id, block.timestamp, quantityIn);
         return id;
-        // return 1;
     }
 
 
-    function requestSellOrder(address _token, uint256 _amount, address _receiver) external returns(uint) {
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
-        // address wrappedDshare = factoryStorage.wrappedDshareAddress(_token);
-        // vault.withdrawFunds(wrappedDshare, address(this), _amount);
-        // uint orderAmount = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
-
+    function requestSellOrder(address _token, uint256 _orderAmount) public returns(uint) {
+        
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
-        order.assetTokenQuantity = _amount;
-        order.recipient = _receiver;
-        
-        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-        
-        
-        IERC20(_token).approve(address(issuer), _amount);
+        order.assetTokenQuantity = _orderAmount;
+
+       IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
+
+       IERC20(token).approve(address(issuer), _orderAmount);
+
         // balances before
         uint256 id = issuer.createOrderStandardFees(order);
-        // orderInstanceById[id] = order;
+        emit SellRequest(id, block.timestamp, _orderAmount);
         return id;
     }
     

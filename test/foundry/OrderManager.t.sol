@@ -9,7 +9,7 @@ import "./utils/SigUtils.sol";
 import "../../contracts/dinary/orders/OrderProcessor.sol";
 import "../../contracts/dinary/orders/IOrderProcessor.sol";
 import {TransferRestrictor} from "../../contracts/dinary/TransferRestrictor.sol";
-import {OrderManager} from "../../contracts/factory/OrderManager.sol";
+import {TestOrderManager} from "../../contracts/factory/TestOrderManager.sol";
 import {NumberUtils} from "../../contracts/dinary/common/NumberUtils.sol";
 import {FeeLib} from "../../contracts/dinary/common/FeeLib.sol";
 import {DShare} from "../../contracts/dinary/DShare.sol";
@@ -66,7 +66,7 @@ contract OrderProcessorTest is Test {
     SigUtils sigUtils;
     TransferRestrictor restrictor;
 
-    OrderManager orderManager;
+    TestOrderManager orderManager;
 
     uint256 userPrivateKey;
     uint256 adminPrivateKey;
@@ -114,7 +114,7 @@ contract OrderProcessorTest is Test {
         restrictor = TransferRestrictor(address(token.transferRestrictor()));
         restrictor.grantRole(restrictor.RESTRICTOR_ROLE(), restrictor_role);
 
-        orderManager = new OrderManager();
+        orderManager = new TestOrderManager();
         orderManager.initialize(address(paymentToken), paymentToken.decimals(), address(token), address(issuer));
 
         vm.stopPrank();

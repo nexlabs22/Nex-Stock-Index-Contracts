@@ -32,6 +32,14 @@ export const NexVaultAddresses: AddressMap = {
     [`sepolia`]: `0xA5d5282772dAD565203D88E2572b2087CEF5639D`
 };
 
+export const OrderManagerAddresses: AddressMap = {
+    [`sepolia`]: `0x0666056AcFaFf5EDB09F01Da15fe99d3B4eEE5F9`
+};
+
+export const TestFactoryAddresses: AddressMap = {
+    [`sepolia`]: `0xFA6fefD6616b600aC17A5E42403EBE218Ad210E1`
+};
+
 
 export const dShares = [
     '0xD771a71E5bb303da787b4ba2ce559e39dc6eD85c', //apple
