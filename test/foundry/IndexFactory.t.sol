@@ -537,7 +537,7 @@ contract OrderProcessorTest is Test {
         uint256 userBalanceBefore = paymentToken.balanceOf(user);
         uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
         paymentToken.approve(address(factory), quantityIn);
-        uint nonce = factory.issuance(inputAmount);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
 
         for(uint i = 0; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
@@ -566,7 +566,7 @@ contract OrderProcessorTest is Test {
         uint256 userBalanceBefore = paymentToken.balanceOf(user);
         uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
         paymentToken.approve(address(factory), feeAmount + inputAmount);
-        uint nonce = factory.issuance(inputAmount);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
         vm.stopPrank();
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
@@ -609,7 +609,7 @@ contract OrderProcessorTest is Test {
         uint256 userBalanceBefore = paymentToken.balanceOf(user);
         uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
         paymentToken.approve(address(factory), feeAmount + inputAmount);
-        uint nonce = factory.issuance(inputAmount);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
         vm.stopPrank();
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
@@ -652,7 +652,7 @@ contract OrderProcessorTest is Test {
 
         vm.startPrank(user);
         paymentToken.approve(address(factory), quantityIn);
-        uint nonce = factory.issuance(inputAmount);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
         
 
         for(uint i = 0; i < 10; i++) {

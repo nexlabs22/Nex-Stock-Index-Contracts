@@ -1,29 +1,29 @@
 import { ethers, upgrades } from "hardhat";
-import { ApiOracleAddresses, ExternalJobIdBytes32Addresses, IndexFactoryStorageAddresses, LINKAddresses, Mag7IndexTokenAddresses, NexVaultAddresses, OrderManagerAddresses, OrderProcessorAddresses, UsdcAddresses } from "../../contractAddresses";
+import { ApiOracleAddresses, ExternalJobIdBytes32Addresses, LINKAddresses, Mag7IndexTokenAddresses, NexVaultAddresses, OrderProcessorAddresses, UsdcAddresses } from "../../contractAddresses";
 
 // sepoliaOrderManager = "0x478CbE6D18d69773EEaf94523125a12Cfd985404"
 async function deployIndexToken() {
   
   const [deployer] = await ethers.getSigners();
 
-  const IndexFactory = await ethers.getContractFactory("IndexFactory");
-  console.log('Deploying IndexFactory...');
+  const IndexFactoryStorage = await ethers.getContractFactory("IndexFactoryStorage");
+  console.log('Deploying IndexFactoryStorage...');
 
-  const indexFactory = await upgrades.deployProxy(IndexFactory, [
-      IndexFactoryStorageAddresses[`sepolia`],
-      OrderManagerAddresses[`sepolia`],
+  const indexFactoryStorage = await upgrades.deployProxy(IndexFactoryStorage, [
       OrderProcessorAddresses[`sepolia`],
       Mag7IndexTokenAddresses[`sepolia`],
       NexVaultAddresses[`sepolia`],
       UsdcAddresses[`sepolia`],
       '6',
-      false
+      LINKAddresses[`sepolia`],
+      ApiOracleAddresses[`goerli`],
+      ExternalJobIdBytes32Addresses[`goerli`]
   ], { initializer: 'initialize' });
 
 //   await orderManager.deployed()
 
   console.log(
-    `indexFactory deployed: ${ await indexFactory.target}`
+    `indexFactoryStorage deployed: ${ await indexFactoryStorage.target}`
   );
 }
 

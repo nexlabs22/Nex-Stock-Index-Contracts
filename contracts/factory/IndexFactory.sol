@@ -311,6 +311,7 @@ contract IndexFactory is
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
         fees += fee;
+        // fees += amount;
         }
         return fees;
     }
@@ -360,7 +361,7 @@ contract IndexFactory is
     
 
 
-    function issuance(uint _inputAmount) public returns(uint256) {
+    function issuanceIndexTokens(uint _inputAmount) public returns(uint256) {
         
         uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
@@ -375,7 +376,8 @@ contract IndexFactory is
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
-            uint requestId = requestBuyOrder(tokenAddress, amount, address(coa));
+            // uint requestId = requestBuyOrder(tokenAddress, amount, address(coa));
+            uint requestId = requestBuyOrder(tokenAddress, amount, address(orderManager));
             actionInfoById[requestId] = ActionInfo(1, issuanceNonce);
             buyRequestPayedAmountById[requestId] = amount;
             issuanceRequestId[issuanceNonce][tokenAddress] = requestId;
@@ -411,7 +413,7 @@ contract IndexFactory is
             WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(balance, address(vault));
         }
             uint256 primaryTotalSupply = issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce];
-            if(primaryTotalSupply == 0){
+            if(primaryTotalSupply == 0 || primaryPortfolioValue == 0){
                 uint256 mintAmount = secondaryPortfolioValue*100;
                 token.mint(requester, mintAmount);
                 emit Issuanced(_issuanceNonce, requester, usdc, issuanceInputAmount[_issuanceNonce], mintAmount, block.timestamp);
