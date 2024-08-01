@@ -329,7 +329,7 @@ contract IndexFactory is
         IERC20(usdc).approve(address(issuer), quantityIn);
         */
         // uint256 id = issuer.createOrderStandardFees(order);
-        uint256 id = orderManager.requestBuyOrder(_token, _orderAmount, _receiver);
+        uint256 id = orderManager.requestBuyOrderFromCurrentBalance(_token, _orderAmount, _receiver);
         orderInstanceById[id] = order;
         return id;
     }
@@ -350,11 +350,11 @@ contract IndexFactory is
         IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
         IERC20(token).approve(address(issuer), _orderAmount);
         */
-        
-        IERC20(_token).approve(address(orderManager), orderAmount);
+        IERC20(_token).transfer(address(orderManager), orderAmount);
+        // IERC20(_token).approve(address(orderManager), orderAmount);
         // balances before
         // uint256 id = issuer.createOrderStandardFees(order);
-        uint256 id = orderManager.requestSellOrder(_token, orderAmount, _receiver);
+        uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         orderInstanceById[id] = order;
         return id;
     }
@@ -365,18 +365,18 @@ contract IndexFactory is
         
         uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
-        IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
-        IERC20(usdc).approve(address(orderManager), quantityIn);
+        IERC20(usdc).transferFrom(msg.sender, address(orderManager), quantityIn);
+        // IERC20(usdc).approve(address(orderManager), quantityIn);
         
         
         issuanceNonce += 1;
-        ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
-        coaByIssuanceNonce[issuanceNonce] = address(coa);
+        // ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
+        // coaByIssuanceNonce[issuanceNonce] = address(coa);
         issuanceInputAmount[issuanceNonce] = _inputAmount;
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
-            // uint requestId = requestBuyOrder(tokenAddress, amount, address(coa));
+            // uint requestId = requestBuyOrder((tokenAddress, amount, address(coa));
             uint requestId = requestBuyOrder(tokenAddress, amount, address(orderManager));
             actionInfoById[requestId] = ActionInfo(1, issuanceNonce);
             buyRequestPayedAmountById[requestId] = amount;
@@ -401,14 +401,15 @@ contract IndexFactory is
             address tokenAddress = factoryStorage.currentList(i);
             uint256 tokenRequestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(tokenAddress, address(usdc));
-            address coaAddress = coaByIssuanceNonce[_issuanceNonce];
-            uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
+            // address coaAddress = coaByIssuanceNonce[_issuanceNonce];
+            // uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
+            uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 primaryBalance = issuanceTokenPrimaryBalance[_issuanceNonce][tokenAddress];
             uint256 primaryValue = primaryBalance*tokenPriceData.price;
             uint256 secondaryValue = primaryValue + buyRequestPayedAmountById[tokenRequestId];
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
-            ContractOwnedAccount(coaAddress).sendToken(tokenAddress, address(this), balance);
+            orderManager.sendToken(tokenAddress, address(this), balance);
             IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), balance);
             WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(balance, address(vault));
         }
@@ -429,7 +430,7 @@ contract IndexFactory is
     function cancelIssuance(uint256 _issuanceNonce) public {
         require(!issuanceIsCompleted[_issuanceNonce], "Issuance is completed");
         address requester = issuanceRequesterByNonce[_issuanceNonce];
-        address coaAddress = coaByIssuanceNonce[_issuanceNonce];
+        // address coaAddress = coaByIssuanceNonce[_issuanceNonce];
         require(msg.sender == requester, "Only requester can cancel the issuance");
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
@@ -463,8 +464,8 @@ contract IndexFactory is
 
     function redemption(uint _inputAmount) public returns(uint) {
         redemptionNonce += 1;
-        ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
-        coaByRedemptionNonce[redemptionNonce] = address(coa);
+        // ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
+        // coaByRedemptionNonce[redemptionNonce] = address(coa);
         redemptionInputAmount[redemptionNonce] = _inputAmount;
         uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
         token.burn(msg.sender, _inputAmount);
@@ -472,7 +473,7 @@ contract IndexFactory is
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint256 amount = tokenBurnPercent * IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(vault)) / 1e18;
-            uint requestId = requestSellOrder(tokenAddress, amount, address(coa));
+            uint requestId = requestSellOrder(tokenAddress, amount, address(orderManager));
             actionInfoById[requestId] = ActionInfo(2, redemptionNonce);
             sellRequestAssetAmountById[requestId] = amount;
             redemptionRequestId[redemptionNonce][tokenAddress] = requestId;
@@ -492,11 +493,18 @@ contract IndexFactory is
         require(factoryStorage.checkRedemptionOrdersStatus(_redemptionNonce), "Redemption orders are not completed");
         require(!redemptionIsCompleted[_redemptionNonce], "Redemption is completed");
         address requester = redemptionRequesterByNonce[_redemptionNonce];
-        address coaAddress = coaByRedemptionNonce[_redemptionNonce];
-        uint256 balance = IERC20(usdc).balanceOf(coaAddress);
-        ContractOwnedAccount(address(coaAddress)).sendToken(usdc, requester, balance);
+        // address coaAddress = coaByRedemptionNonce[_redemptionNonce];
+        // uint256 balance = IERC20(usdc).balanceOf(coaAddress);
+        uint totalBalance;
+        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
+            address tokenAddress = factoryStorage.currentList(i);
+            uint256 tokenRequestId = redemptionRequestId[_redemptionNonce][tokenAddress];
+            uint256 balance = issuer.getReceivedAmount(tokenRequestId);
+            totalBalance += balance;
+        }
+        orderManager.sendToken(usdc, requester, totalBalance);
         redemptionIsCompleted[_redemptionNonce] = true;
-        emit Redemption(_redemptionNonce, requester, usdc, redemptionInputAmount[_redemptionNonce], balance, block.timestamp);
+        emit Redemption(_redemptionNonce, requester, usdc, redemptionInputAmount[_redemptionNonce], totalBalance, block.timestamp);
     }
 
     function cancelRedemption(uint _redemptionNonce) public {
@@ -512,7 +520,7 @@ contract IndexFactory is
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || filledAmount > 0){
                 ContractOwnedAccount(coaAddress).sendToken(address(usdc), address(this), filledAmount);
                 IERC20(usdc).approve(address(orderManager), filledAmount);
-                uint cancelRequestId = requestBuyOrder(tokenAddress, filledAmount, address(coaAddress));
+                uint cancelRequestId = requestBuyOrder((tokenAddress, filledAmount, address(coaAddress));
                 actionInfoById[cancelRequestId] = ActionInfo(4, _redemptionNonce);
                 cancelRedemptionRequestId[_redemptionNonce][tokenAddress] = requestId;
             }

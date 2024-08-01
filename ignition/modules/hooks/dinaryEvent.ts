@@ -6,12 +6,17 @@ import {
     bytecode as Counter_BYTECODE,
   } from '../../../artifacts/contracts/test/Counter.sol/Counter.json'
 import {
+    abi as Factory_ABI,
+    bytecode as Factory_BYTECODE,
+  } from '../../../artifacts/contracts/factory/IndexFactory.sol/IndexFactory.json'
+import {
 abi as OrderProcessor_ABI,
 bytecode as OrderProcessor_BYTECODE,
 } from '../../../artifacts/contracts/dinary/orders/OrderProcessor.sol/OrderProcessor.json'
-import { OrderProcessorAddresses, UsdcAddresses } from '../../../contractAddresses'
+import { IndexFactoryAddresses, OrderProcessorAddresses, UsdcAddresses } from '../../../contractAddresses'
 import { privateKeyToAccount } from 'viem/accounts'
 // import { Event } from '../../../typechain-types/contracts/factory/TestIndexFactory';
+import { Multicall } from '../../../typechain-types/@openzeppelin/contracts/utils/Multicall';
 // import {}
 
 const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}` as `0x${string}`) 
@@ -32,8 +37,6 @@ const client = createWalletClient({
 // main()
 
 async function execution(logs: any) {
-    // console.log(logs);
-    // console.log(logs[0]?.args?.from)
     
     console.log(logs);
     console.log(logs[0]?.args?.id)
@@ -49,10 +52,31 @@ async function execution(logs: any) {
     console.log("increased !")
 }
 
+async function multical(logs: any) {
+  const id = logs[0]?.args?.id;
+
+  const isFilled = await client.readContract({
+    address: IndexFactoryAddresses[`sepolia`] as `0x${string}`,
+    abi: Factory_ABI,
+    args: [id],
+    functionName: 'checkMultical',
+  })
+  if(isFilled){
+  console.log("Completing...")
+  const { request } = await client.simulateContract({
+      account,
+      address: IndexFactoryAddresses[`sepolia`] as `0x${string}`,
+      abi: Factory_ABI,
+      functionName: 'multical',
+    }) // Public Action
+  const hash = await client.writeContract(request) // Wallet Action
+  console.log("Completed !")
+  }
+}
+
 const unwatch = client.watchContractEvent({
     address: OrderProcessorAddresses[`sepolia`] as `0x${string}`,
     abi: OrderProcessor_ABI,
-    eventName: 'OrderFulfilled', 
-    // args: { from: '0xc961145a54C96E3aE9bAA048c4F4D6b04C13916b' }, 
-    onLogs: logs => execution(logs)
+    eventName: 'OrderFulfilled',
+    onLogs: logs => multical(logs)
   })

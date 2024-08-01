@@ -25,6 +25,8 @@ contract OrderManager is
         REJECTED
     }
 
+    event FundsWithdrawn(address token, address to, uint256 amount);
+
     struct Request {
         address requester; // sender of the request.
         uint256 amount; // amount of token to mint/burn.
@@ -121,13 +123,31 @@ contract OrderManager is
         // return 1;
     }
 
+    function requestBuyOrderFromCurrentBalance(address _token, uint256 _orderAmount, address _receiver) external returns(uint) {
+        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
+        
+        IOrderProcessor.Order memory order = getPrimaryOrder(false);
+        order.recipient = _receiver;
+        order.assetToken = address(_token);
+        order.paymentTokenQuantity = _orderAmount;
+        uint256 quantityIn = order.paymentTokenQuantity + fees;
+       
+        
+        IERC20(usdc).approve(address(issuer), quantityIn);
+        
+        uint256 id = issuer.createOrderStandardFees(order);
+        // orderInstanceById[id] = order;
+        emit BuyRequest(id, block.timestamp, _orderAmount);
+        return id;
+        // return 1;
+    }
+
 
     function requestSellOrder(address _token, uint256 _amount, address _receiver) external returns(uint) {
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
-        // address wrappedDshare = factoryStorage.wrappedDshareAddress(_token);
-        // vault.withdrawFunds(wrappedDshare, address(this), _amount);
-        // uint orderAmount = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
-
+        
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
         order.assetTokenQuantity = _amount;
@@ -137,10 +157,31 @@ contract OrderManager is
         
         
         IERC20(_token).approve(address(issuer), _amount);
-        // balances before
         uint256 id = issuer.createOrderStandardFees(order);
-        // orderInstanceById[id] = order;
+       
         return id;
+    }
+
+    function requestSellOrderFromCurrentBalance(address _token, uint256 _amount, address _receiver) external returns(uint) {
+        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        
+        IOrderProcessor.Order memory order = getPrimaryOrder(true);
+        order.assetToken = _token;
+        order.assetTokenQuantity = _amount;
+        order.recipient = _receiver;
+        
+        
+        IERC20(_token).approve(address(issuer), _amount);
+       
+        uint256 id = issuer.createOrderStandardFees(order);
+        
+        return id;
+    }
+
+    function withdrawFunds(address _token, address _to, uint256 _amount) external {
+        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        emit FundsWithdrawn(_token, _to, _amount);
+        IERC20(_token).transfer(_to, _amount);
     }
     
 }
