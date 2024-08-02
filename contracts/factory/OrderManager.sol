@@ -183,5 +183,10 @@ contract OrderManager is
         emit FundsWithdrawn(_token, _to, _amount);
         IERC20(_token).transfer(_to, _amount);
     }
+
+    function cancelOrder(uint256 _requestId) external {
+        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        issuer.requestCancel(_requestId);
+    }
     
 }

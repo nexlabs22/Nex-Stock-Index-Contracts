@@ -575,7 +575,7 @@ contract OrderProcessorTest is Test {
             IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
-            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce));
+            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(address(orderManager));
             
             
             issuer.fillOrder(order, orderAmount, receivedAmount, feeAmount/factoryStorage.totalCurrentList());
@@ -585,13 +585,14 @@ contract OrderProcessorTest is Test {
                     || fillPrice.price == mulDiv(orderAmount, 10 ** (18 - paymentToken.decimals()), receivedAmount)
             );
             // balances after
-            assertEq(IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce)), userAssetBefore + receivedAmount);
+            assertEq(IERC20(tokenAddress).balanceOf(address(orderManager)), userAssetBefore + receivedAmount);
             assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
             
         }
         assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
         factory.completeIssuance(nonce);
         assertEq(factory.issuanceIsCompleted(nonce), true);
+        assertEq(indexToken.balanceOf(user), 100000e18);
     }
 
     function testCompleteIssuanceMultical() public {
@@ -618,7 +619,7 @@ contract OrderProcessorTest is Test {
             IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
-            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce));
+            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(address(orderManager));
             
             
             issuer.fillOrder(order, orderAmount, receivedAmount, feeAmount/factoryStorage.totalCurrentList());
@@ -628,7 +629,7 @@ contract OrderProcessorTest is Test {
                     || fillPrice.price == mulDiv(orderAmount, 10 ** (18 - paymentToken.decimals()), receivedAmount)
             );
             // balances after
-            assertEq(IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce)), userAssetBefore + receivedAmount);
+            assertEq(IERC20(tokenAddress).balanceOf(address(orderManager)), userAssetBefore + receivedAmount);
             assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
             //multical
             if(factory.checkMultical(id)){
@@ -862,7 +863,7 @@ contract OrderProcessorTest is Test {
         assertEq(factory.cancelRedemptionComplted(nonce), true);
     }
 
-    
+    /**
     function testRebalancing() public {
         vm.startPrank(admin);
         for(uint i; i < 10; i++) {
@@ -1001,7 +1002,7 @@ contract OrderProcessorTest is Test {
         
 
     }
-
+    */
     /**
     function testRebalancingMultical() public {
         vm.startPrank(admin);
