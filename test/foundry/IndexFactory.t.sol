@@ -527,7 +527,7 @@ contract OrderProcessorTest is Test {
         uint inputAmount = 1000e18;
         vm.startPrank(admin);
         uint feeAmount = factory.calculateIssuanceFee(inputAmount);
-        uint quantityIn = feeAmount + inputAmount;
+        uint quantityIn = feeAmount + inputAmount + inputAmount*10/10000;
         
         paymentToken.mint(address(user), quantityIn);
         vm.stopPrank();
@@ -558,14 +558,14 @@ contract OrderProcessorTest is Test {
         uint receivedAmount = 100e18/factoryStorage.totalCurrentList();
         uint feeAmount = factory.calculateIssuanceFee(inputAmount);
         // uint expectedAmountOut = factory.getIssuanceAmountOut(inputAmount);
-        paymentToken.mint(address(user), feeAmount + inputAmount);
+        paymentToken.mint(address(user), feeAmount + inputAmount + inputAmount*10/10000);
         vm.stopPrank();
 
         vm.startPrank(user);
 
         uint256 userBalanceBefore = paymentToken.balanceOf(user);
         uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
-        paymentToken.approve(address(factory), feeAmount + inputAmount);
+        paymentToken.approve(address(factory), feeAmount + inputAmount + inputAmount*10/10000);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
         vm.stopPrank();
         for(uint i = 0; i < 10; i++) {
@@ -602,14 +602,14 @@ contract OrderProcessorTest is Test {
         uint receivedAmount = 100e18/factoryStorage.totalCurrentList();
         uint feeAmount = factory.calculateIssuanceFee(inputAmount);
         // uint expectedAmountOut = factory.getIssuanceAmountOut(inputAmount);
-        paymentToken.mint(address(user), feeAmount + inputAmount);
+        paymentToken.mint(address(user), feeAmount + inputAmount + inputAmount*10/10000);
         vm.stopPrank();
 
         vm.startPrank(user);
 
         uint256 userBalanceBefore = paymentToken.balanceOf(user);
         uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
-        paymentToken.approve(address(factory), feeAmount + inputAmount);
+        paymentToken.approve(address(factory), feeAmount + inputAmount + inputAmount*10/10000);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
         vm.stopPrank();
         for(uint i = 0; i < 10; i++) {
@@ -647,7 +647,7 @@ contract OrderProcessorTest is Test {
         vm.startPrank(admin);
         uint inputAmount = 1000e18;
         uint feeAmount = factory.calculateIssuanceFee(inputAmount);
-        uint quantityIn = feeAmount + inputAmount;
+        uint quantityIn = feeAmount + inputAmount + inputAmount*10/10000;
         paymentToken.mint(address(user), quantityIn);
         vm.stopPrank();
 

@@ -68,8 +68,6 @@ contract IndexFactory is
     mapping(uint => mapping(address => uint)) public cancelIssuanceRequestId;
     mapping(uint => mapping(address => uint)) public cancelRedemptionRequestId;
 
-    mapping(uint => mapping(address => uint)) public cancelIssuanceUnfilledAmount;
-    mapping(uint => mapping(address => uint)) public cancelRedemptionUnfilledAmount;
 
     mapping(uint => mapping(address => uint)) public issuanceRequestId;
     mapping(uint => mapping(address => uint)) public redemptionRequestId;
@@ -108,6 +106,9 @@ contract IndexFactory is
     mapping(uint => ActionInfo) public actionInfoById; 
     // RequestNFT public nft;
     uint256 public latestFeeUpdate;
+
+    mapping(uint => mapping(address => uint)) public cancelIssuanceUnfilledAmount;
+    mapping(uint => mapping(address => uint)) public cancelRedemptionUnfilledAmount;
 
     event RequestIssuance(
         uint indexed nonce,
@@ -175,7 +176,7 @@ contract IndexFactory is
   function setFeeRate(uint8 _newFee) public onlyOwner {
     uint256 distance = block.timestamp - latestFeeUpdate;
     require(distance / 60 / 60 > 12, "You should wait at least 12 hours after the latest update");
-    require(_newFee <= 100 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
+    require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
     feeRate = _newFee;
     latestFeeUpdate = block.timestamp;
   }
@@ -218,9 +219,9 @@ contract IndexFactory is
     }
     
 
-    function getOrderInstanceById(uint256 id) external view returns(IOrderProcessor.Order memory){
-        return orderInstanceById[id];
-    }
+    // function getOrderInstanceById(uint256 id) external view returns(IOrderProcessor.Order memory){
+    //     return orderInstanceById[id];
+    // }
 
     function getVaultDshareBalance(address _token) public view returns(uint){
         address wrappedDshareAddress = factoryStorage.wrappedDshareAddress(_token);
@@ -228,9 +229,9 @@ contract IndexFactory is
         return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
     }
 
-    function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
-        return percentageFeeRate != 0 ? PrbMath.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
-    }
+    // function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
+    //     return percentageFeeRate != 0 ? PrbMath.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
+    // }
     
     function getVaultDshareValue(address _token) public view returns(uint){
         uint tokenPrice = priceInWei(_token);
@@ -365,10 +366,11 @@ contract IndexFactory is
 
 
     function issuanceIndexTokens(uint _inputAmount) public returns(uint256) {
-        
+        uint feeAmount = (_inputAmount * feeRate) / 10000;
         uint256 orderProcessorFee = calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
         IERC20(usdc).transferFrom(msg.sender, address(orderManager), quantityIn);
+        IERC20(usdc).transferFrom(msg.sender, owner(), feeAmount);
         // IERC20(usdc).approve(address(orderManager), quantityIn);
         
         
@@ -404,8 +406,6 @@ contract IndexFactory is
             address tokenAddress = factoryStorage.currentList(i);
             uint256 tokenRequestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(tokenAddress, address(usdc));
-            // address coaAddress = coaByIssuanceNonce[_issuanceNonce];
-            // uint256 balance = IERC20(tokenAddress).balanceOf(coaAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 primaryBalance = issuanceTokenPrimaryBalance[_issuanceNonce][tokenAddress];
             uint256 primaryValue = primaryBalance*tokenPriceData.price;
@@ -511,7 +511,9 @@ contract IndexFactory is
             uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
             totalBalance += balance - feeTaken;
         }
-        orderManager.withdrawFunds(usdc, requester, totalBalance);
+        uint fee = (totalBalance * feeRate) / 10000;
+        orderManager.withdrawFunds(usdc, owner(), fee);
+        orderManager.withdrawFunds(usdc, requester, totalBalance - fee);
         redemptionIsCompleted[_redemptionNonce] = true;
         emit Redemption(_redemptionNonce, requester, usdc, redemptionInputAmount[_redemptionNonce], totalBalance, block.timestamp);
     }
@@ -569,9 +571,9 @@ contract IndexFactory is
     
 
     
-    function getActionType(uint _requestId) public view returns(uint){
-        return actionInfoById[_requestId].actionType;
-    }
+    // function getActionType(uint _requestId) public view returns(uint){
+    //     return actionInfoById[_requestId].actionType;
+    // }
 
     function checkMultical(uint _reqeustId) public view returns (bool){
         ActionInfo memory actionInfo = actionInfoById[_reqeustId];
@@ -610,24 +612,24 @@ contract IndexFactory is
 
     
 
-    function getTimestamp() internal view returns (uint256) {
-        // timestamp is only used for data maintaining purpose, it is not relied on for critical logic.
-        return block.timestamp; // solhint-disable-line not-rely-on-time
-    }
+    // function getTimestamp() internal view returns (uint256) {
+    //     // timestamp is only used for data maintaining purpose, it is not relied on for critical logic.
+    //     return block.timestamp; // solhint-disable-line not-rely-on-time
+    // }
 
     
 
-    function compareStrings(
-        string memory a,
-        string memory b
-    ) internal pure returns (bool) {
-        return (keccak256(abi.encodePacked(a)) ==
-            keccak256(abi.encodePacked(b)));
-    }
+    // function compareStrings(
+    //     string memory a,
+    //     string memory b
+    // ) internal pure returns (bool) {
+    //     return (keccak256(abi.encodePacked(a)) ==
+    //         keccak256(abi.encodePacked(b)));
+    // }
 
-    function isEmptyString(string memory a) internal pure returns (bool) {
-        return (compareStrings(a, ""));
-    }
+    // function isEmptyString(string memory a) internal pure returns (bool) {
+    //     return (compareStrings(a, ""));
+    // }
 
     
 }
