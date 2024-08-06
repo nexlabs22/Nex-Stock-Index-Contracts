@@ -219,9 +219,9 @@ contract IndexFactory is
     }
     
 
-    // function getOrderInstanceById(uint256 id) external view returns(IOrderProcessor.Order memory){
-    //     return orderInstanceById[id];
-    // }
+    function getOrderInstanceById(uint256 id) external view returns(IOrderProcessor.Order memory){
+        return orderInstanceById[id];
+    }
 
     function getVaultDshareBalance(address _token) public view returns(uint){
         address wrappedDshareAddress = factoryStorage.wrappedDshareAddress(_token);
