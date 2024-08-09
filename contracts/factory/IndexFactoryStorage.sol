@@ -60,7 +60,10 @@ contract IndexFactoryStorage is
     IOrderProcessor public issuer;
     address public usdc;
     uint8 public usdcDecimals;
+    OrderManager public orderManager;
     
+    
+    bool public isMainnet;
 
     function initialize(
         address _issuer,
@@ -70,7 +73,8 @@ contract IndexFactoryStorage is
         uint8 _usdcDecimals,
         address _chainlinkToken,
         address _oracleAddress,
-        bytes32 _externalJobId
+        bytes32 _externalJobId,
+        bool _isMainnet
     ) external initializer {
         issuer = IOrderProcessor(_issuer);
         token = IndexToken(_token);
@@ -85,14 +89,138 @@ contract IndexFactoryStorage is
         oraclePayment = ((1 * LINK_DIVISIBILITY) / 10); // n * 10**18
         baseUrl = "https://app.nexlabs.io/api/allFundingRates";
         urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
+        isMainnet = _isMainnet;
+    }
+
+    
+    function setUsdcAddress(
+        address _usdc,
+        uint8 _usdcDecimals
+    ) public onlyOwner returns (bool) {
+        require(_usdc != address(0), "invalid token address");
+        usdc = _usdc;
+        usdcDecimals = _usdcDecimals;
+        return true;
+    }
+
+    function setTokenAddress(
+        address _token
+    ) public onlyOwner returns (bool) {
+        require(_token != address(0), "invalid token address");
+        token = IndexToken(_token);
+        return true;
     }
 
     
 
+    /// @notice Allows the owner of the contract to set the issuer
+    /// @param _issuer address
+    /// @return bool
+    function setIssuer(address _issuer) external onlyOwner returns (bool) {
+        require(_issuer != address(0), "invalid issuer address");
+        issuer = IOrderProcessor(_issuer);
+
+        return true;
+    }
 
     
 
+    function getVaultDshareBalance(address _token) public view returns(uint){
+        address wrappedDshareAddress = factoryStorage.wrappedDshareAddress(_token);
+        uint wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
+        return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
+    }
+
+    function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
+        return percentageFeeRate != 0 ? PrbMath.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
+    }
     
+    function getVaultDshareValue(address _token) public view returns(uint){
+        uint tokenPrice = priceInWei(_token);
+        uint dshareBalance = getVaultDshareBalance(_token);
+        return (dshareBalance * tokenPrice)/1e18;
+    }
+
+    function getPortfolioValue() public view returns(uint){
+        uint portfolioValue;
+        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
+            uint tokenValue = getVaultDshareValue(factoryStorage.currentList(i));
+            portfolioValue += tokenValue;
+        }
+        return portfolioValue;
+    }
+
+    function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {        
+        if (_chainDecimals > _amountDecimals){
+            return _amount * int256(10 **(_chainDecimals - _amountDecimals));
+        }else{
+            return _amount * int256(10 **(_amountDecimals - _chainDecimals));
+        }
+    }
+
+    function priceInWei(address _tokenAddress) public view returns (uint256) {
+        
+        if(isMainnet){
+        address feedAddress = factoryStorage.priceFeedByTokenAddress(_tokenAddress);
+        (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
+        uint8 priceFeedDecimals = AggregatorV3Interface(feedAddress).decimals();
+        price = _toWei(price, priceFeedDecimals, 18);
+        return uint256(price);
+        } else{
+        IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(_tokenAddress, address(usdc));
+        return tokenPriceData.price;
+        }
+    }
+    
+    function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
+        return IOrderProcessor.Order({
+            requestTimestamp: uint64(block.timestamp),
+            recipient: address(this),
+            assetToken: address(token),
+            paymentToken: address(usdc),
+            sell: sell,
+            orderType: IOrderProcessor.OrderType.MARKET,
+            assetTokenQuantity: sell ? 100 ether : 0,
+            paymentTokenQuantity: sell ? 0 : 100 ether,
+            price: 0,
+            tif: IOrderProcessor.TIF.GTC
+        });
+    }
+    
+    function getIssuanceAmountOut(uint _amount) public view returns(uint){
+        uint portfolioValue = getPortfolioValue();
+        uint totalSupply = token.totalSupply();
+        uint amountOut = _amount * totalSupply / portfolioValue;
+        return amountOut;
+    }
+
+    function getRedemptionAmountOut(uint _amount) public view returns(uint){
+        uint portfolioValue = getPortfolioValue();
+        uint totalSupply = token.totalSupply();
+        uint amountOut = _amount * portfolioValue / totalSupply;
+        return amountOut;
+    }
+
+    
+
+    function calculateBuyRequestFee(uint _amount) public view returns(uint){
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _amount);
+        return fee;
+    }
+
+    function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
+        uint256 fees;
+        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
+        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
+        fees += fee;
+        // fees += amount;
+        }
+        return fees;
+    }
 
 
     

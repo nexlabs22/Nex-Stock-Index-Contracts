@@ -42,17 +42,8 @@ contract IndexFactory is
 
 
 
-    IndexToken public token;
-
     IndexFactoryStorage public factoryStorage;
-
-    NexVault public vault;
-    OrderManager public orderManager;
-    IOrderProcessor public issuer;
-
-    address public usdc;
-    uint8 public usdcDecimals;
-
+    
     uint8 public feeRate; // 10/10000 = 0.1%
 
 
@@ -63,7 +54,6 @@ contract IndexFactory is
     uint public redemptionNonce;
 
 
-    bool public isMainnet;
 
     mapping(uint => mapping(address => uint)) public cancelIssuanceRequestId;
     mapping(uint => mapping(address => uint)) public cancelRedemptionRequestId;
@@ -86,8 +76,7 @@ contract IndexFactory is
     mapping(uint => address) public issuanceRequesterByNonce;
     mapping(uint => address) public redemptionRequesterByNonce;
 
-    mapping(uint => address) public coaByIssuanceNonce;
-    mapping(uint => address) public coaByRedemptionNonce;
+
 
     mapping(uint => bool) public cancelIssuanceComplted;
     mapping(uint => bool) public cancelRedemptionComplted;
@@ -95,10 +84,6 @@ contract IndexFactory is
     mapping(uint =>  IOrderProcessor.Order) public orderInstanceById;
 
 
-    mapping(uint => uint) public portfolioValueByNonce;
-    mapping(uint => mapping(address => uint)) public tokenValueByNonce;
-    mapping(uint => mapping(address => uint)) public tokenShortagePercentByNonce;
-    mapping(uint => uint) public totalShortagePercentByNonce;
 
     mapping(uint => uint) public issuanceInputAmount;
     mapping(uint => uint) public redemptionInputAmount;
@@ -147,27 +132,12 @@ contract IndexFactory is
     );
 
     function initialize(
-        address _factoryStorage,
-        address _orderManager,
-        address _issuer,
-        address _token,
-        address _vault,
-        address _usdc,
-        uint8 _usdcDecimals,
-        bool _isMainnet
+        address _factoryStorage
     ) external initializer {
         factoryStorage = IndexFactoryStorage(_factoryStorage);
-        orderManager = OrderManager(_orderManager);
-        issuer = IOrderProcessor(_issuer);
-        token = IndexToken(_token);
-        vault = NexVault(_vault);
-        usdc = _usdc;
-        usdcDecimals = _usdcDecimals;
+       
         __Ownable_init(msg.sender);
         __Pausable_init();
-        feeRate = 10;
-        //set oracle data
-        isMainnet = _isMainnet;
     }
 
     
@@ -181,35 +151,7 @@ contract IndexFactory is
     latestFeeUpdate = block.timestamp;
   }
 
-    function setUsdcAddress(
-        address _usdc,
-        uint8 _usdcDecimals
-    ) public onlyOwner returns (bool) {
-        require(_usdc != address(0), "invalid token address");
-        usdc = _usdc;
-        usdcDecimals = _usdcDecimals;
-        return true;
-    }
-
-    function setTokenAddress(
-        address _token
-    ) public onlyOwner returns (bool) {
-        require(_token != address(0), "invalid token address");
-        token = IndexToken(_token);
-        return true;
-    }
-
     
-
-    /// @notice Allows the owner of the contract to set the issuer
-    /// @param _issuer address
-    /// @return bool
-    function setIssuer(address _issuer) external onlyOwner returns (bool) {
-        require(_issuer != address(0), "invalid issuer address");
-        issuer = IOrderProcessor(_issuer);
-
-        return true;
-    }
 
 
     function setIndexFactoryStorage(address _factoryStorage) external onlyOwner returns (bool) {
@@ -223,102 +165,7 @@ contract IndexFactory is
         return orderInstanceById[id];
     }
 
-    function getVaultDshareBalance(address _token) public view returns(uint){
-        address wrappedDshareAddress = factoryStorage.wrappedDshareAddress(_token);
-        uint wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
-        return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
-    }
-
-    // function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
-    //     return percentageFeeRate != 0 ? PrbMath.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
-    // }
     
-    function getVaultDshareValue(address _token) public view returns(uint){
-        uint tokenPrice = priceInWei(_token);
-        uint dshareBalance = getVaultDshareBalance(_token);
-        return (dshareBalance * tokenPrice)/1e18;
-    }
-
-    function getPortfolioValue() public view returns(uint){
-        uint portfolioValue;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            uint tokenValue = getVaultDshareValue(factoryStorage.currentList(i));
-            portfolioValue += tokenValue;
-        }
-        return portfolioValue;
-    }
-
-    function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {        
-        if (_chainDecimals > _amountDecimals){
-            return _amount * int256(10 **(_chainDecimals - _amountDecimals));
-        }else{
-            return _amount * int256(10 **(_amountDecimals - _chainDecimals));
-        }
-    }
-
-    function priceInWei(address _tokenAddress) public view returns (uint256) {
-        
-        if(isMainnet){
-        address feedAddress = factoryStorage.priceFeedByTokenAddress(_tokenAddress);
-        (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
-        uint8 priceFeedDecimals = AggregatorV3Interface(feedAddress).decimals();
-        price = _toWei(price, priceFeedDecimals, 18);
-        return uint256(price);
-        } else{
-        IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(_tokenAddress, address(usdc));
-        return tokenPriceData.price;
-        }
-    }
-    
-    function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
-        return IOrderProcessor.Order({
-            requestTimestamp: uint64(block.timestamp),
-            recipient: address(this),
-            assetToken: address(token),
-            paymentToken: address(usdc),
-            sell: sell,
-            orderType: IOrderProcessor.OrderType.MARKET,
-            assetTokenQuantity: sell ? 100 ether : 0,
-            paymentTokenQuantity: sell ? 0 : 100 ether,
-            price: 0,
-            tif: IOrderProcessor.TIF.GTC
-        });
-    }
-    
-    function getIssuanceAmountOut(uint _amount) public view returns(uint){
-        uint portfolioValue = getPortfolioValue();
-        uint totalSupply = token.totalSupply();
-        uint amountOut = _amount * totalSupply / portfolioValue;
-        return amountOut;
-    }
-
-    function getRedemptionAmountOut(uint _amount) public view returns(uint){
-        uint portfolioValue = getPortfolioValue();
-        uint totalSupply = token.totalSupply();
-        uint amountOut = _amount * portfolioValue / totalSupply;
-        return amountOut;
-    }
-
-    
-
-    function calculateBuyRequestFee(uint _amount) public view returns(uint){
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _amount);
-        return fee;
-    }
-
-    function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
-        uint256 fees;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-        address tokenAddress = factoryStorage.currentList(i);
-        uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
-        fees += fee;
-        // fees += amount;
-        }
-        return fees;
-    }
 
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
        
@@ -328,11 +175,7 @@ contract IndexFactory is
         order.assetToken = address(_token);
         order.paymentTokenQuantity = _orderAmount;
        
-        /**
-        IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
-        IERC20(usdc).approve(address(issuer), quantityIn);
-        */
-        // uint256 id = issuer.createOrderStandardFees(order);
+        
         uint256 id = orderManager.requestBuyOrderFromCurrentBalance(_token, _orderAmount, _receiver);
         orderInstanceById[id] = order;
         return id;
@@ -350,14 +193,9 @@ contract IndexFactory is
         order.assetToken = _token;
         order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
-        /**
-        IERC20(token).transferFrom(msg.sender, address(this), _orderAmount);
-        IERC20(token).approve(address(issuer), _orderAmount);
-        */
+        
         IERC20(_token).transfer(address(orderManager), orderAmount);
-        // IERC20(_token).approve(address(orderManager), orderAmount);
-        // balances before
-        // uint256 id = issuer.createOrderStandardFees(order);
+        
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         orderInstanceById[id] = order;
         return id;
@@ -371,12 +209,10 @@ contract IndexFactory is
         uint256 quantityIn = orderProcessorFee + _inputAmount;
         IERC20(usdc).transferFrom(msg.sender, address(orderManager), quantityIn);
         IERC20(usdc).transferFrom(msg.sender, owner(), feeAmount);
-        // IERC20(usdc).approve(address(orderManager), quantityIn);
         
         
         issuanceNonce += 1;
-        // ContractOwnedAccount coa = new ContractOwnedAccount(address(this));
-        // coaByIssuanceNonce[issuanceNonce] = address(coa);
+        
         issuanceInputAmount[issuanceNonce] = _inputAmount;
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
@@ -611,25 +447,6 @@ contract IndexFactory is
     }
 
     
-
-    // function getTimestamp() internal view returns (uint256) {
-    //     // timestamp is only used for data maintaining purpose, it is not relied on for critical logic.
-    //     return block.timestamp; // solhint-disable-line not-rely-on-time
-    // }
-
-    
-
-    // function compareStrings(
-    //     string memory a,
-    //     string memory b
-    // ) internal pure returns (bool) {
-    //     return (keccak256(abi.encodePacked(a)) ==
-    //         keccak256(abi.encodePacked(b)));
-    // }
-
-    // function isEmptyString(string memory a) internal pure returns (bool) {
-    //     return (compareStrings(a, ""));
-    // }
 
     
 }
