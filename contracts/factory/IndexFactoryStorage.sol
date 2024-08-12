@@ -26,6 +26,11 @@ contract IndexFactoryStorage is
 {
     using Chainlink for Chainlink.Request;
 
+    struct ActionInfo {
+        uint actionType;
+        uint nonce; 
+    }
+    
     string public baseUrl;
     string public urlParams;
 
@@ -51,8 +56,6 @@ contract IndexFactoryStorage is
     mapping(address => uint) public tokenOracleMarketShare;
 
     
-    
-    
     mapping(address => address) public priceFeedByTokenAddress;
 
     IndexToken public token;
@@ -61,9 +64,38 @@ contract IndexFactoryStorage is
     address public usdc;
     uint8 public usdcDecimals;
     OrderManager public orderManager;
-    
-    
     bool public isMainnet;
+
+    // new
+    uint8 public feeRate; // 10/10000 = 0.1%
+    uint256 public latestFeeUpdate;
+    uint public issuanceNonce;
+    uint public redemptionNonce;
+
+
+    mapping(uint => bool) public issuanceIsCompleted;
+    mapping(uint => bool) public redemptionIsCompleted;
+    mapping(uint => uint) public burnedTokenAmountByNonce;
+    mapping(uint => mapping(address => uint)) public cancelIssuanceRequestId;
+    mapping(uint => mapping(address => uint)) public cancelRedemptionRequestId;
+    mapping(uint => mapping(address => uint)) public issuanceRequestId;
+    mapping(uint => mapping(address => uint)) public redemptionRequestId;
+    mapping(uint => uint) public buyRequestPayedAmountById;
+    mapping(uint => uint) public sellRequestAssetAmountById;
+    mapping(uint => mapping(address => uint)) public issuanceTokenPrimaryBalance;
+    mapping(uint => mapping(address => uint)) public redemptionTokenPrimaryBalance;
+    mapping(uint => uint) public issuanceIndexTokenPrimaryTotalSupply;
+    mapping(uint => uint) public redemptionIndexTokenPrimaryTotalSupply;
+    mapping(uint => address) public issuanceRequesterByNonce;
+    mapping(uint => address) public redemptionRequesterByNonce;
+    mapping(uint => bool) public cancelIssuanceComplted;
+    mapping(uint => bool) public cancelRedemptionComplted;
+    mapping(uint =>  IOrderProcessor.Order) public orderInstanceById;
+    mapping(uint => uint) public issuanceInputAmount;
+    mapping(uint => uint) public redemptionInputAmount;
+    mapping(uint => ActionInfo) public actionInfoById;
+    mapping(uint => mapping(address => uint)) public cancelIssuanceUnfilledAmount;
+    mapping(uint => mapping(address => uint)) public cancelRedemptionUnfilledAmount;
 
     function initialize(
         address _issuer,
@@ -93,6 +125,15 @@ contract IndexFactoryStorage is
     }
 
     
+    //Notice: newFee should be between 1 to 100 (0.01% - 1%)
+    function setFeeRate(uint8 _newFee) public onlyOwner {
+    uint256 distance = block.timestamp - latestFeeUpdate;
+    require(distance / 60 / 60 > 12, "You should wait at least 12 hours after the latest update");
+    require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
+    feeRate = _newFee;
+    latestFeeUpdate = block.timestamp;
+    }
+
     function setUsdcAddress(
         address _usdc,
         uint8 _usdcDecimals
@@ -123,10 +164,133 @@ contract IndexFactoryStorage is
         return true;
     }
 
+    function increaseIssuanceNonce() external {
+        require(msg.sender == address(factory), "caller must be factory");
+        issuanceNonce += 1;
+    }
+
+    function increaseRedeemNonce() external {
+        require(msg.sender == address(factory), "caller must be factory");
+        redemptionNonce += 1;
+    }
     
+    function setIssuanceIsCompleted(uint _issuanceNonce , bool _isCompleted) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        issuanceIsCompleted[_issuanceNonce] = _isCompleted;
+    }
+
+    function setRedemptionIsCompleted(uint _redemptionNonce , bool _isCompleted) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        redemptionIsCompleted[_redemptionNonce] = _isCompleted;
+    }
+
+    function setBurnedTokenByNonce(uint _redemptionNonce , uint _burnedAmount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        burnedTokenAmountByNonce[_redemptionNonce] = _burnedAmount;
+    }
+
+    function setIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        issuanceRequestId[_issuanceNonce][_token] = _requestId;
+    }
+
+    function setRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        redemptionRequestId[_redemptionNonce][_token] = _requestId;
+    }
+
+    function setIssuanceRequesterByNonce(uint _issuanceNonce, address _requester) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        issuanceRequesterByNonce[_issuanceNonce] = _requester;
+    }
+
+    function setRedemptionRequesterByNonce(uint _redemptionNonce, address _requester) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        redemptionRequesterByNonce[_redemptionNonce] = _requester;
+    }
+
+    function setCancelIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        cancelIssuanceRequestId[_issuanceNonce][_token] = _requestId;
+    }
+
+    function setCancelRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        cancelRedemptionRequestId[_redemptionNonce][_token] = _requestId;
+    }
+
+    function setBuyRequestPayedAmountById(uint _requestId, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        buyRequestPayedAmountById[_requestId] = _amount;
+    }
+
+    function setSellRequestAssetAmountById(uint _requestId, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        sellRequestAssetAmountById[_requestId] = _amount;
+    }
+
+    function setIssuanceTokenPrimaryBalance(uint _issuanceNonce, address _token, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        issuanceTokenPrimaryBalance[_issuanceNonce][_token] = _amount;
+    }
+
+    function setRedemptionTokenPrimaryBalance(uint _redemptionNonce, address _token, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        redemptionTokenPrimaryBalance[_redemptionNonce][_token] = _amount;
+    }
+
+    function setIssuanceIndexTokenPrimaryTotalSupply(uint _issuanceNonce, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce] = _amount;
+    }
+
+    function setRedemptionIndexTokenPrimaryTotalSupply(uint _redemptionNonce, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        redemptionIndexTokenPrimaryTotalSupply[_redemptionNonce] = _amount;
+    }
+
+    function setIssuanceInputAmount(uint _issuanceNonce, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        issuanceInputAmount[_issuanceNonce] = _amount;
+    }
+
+    function setRedemptionInputAmount(uint _redemptionNonce, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        redemptionInputAmount[_redemptionNonce] = _amount;
+    }
+
+    function setActionInfoById(uint _requestId, ActionInfo memory _actionInfo) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        actionInfoById[_requestId] = _actionInfo;
+    }
+
+    function setCancelIssuanceUnfilledAmount(uint _issuanceNonce, address _token, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        cancelIssuanceUnfilledAmount[_issuanceNonce][_token] = _amount;
+    }
+
+    function setCancelRedemptionUnfilledAmount(uint _redemptionNonce, address _token, uint _amount) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        cancelRedemptionUnfilledAmount[_redemptionNonce][_token] = _amount;
+    }
+
+    function setCancelIssuanceComplted(uint _issuanceNonce, bool _isCompleted) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        cancelIssuanceComplted[_issuanceNonce] = _isCompleted;
+    }
+
+    function setCancelRedemptionComplted(uint _redemptionNonce, bool _isCompleted) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        cancelRedemptionComplted[_redemptionNonce] = _isCompleted;
+    }
+
+    function setOrderInstanceById(uint _requestId, IOrderProcessor.Order memory _order) external {
+        require(msg.sender == address(factory), "caller must be factory");
+        orderInstanceById[_requestId] = _order;
+    }
 
     function getVaultDshareBalance(address _token) public view returns(uint){
-        address wrappedDshareAddress = factoryStorage.wrappedDshareAddress(_token);
+        address wrappedDshareAddress = wrappedDshareAddress[_token];
         uint wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
         return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
     }
@@ -143,8 +307,8 @@ contract IndexFactoryStorage is
 
     function getPortfolioValue() public view returns(uint){
         uint portfolioValue;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            uint tokenValue = getVaultDshareValue(factoryStorage.currentList(i));
+        for(uint i; i < totalCurrentList; i++) {
+            uint tokenValue = getVaultDshareValue(currentList[i]);
             portfolioValue += tokenValue;
         }
         return portfolioValue;
@@ -161,7 +325,7 @@ contract IndexFactoryStorage is
     function priceInWei(address _tokenAddress) public view returns (uint256) {
         
         if(isMainnet){
-        address feedAddress = factoryStorage.priceFeedByTokenAddress(_tokenAddress);
+        address feedAddress = priceFeedByTokenAddress[_tokenAddress];
         (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
         uint8 priceFeedDecimals = AggregatorV3Interface(feedAddress).decimals();
         price = _toWei(price, priceFeedDecimals, 18);
@@ -172,7 +336,7 @@ contract IndexFactoryStorage is
         }
     }
     
-    function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
+    function getPrimaryOrder(bool sell) external view returns (IOrderProcessor.Order memory) {
         return IOrderProcessor.Order({
             requestTimestamp: uint64(block.timestamp),
             recipient: address(this),
@@ -211,9 +375,9 @@ contract IndexFactoryStorage is
 
     function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
         uint256 fees;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-        address tokenAddress = factoryStorage.currentList(i);
-        uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
+        for(uint i; i < totalCurrentList; i++) {
+        address tokenAddress = currentList[i];
+        uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100e18;
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
         fees += fee;
@@ -346,13 +510,12 @@ contract IndexFactoryStorage is
         uint completedCount;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint requestId = factory.issuanceRequestId(_issuanceNonce, tokenAddress);
-            address coaAddress = factory.coaByIssuanceNonce(_issuanceNonce);
-            uint coaBalance = IERC20(tokenAddress).balanceOf(coaAddress);
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED) && coaBalance == 0){
+            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
+            uint receivedAmount = issuer.getReceivedAmount(requestId);
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED) && receivedAmount == 0){
                 completedCount += 1;
-            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) && coaBalance == 0){
-                uint cancelRequestId = factory.cancelIssuanceRequestId(_issuanceNonce,tokenAddress);
+            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) && receivedAmount == 0){
+                uint cancelRequestId = cancelIssuanceRequestId[_issuanceNonce][tokenAddress];
                 if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                     completedCount += 1;
                 }
@@ -368,7 +531,7 @@ contract IndexFactoryStorage is
     function isIssuanceOrderActive(uint256 _issuanceNonce) public view returns(bool) {
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint requestId = factory.issuanceRequestId(_issuanceNonce, tokenAddress);
+            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
                 return true;
             }
@@ -380,7 +543,7 @@ contract IndexFactoryStorage is
         uint completedOrdersCount;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint requestId = factory.issuanceRequestId(_issuanceNonce, tokenAddress);
+            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 completedOrdersCount += 1;
             }
@@ -396,7 +559,7 @@ contract IndexFactoryStorage is
         uint completedOrdersCount;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint requestId = factory.redemptionRequestId(_redemptionNonce,tokenAddress);
+            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 completedOrdersCount += 1;
             }
@@ -411,7 +574,7 @@ contract IndexFactoryStorage is
     function isRedemptionOrderActive(uint256 _redemptionNonce) public view returns(bool) {
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint requestId = factory.redemptionRequestId(_redemptionNonce, tokenAddress);
+            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
                 return true;
             }
@@ -423,13 +586,12 @@ contract IndexFactoryStorage is
         uint completedCount;
         for(uint i; i < totalCurrentList; i++) {
             address tokenAddress = currentList[i];
-            uint requestId = factory.redemptionRequestId(_redemptionNonce,tokenAddress);
-            address coaAddress = factory.coaByRedemptionNonce(_redemptionNonce);
-            uint coaBalance = IERC20(tokenAddress).balanceOf(coaAddress);
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED) && coaBalance == 0){
+            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
+            uint receivedAmount = issuer.getReceivedAmount(requestId);
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED) && receivedAmount == 0){
                 completedCount += 1;
-            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) && coaBalance == 0){
-                uint cancelRequestId = factory.cancelRedemptionRequestId(_redemptionNonce, tokenAddress);
+            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) && receivedAmount == 0){
+                uint cancelRequestId = cancelRedemptionRequestId[_redemptionNonce][tokenAddress];
                 if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                     completedCount += 1;
                 }
