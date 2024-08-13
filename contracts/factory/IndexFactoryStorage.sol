@@ -13,8 +13,11 @@ import "../dinary/orders/IOrderProcessor.sol";
 import "../dinary/WrappedDShare.sol";
 import "../vault/NexVault.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "./IndexFactory.sol";
-import "./IndexFactoryBalancer.sol";
+import "./OrderManager.sol";
+import "../libraries/Commen.sol" as PrbMath;
+// import "./IndexFactory.sol";
+// import "./IndexFactoryBalancer.sol";
+// import "./IndexFactoryProcessor.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -34,8 +37,9 @@ contract IndexFactoryStorage is
     string public baseUrl;
     string public urlParams;
 
-    IndexFactory public factory;
-    IndexFactoryBalancer public factoryBalancer;
+    address public factoryAddress;
+    address public factoryBalancerAddress;
+    address public factoryProcessorAddress;
 
     bytes32 public externalJobId;
     uint256 public oraclePayment;
@@ -72,6 +76,7 @@ contract IndexFactoryStorage is
     uint public issuanceNonce;
     uint public redemptionNonce;
 
+    uint8 public latestPriceDecimals;
 
     mapping(uint => bool) public issuanceIsCompleted;
     mapping(uint => bool) public redemptionIsCompleted;
@@ -122,9 +127,13 @@ contract IndexFactoryStorage is
         baseUrl = "https://app.nexlabs.io/api/allFundingRates";
         urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
         isMainnet = _isMainnet;
+        feeRate = 10;
     }
 
-    
+    modifier onlyFactory() {
+        require(msg.sender == factoryAddress || msg.sender == factoryProcessorAddress || msg.sender == factoryBalancerAddress, "Caller is not a factory contract");
+        _;
+    }
     //Notice: newFee should be between 1 to 100 (0.01% - 1%)
     function setFeeRate(uint8 _newFee) public onlyOwner {
     uint256 distance = block.timestamp - latestFeeUpdate;
@@ -144,11 +153,21 @@ contract IndexFactoryStorage is
         return true;
     }
 
+    function setLatestPriceDecimals(uint8 _decimals) public onlyOwner {
+        latestPriceDecimals = _decimals;
+    }
+
     function setTokenAddress(
         address _token
     ) public onlyOwner returns (bool) {
         require(_token != address(0), "invalid token address");
         token = IndexToken(_token);
+        return true;
+    }
+
+    function setOrderManager(address _orderManager) external onlyOwner returns (bool) {
+        require(_orderManager != address(0), "invalid order manager address");
+        orderManager = OrderManager(_orderManager);
         return true;
     }
 
@@ -164,129 +183,148 @@ contract IndexFactoryStorage is
         return true;
     }
 
-    function increaseIssuanceNonce() external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setWrappedDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
+        require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
+        for(uint i = 0; i < _dShares.length; i++){
+            wrappedDshareAddress[_dShares[i]] = _wrappedDShares[i];
+        }
+    }
+
+    function setPriceFeedAddresses(address[] memory _dShares, address[] memory _priceFeedAddresses) public onlyOwner {
+        require(_dShares.length == _priceFeedAddresses.length, "Array length mismatch");
+        for(uint i = 0; i < _dShares.length; i++){
+            priceFeedByTokenAddress[_dShares[i]] = _priceFeedAddresses[i];
+        }
+    }
+
+    function setUrl(string memory _beforeAddress, string memory _afterAddress) public onlyOwner{
+    baseUrl = _beforeAddress;
+    urlParams = _afterAddress;
+    }
+
+    function setOracleInfo(address _oracleAddress, bytes32 _externalJobId) public onlyOwner {
+        setChainlinkOracle(_oracleAddress);
+        externalJobId = _externalJobId;
+    }
+
+    function setFactory(address _factoryAddress) public onlyOwner {
+        factoryAddress = _factoryAddress;
+    }
+
+    function setFactoryBalancer(address _factoryBalancerAddress) public onlyOwner {
+        factoryBalancerAddress = _factoryBalancerAddress;
+    }
+
+    function setFactoryProcessor(address _factoryProcessorAddress) public onlyOwner {
+        factoryProcessorAddress = _factoryProcessorAddress;
+    }
+
+    function increaseIssuanceNonce() external onlyFactory {
         issuanceNonce += 1;
     }
 
-    function increaseRedeemNonce() external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function increaseRedemptionNonce() external onlyFactory {
         redemptionNonce += 1;
     }
     
-    function setIssuanceIsCompleted(uint _issuanceNonce , bool _isCompleted) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setIssuanceIsCompleted(uint _issuanceNonce , bool _isCompleted) external onlyFactory {
         issuanceIsCompleted[_issuanceNonce] = _isCompleted;
     }
 
-    function setRedemptionIsCompleted(uint _redemptionNonce , bool _isCompleted) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setRedemptionIsCompleted(uint _redemptionNonce , bool _isCompleted) external onlyFactory {
         redemptionIsCompleted[_redemptionNonce] = _isCompleted;
     }
 
-    function setBurnedTokenByNonce(uint _redemptionNonce , uint _burnedAmount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setBurnedTokenAmountByNonce(uint _redemptionNonce , uint _burnedAmount) external onlyFactory {
         burnedTokenAmountByNonce[_redemptionNonce] = _burnedAmount;
     }
 
-    function setIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external onlyFactory {
         issuanceRequestId[_issuanceNonce][_token] = _requestId;
     }
 
-    function setRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external onlyFactory {
         redemptionRequestId[_redemptionNonce][_token] = _requestId;
     }
 
-    function setIssuanceRequesterByNonce(uint _issuanceNonce, address _requester) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setIssuanceRequesterByNonce(uint _issuanceNonce, address _requester) external onlyFactory {
         issuanceRequesterByNonce[_issuanceNonce] = _requester;
     }
 
-    function setRedemptionRequesterByNonce(uint _redemptionNonce, address _requester) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setRedemptionRequesterByNonce(uint _redemptionNonce, address _requester) external onlyFactory {
         redemptionRequesterByNonce[_redemptionNonce] = _requester;
     }
 
-    function setCancelIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setCancelIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external onlyFactory {
         cancelIssuanceRequestId[_issuanceNonce][_token] = _requestId;
     }
 
-    function setCancelRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setCancelRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external onlyFactory {
         cancelRedemptionRequestId[_redemptionNonce][_token] = _requestId;
     }
 
-    function setBuyRequestPayedAmountById(uint _requestId, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setBuyRequestPayedAmountById(uint _requestId, uint _amount) external onlyFactory {
         buyRequestPayedAmountById[_requestId] = _amount;
     }
 
-    function setSellRequestAssetAmountById(uint _requestId, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setSellRequestAssetAmountById(uint _requestId, uint _amount) external onlyFactory {
         sellRequestAssetAmountById[_requestId] = _amount;
     }
 
-    function setIssuanceTokenPrimaryBalance(uint _issuanceNonce, address _token, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setIssuanceTokenPrimaryBalance(uint _issuanceNonce, address _token, uint _amount) external onlyFactory {
         issuanceTokenPrimaryBalance[_issuanceNonce][_token] = _amount;
     }
 
-    function setRedemptionTokenPrimaryBalance(uint _redemptionNonce, address _token, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setRedemptionTokenPrimaryBalance(uint _redemptionNonce, address _token, uint _amount) external onlyFactory {
         redemptionTokenPrimaryBalance[_redemptionNonce][_token] = _amount;
     }
 
-    function setIssuanceIndexTokenPrimaryTotalSupply(uint _issuanceNonce, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setIssuanceIndexTokenPrimaryTotalSupply(uint _issuanceNonce, uint _amount) external onlyFactory {
         issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce] = _amount;
     }
 
-    function setRedemptionIndexTokenPrimaryTotalSupply(uint _redemptionNonce, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setRedemptionIndexTokenPrimaryTotalSupply(uint _redemptionNonce, uint _amount) external onlyFactory {
         redemptionIndexTokenPrimaryTotalSupply[_redemptionNonce] = _amount;
     }
 
-    function setIssuanceInputAmount(uint _issuanceNonce, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setIssuanceInputAmount(uint _issuanceNonce, uint _amount) external onlyFactory {
         issuanceInputAmount[_issuanceNonce] = _amount;
     }
 
-    function setRedemptionInputAmount(uint _redemptionNonce, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setRedemptionInputAmount(uint _redemptionNonce, uint _amount) external onlyFactory {
         redemptionInputAmount[_redemptionNonce] = _amount;
     }
 
-    function setActionInfoById(uint _requestId, ActionInfo memory _actionInfo) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setActionInfoById(uint _requestId, ActionInfo memory _actionInfo) external onlyFactory {
         actionInfoById[_requestId] = _actionInfo;
     }
 
-    function setCancelIssuanceUnfilledAmount(uint _issuanceNonce, address _token, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setCancelIssuanceUnfilledAmount(uint _issuanceNonce, address _token, uint _amount) external onlyFactory {
         cancelIssuanceUnfilledAmount[_issuanceNonce][_token] = _amount;
     }
 
-    function setCancelRedemptionUnfilledAmount(uint _redemptionNonce, address _token, uint _amount) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setCancelRedemptionUnfilledAmount(uint _redemptionNonce, address _token, uint _amount) external onlyFactory {
         cancelRedemptionUnfilledAmount[_redemptionNonce][_token] = _amount;
     }
 
-    function setCancelIssuanceComplted(uint _issuanceNonce, bool _isCompleted) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setCancelIssuanceComplted(uint _issuanceNonce, bool _isCompleted) external onlyFactory {
         cancelIssuanceComplted[_issuanceNonce] = _isCompleted;
     }
 
-    function setCancelRedemptionComplted(uint _redemptionNonce, bool _isCompleted) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setCancelRedemptionComplted(uint _redemptionNonce, bool _isCompleted) external onlyFactory {
         cancelRedemptionComplted[_redemptionNonce] = _isCompleted;
     }
 
-    function setOrderInstanceById(uint _requestId, IOrderProcessor.Order memory _order) external {
-        require(msg.sender == address(factory), "caller must be factory");
+    function setOrderInstanceById(uint _requestId, IOrderProcessor.Order memory _order) external onlyFactory {
         orderInstanceById[_requestId] = _order;
+    }
+
+    function getOrderInstanceById(uint _id) public view returns(IOrderProcessor.Order memory){
+        return orderInstanceById[_id];
+    }
+
+    function getActionInfoById(uint _id) public view returns(ActionInfo memory){
+        return actionInfoById[_id];
     }
 
     function getVaultDshareBalance(address _token) public view returns(uint){
@@ -332,7 +370,8 @@ contract IndexFactoryStorage is
         return uint256(price);
         } else{
         IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(_tokenAddress, address(usdc));
-        return tokenPriceData.price;
+        int price = _toWei(int(tokenPriceData.price), latestPriceDecimals, 18);
+        return uint(price);
         }
     }
     
@@ -387,43 +426,11 @@ contract IndexFactoryStorage is
     }
 
 
-    
-    function setWrappedDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
-        require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
-        for(uint i = 0; i < _dShares.length; i++){
-            wrappedDshareAddress[_dShares[i]] = _wrappedDShares[i];
-        }
-    }
-
-    function setPriceFeedAddresses(address[] memory _dShares, address[] memory _priceFeedAddresses) public onlyOwner {
-        require(_dShares.length == _priceFeedAddresses.length, "Array length mismatch");
-        for(uint i = 0; i < _dShares.length; i++){
-            priceFeedByTokenAddress[_dShares[i]] = _priceFeedAddresses[i];
-        }
-    }
-
 
     function concatenation(string memory a, string memory b) public pure returns (string memory) {
         return string(bytes.concat(bytes(a), bytes(b)));
     }
 
-    function setUrl(string memory _beforeAddress, string memory _afterAddress) public onlyOwner{
-    baseUrl = _beforeAddress;
-    urlParams = _afterAddress;
-    }
-
-    function setOracleInfo(address _oracleAddress, bytes32 _externalJobId) public onlyOwner {
-        setChainlinkOracle(_oracleAddress);
-        externalJobId = _externalJobId;
-    }
-
-    function setFactory(address _factoryAddress) public onlyOwner {
-        factory = IndexFactory(_factoryAddress);
-    }
-
-    function setFactoryBalancer(address _factoryBalancerAddress) public onlyOwner {
-        factoryBalancer = IndexFactoryBalancer(_factoryBalancerAddress);
-    }
     
     function requestAssetsData(
     )
@@ -469,7 +476,7 @@ contract IndexFactoryStorage is
     }
 
     function updateCurrentList() external {
-        require(msg.sender == address(factoryBalancer), "caller must be factory balancer");
+        require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
         totalCurrentList = totalOracleList;
         for(uint i = 0; i < totalOracleList; i++){
             address tokenAddress = oracleList[i];

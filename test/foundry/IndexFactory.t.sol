@@ -10,6 +10,7 @@ import "../../contracts/test/Token.sol";
 import "../../contracts/token/IndexToken.sol";
 import "../../contracts/vault/NexVault.sol";
 import "../../contracts/factory/IndexFactory.sol";
+import "../../contracts/factory/IndexFactoryProcessor.sol";
 import "../../contracts/factory/IndexFactoryStorage.sol";
 import "../../contracts/factory/IndexFactoryBalancer.sol";
 import {MockToken} from "./utils/mocks/MockToken.sol";
@@ -84,6 +85,7 @@ contract OrderProcessorTest is Test {
     MockApiOracle public oracle;
     LinkToken link;
     IndexFactory public factory;
+    IndexFactoryProcessor public factoryProcessor;
     MockV3Aggregator public ethPriceOracle;
     NexVault public vault;
     IndexFactoryStorage public factoryStorage;
@@ -198,38 +200,52 @@ contract OrderProcessorTest is Test {
         vault.initialize(address(0));
         
         factoryStorage = new IndexFactoryStorage();
-        factoryStorage.initialize(address(issuer), address(indexToken), address(vault), address(paymentToken), paymentToken.decimals(), address(link), address(oracle), jobId);
-
-        factoryBalancer = new IndexFactoryBalancer();
-        factoryBalancer.initialize(
-            address(factoryStorage),
-            address(orderManager),
-            address(issuer),
-            payable(address(indexToken)),
-            address(vault),
-            address(paymentToken),
-            paymentToken.decimals(),
-            true //isMainnet
+        factoryStorage.initialize(
+            address(issuer), 
+            address(indexToken), 
+            address(vault), 
+            address(paymentToken), 
+            paymentToken.decimals(), 
+            address(link), 
+            address(oracle), 
+            jobId,
+            true
         );
+
+        // factoryBalancer = new IndexFactoryBalancer();
+        // factoryBalancer.initialize(
+        //     address(factoryStorage),
+        //     address(orderManager),
+        //     address(issuer),
+        //     payable(address(indexToken)),
+        //     address(vault),
+        //     address(paymentToken),
+        //     paymentToken.decimals(),
+        //     true //isMainnet
+        // );
+
         factory = new IndexFactory();
         factory.initialize(
-            address(factoryStorage),
-            address(orderManager),
-            address(issuer),
-            payable(address(indexToken)),
-            address(vault),
-            address(paymentToken),
-            paymentToken.decimals(),
-            true //isMainnet
+            address(factoryStorage)
+        );
+
+        factoryProcessor = new IndexFactoryProcessor();
+        factoryProcessor.initialize(
+            address(factoryStorage)
         );
         
 
-        indexToken.setMinter(address(factory));
+        indexToken.setMinter(address(factory), true);
+        indexToken.setMinter(address(factoryProcessor), true);
         vault.setOperator(address(factory), true);
+        vault.setOperator(address(factoryProcessor), true);
         vault.setOperator(address(factoryBalancer), true);
+        factoryStorage.setOrderManager(address(orderManager));
         factoryStorage.setFactory(address(factory));
+        factoryStorage.setFactoryProcessor(address(factoryProcessor));
         factoryStorage.setFactoryBalancer(address(factoryBalancer));
         orderManager.setOperator(address(factory), true);
+        orderManager.setOperator(address(factoryProcessor), true);
         orderManager.setOperator(address(factoryBalancer), true);
         
         DShare[10] memory tokens;
@@ -523,10 +539,11 @@ contract OrderProcessorTest is Test {
 
         vm.stopPrank();
     }
+    
     function testIssuance() public {
         uint inputAmount = 1000e18;
         vm.startPrank(admin);
-        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         uint quantityIn = feeAmount + inputAmount + inputAmount*10/10000;
         
         paymentToken.mint(address(user), quantityIn);
@@ -541,8 +558,8 @@ contract OrderProcessorTest is Test {
 
         for(uint i = 0; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
-        uint id = factory.issuanceRequestId(nonce, tokenAddress);
-        uint orderAmount = factory.buyRequestPayedAmountById(id);
+        uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
         assertEq(issuer.getUnfilledAmount(id), orderAmount);
         }
@@ -550,14 +567,14 @@ contract OrderProcessorTest is Test {
         assertEq(paymentToken.balanceOf(user), userBalanceBefore - quantityIn);
         assertEq(paymentToken.balanceOf(address(issuer)), feeAmount);
     }
-
+    
     function testCompleteIssuance() public {
         vm.startPrank(admin);
         // uint totalCurretList = factoryStorage.totalCurrentList();
         uint inputAmount = 1000e18;
         uint receivedAmount = 100e18/factoryStorage.totalCurrentList();
-        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
-        // uint expectedAmountOut = factory.getIssuanceAmountOut(inputAmount);
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        // uint expectedAmountOut = factoryStorage.getIssuanceAmountOut(inputAmount);
         paymentToken.mint(address(user), feeAmount + inputAmount + inputAmount*10/10000);
         vm.stopPrank();
 
@@ -570,9 +587,9 @@ contract OrderProcessorTest is Test {
         vm.stopPrank();
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
-            uint id = factory.issuanceRequestId(nonce, tokenAddress);
-            uint orderAmount = factory.buyRequestPayedAmountById(id);
-            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
             uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(address(orderManager));
@@ -590,18 +607,18 @@ contract OrderProcessorTest is Test {
             
         }
         assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
-        factory.completeIssuance(nonce);
-        assertEq(factory.issuanceIsCompleted(nonce), true);
+        factoryProcessor.completeIssuance(nonce);
+        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
         assertEq(indexToken.balanceOf(user), 100000e18);
     }
-
+    
     function testCompleteIssuanceMultical() public {
         vm.startPrank(admin);
         // uint totalCurretList = factoryStorage.totalCurrentList();
         uint inputAmount = 1000e18;
         uint receivedAmount = 100e18/factoryStorage.totalCurrentList();
-        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
-        // uint expectedAmountOut = factory.getIssuanceAmountOut(inputAmount);
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        // uint expectedAmountOut = factoryStorage.getIssuanceAmountOut(inputAmount);
         paymentToken.mint(address(user), feeAmount + inputAmount + inputAmount*10/10000);
         vm.stopPrank();
 
@@ -614,9 +631,9 @@ contract OrderProcessorTest is Test {
         vm.stopPrank();
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
-            uint id = factory.issuanceRequestId(nonce, tokenAddress);
-            uint orderAmount = factory.buyRequestPayedAmountById(id);
-            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
             uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(address(orderManager));
@@ -632,21 +649,21 @@ contract OrderProcessorTest is Test {
             assertEq(IERC20(tokenAddress).balanceOf(address(orderManager)), userAssetBefore + receivedAmount);
             assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
             //multical
-            if(factory.checkMultical(id)){
-                factory.multical(id);
+            if(factoryProcessor.checkMultical(id)){
+                factoryProcessor.multical(id);
             }
         }
         // assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
-        // factory.completeIssuance(nonce);
-        assertEq(factory.issuanceIsCompleted(nonce), true);
+        // factoryProcessor.completeIssuance(nonce);
+        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
     }
 
     
-
+    
     function testCancelIssuance() public {
         vm.startPrank(admin);
         uint inputAmount = 1000e18;
-        uint feeAmount = factory.calculateIssuanceFee(inputAmount);
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         uint quantityIn = feeAmount + inputAmount + inputAmount*10/10000;
         paymentToken.mint(address(user), quantityIn);
         vm.stopPrank();
@@ -658,8 +675,8 @@ contract OrderProcessorTest is Test {
 
         for(uint i = 0; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
-        uint id = factory.issuanceRequestId(nonce, tokenAddress);
-        uint orderAmount = factory.buyRequestPayedAmountById(id);
+        uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
         assertEq(issuer.getUnfilledAmount(id), orderAmount);
         }
@@ -670,17 +687,17 @@ contract OrderProcessorTest is Test {
         // vm.startPrank(operator);
         // for(uint i = 0; i < 10; i++) {
         //     address tokenAddress = factoryStorage.currentList(i);
-        //     uint id = factory.issuanceRequestId(nonce, tokenAddress);
-        //     uint orderAmount = factory.buyRequestPayedAmountById(id);
-        //     IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+        //     uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+        //     uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
+        //     IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
         //     paymentToken.approve(address(issuer), orderAmount);
         //     issuer.cancelOrder(order, " ");
         //     assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
         // }
-        // factory.completeCancelIssuance(nonce);
-        // assertEq(factory.cancelIssuanceComplted(nonce), true);
+        // factoryProcessor.completeCancelIssuance(nonce);
+        // assertEq(factoryStorage.cancelIssuanceComplted(nonce), true);
     }
-
+    
     function testRedemption() public {
         vm.startPrank(admin);
         for(uint i; i < 10; i++) {
@@ -694,9 +711,9 @@ contract OrderProcessorTest is Test {
         WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
         }
         
-        indexToken.setMinter(address(admin));
+        indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
-        indexToken.setMinter(address(factory));
+        indexToken.setMinter(address(factory), true);
         
         vm.stopPrank();
         vm.startPrank(user);
@@ -705,8 +722,8 @@ contract OrderProcessorTest is Test {
 
         for(uint i = 0; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
-        uint id = factory.redemptionRequestId(nonce, tokenAddress);
-        uint orderAmount = factory.sellRequestAssetAmountById(id);
+        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
         assertEq(issuer.getUnfilledAmount(id), orderAmount);
         }
@@ -730,9 +747,9 @@ contract OrderProcessorTest is Test {
         WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
         }
         
-        indexToken.setMinter(address(admin));
+        indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 10000e18);
-        indexToken.setMinter(address(factory));
+        indexToken.setMinter(address(factory), true);
         
         vm.stopPrank();
         vm.startPrank(user);
@@ -740,9 +757,9 @@ contract OrderProcessorTest is Test {
 
         for(uint i; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
-        uint id = factory.redemptionRequestId(nonce, tokenAddress);
-        uint orderAmount = factory.sellRequestAssetAmountById(id);
-        IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
+        IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
         vm.stopPrank();
         vm.prank(admin);
         paymentToken.mint(operator, 100e18);
@@ -757,9 +774,9 @@ contract OrderProcessorTest is Test {
         }
 
         assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
-        assertEq(factory.redemptionIsCompleted(nonce), false);
-        factory.completeRedemption(nonce);
-        assertEq(factory.redemptionIsCompleted(nonce), true);
+        assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
+        factoryProcessor.completeRedemption(nonce);
+        assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
     }
 
 
@@ -778,9 +795,9 @@ contract OrderProcessorTest is Test {
         WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
         }
         
-        indexToken.setMinter(address(admin));
+        indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 10000e18);
-        indexToken.setMinter(address(factory));
+        indexToken.setMinter(address(factory), true);
         
         vm.stopPrank();
         vm.startPrank(user);
@@ -788,9 +805,9 @@ contract OrderProcessorTest is Test {
 
         for(uint i; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
-        uint id = factory.redemptionRequestId(nonce, tokenAddress);
-        uint orderAmount = factory.sellRequestAssetAmountById(id);
-        IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
+        IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
         vm.stopPrank();
         vm.prank(admin);
         paymentToken.mint(operator, 100e18);
@@ -803,17 +820,17 @@ contract OrderProcessorTest is Test {
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
         
         //check multical
-        if(factory.checkMultical(id)){
+        if(factoryProcessor.checkMultical(id)){
             assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
-            assertEq(factory.redemptionIsCompleted(nonce), false);
-            factory.multical(id);
+            assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
+            factoryProcessor.multical(id);
         }
         }
 
         // assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
-        // assertEq(factory.redemptionIsCompleted(nonce), false);
-        // factory.completeRedemption(nonce);
-        assertEq(factory.redemptionIsCompleted(nonce), true);
+        // assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
+        // factoryProcessor.completeRedemption(nonce);
+        assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
     }
 
     function testCancelRdemption() public {
@@ -829,9 +846,9 @@ contract OrderProcessorTest is Test {
         WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
         }
         
-        indexToken.setMinter(address(admin));
+        indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
-        indexToken.setMinter(address(factory));
+        indexToken.setMinter(address(factory), true);
         
         vm.stopPrank();
         vm.startPrank(user);
@@ -840,8 +857,8 @@ contract OrderProcessorTest is Test {
 
         for(uint i = 0; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
-        uint id = factory.redemptionRequestId(nonce, tokenAddress);
-        uint orderAmount = factory.sellRequestAssetAmountById(id);
+        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
         assertEq(issuer.getUnfilledAmount(id), orderAmount);
         }
@@ -851,16 +868,16 @@ contract OrderProcessorTest is Test {
         vm.startPrank(operator);
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
-            uint id = factory.redemptionRequestId(nonce, tokenAddress);
-            uint orderAmount = factory.sellRequestAssetAmountById(id);
-            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
             paymentToken.approve(address(issuer), orderAmount);
             issuer.cancelOrder(order, " ");
             assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
         }
 
-        factory.completeCancelRedemption(nonce);
-        assertEq(factory.cancelRedemptionComplted(nonce), true);
+        factoryProcessor.completeCancelRedemption(nonce);
+        assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
     }
 
     /**
@@ -876,25 +893,25 @@ contract OrderProcessorTest is Test {
         WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
         }
         
-        indexToken.setMinter(address(admin));
+        indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 10000e18);
-        indexToken.setMinter(address(factory));
+        indexToken.setMinter(address(factory), true);
         
         
-        uint portfolioValue = factory.getPortfolioValue();
+        uint portfolioValue = factoryStorage.getPortfolioValue();
         assertEq(portfolioValue, 10000e18*10);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(1)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(2)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(3)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(4)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(5)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(6)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(7)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(8)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(9)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)), 10000e18);
 
-        assertEq(factory.getVaultDshareBalance(factoryStorage.currentList(1)), 1000e18);
+        assertEq(factoryStorage.getVaultDshareBalance(factoryStorage.currentList(1)), 1000e18);
 
 
         updateOracleList2();
@@ -921,20 +938,20 @@ contract OrderProcessorTest is Test {
         }
         assertEq(factoryBalancer.checkFirstRebalanceOrdersStatus(nonce), true);
 
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(1)), 5000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(2)), 5000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(3)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(4)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(5)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(6)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(7)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(8)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(9)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)), 5000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)), 5000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)), 10000e18);
 
         assertEq(paymentToken.balanceOf(address(factoryBalancer)), 10000e18);
         // assertEq(factory.estimateAmountAfterFee(10000e18), 0);
-        // assertEq(factory.calculateIssuanceFee(9950248756218904472636), 0);
+        // assertEq(factoryStorage.calculateIssuanceFee(9950248756218904472636), 0);
         
         vm.prank(admin);
         factoryBalancer.secondRebalanceAction(nonce);
@@ -945,7 +962,7 @@ contract OrderProcessorTest is Test {
             uint orderAmount = factoryBalancer.rebalanceBuyPayedAmountById(id);
             if(id > 0 && orderAmount > 0){
             uint receivedAmount = orderAmount/10;
-            uint fees = factory.calculateBuyRequestFee(orderAmount);
+            uint fees = factoryStorage.calculateBuyRequestFee(orderAmount);
             IOrderProcessor.Order memory order = factoryBalancer.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
@@ -970,16 +987,16 @@ contract OrderProcessorTest is Test {
         vm.prank(admin);
         factoryBalancer.completeRebalanceActions(nonce);
 
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(0))/1e18, 19950);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(1))/1e18, 5000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(2))/1e18, 5000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(3))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(4))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(5))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(6))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(7))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(8))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(9))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0))/1e18, 19950);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(1))/1e18, 5000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(2))/1e18, 5000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(3))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(4))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(5))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(6))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(7))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(8))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(9))/1e18, 10000);
         
         assertEq(paymentToken.balanceOf(address(factoryBalancer))/1e18, 0);
 
@@ -1016,25 +1033,25 @@ contract OrderProcessorTest is Test {
         WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
         }
         
-        indexToken.setMinter(address(admin));
+        indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 10000e18);
-        indexToken.setMinter(address(factory));
+        indexToken.setMinter(address(factory), true);
         
         
-        uint portfolioValue = factory.getPortfolioValue();
+        uint portfolioValue = factoryStorage.getPortfolioValue();
         assertEq(portfolioValue, 10000e18*10);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(1)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(2)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(3)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(4)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(5)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(6)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(7)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(8)), 10000e18);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(9)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)), 10000e18);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)), 10000e18);
 
-        assertEq(factory.getVaultDshareBalance(factoryStorage.currentList(1)), 1000e18);
+        assertEq(factoryStorage.getVaultDshareBalance(factoryStorage.currentList(1)), 1000e18);
 
 
         updateOracleList2();
@@ -1047,7 +1064,7 @@ contract OrderProcessorTest is Test {
         if(id > 0){
         uint orderAmount = factory.rebalanceSellAssetAmountById(id);
         uint payingAmount = orderAmount*10;
-        IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+        IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
         vm.stopPrank();
         vm.prank(admin);
         paymentToken.mint(operator, payingAmount);
@@ -1059,10 +1076,10 @@ contract OrderProcessorTest is Test {
         assertEq(issuer.getUnfilledAmount(id), 0);
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
         }
-        if(factory.checkMultical(id)){
+        if(factoryProcessor.checkMultical(id)){
             vm.stopPrank();
             vm.prank(admin);
-            factory.multical(id);
+            factoryProcessor.multical(id);
         }
         }
         // vm.prank(admin);
@@ -1079,8 +1096,8 @@ contract OrderProcessorTest is Test {
             uint orderAmount = factory.rebalanceBuyPayedAmountById(id);
             if(id > 0 && orderAmount > 0 && uint8(issuer.getOrderStatus(id)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
             uint receivedAmount = orderAmount/10;
-            uint fees = factory.calculateBuyRequestFee(orderAmount);
-            IOrderProcessor.Order memory order = factory.getOrderInstanceById(id);
+            uint fees = factoryStorage.calculateBuyRequestFee(orderAmount);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
             
@@ -1093,10 +1110,10 @@ contract OrderProcessorTest is Test {
             );
             // balances after
             assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
-            if(factory.checkMultical(id)){
+            if(factoryProcessor.checkMultical(id)){
                 vm.stopPrank();
                 vm.prank(admin);
-                factory.multical(id);
+                factoryProcessor.multical(id);
             }
             }
             
@@ -1109,16 +1126,16 @@ contract OrderProcessorTest is Test {
         // vm.prank(admin);
         // factory.completeRebalanceActions(nonce);
 
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(0))/1e18, 19950);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(1))/1e18, 5000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(2))/1e18, 5000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(3))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(4))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(5))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(6))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(7))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(8))/1e18, 10000);
-        assertEq(factory.getVaultDshareValue(factoryStorage.currentList(9))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0))/1e18, 19950);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(1))/1e18, 5000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(2))/1e18, 5000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(3))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(4))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(5))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(6))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(7))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(8))/1e18, 10000);
+        assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(9))/1e18, 10000);
         
         assertEq(paymentToken.balanceOf(address(factory))/1e18, 0);
 
@@ -1144,4 +1161,6 @@ contract OrderProcessorTest is Test {
     }
      
     */
+
+    
 }

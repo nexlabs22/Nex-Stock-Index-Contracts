@@ -37,7 +37,7 @@ contract CounterTest is Test {
             feeReceiver,
             1000000e18
         );
-        indexToken.setMinter(minter);
+        indexToken.setMinter(minter, true);
     }
 
     function testInitialized() public {
@@ -48,7 +48,7 @@ contract CounterTest is Test {
         assertEq(indexToken.feeReceiver(), feeReceiver);
         assertEq(indexToken.methodology(), "");
         assertEq(indexToken.supplyCeiling(), 1000000e18);
-        assertEq(indexToken.minter(), minter);
+        assertEq(indexToken.isMinter(minter), true);
     }
 
     function testMintOnlyMinter() public {
@@ -264,9 +264,9 @@ contract CounterTest is Test {
         vm.expectEmit(true, true, true, true);
         emit MinterSet(newMinter);
         //set data
-        assertEq(indexToken.minter(), minter);
-        indexToken.setMinter(newMinter);
-        assertEq(indexToken.minter(), newMinter);
+        assertEq(indexToken.isMinter(minter), true);
+        indexToken.setMinter(newMinter, true);
+        assertEq(indexToken.isMinter(newMinter), true);
     }
 
     function testSetSupplyCeiling() public {

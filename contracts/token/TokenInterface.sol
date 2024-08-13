@@ -67,7 +67,7 @@ interface TokenInterface {
 
     /// @notice Ownable function to set the contract that controls minting
     /// @param _minter address
-    function setMinter(address _minter) external virtual;
+    function setMinter(address _minter, bool _enabled) external virtual;
 
     /// @notice Ownable function to set the limit at which the total supply cannot exceed
     /// @param _supplyCeiling uint256

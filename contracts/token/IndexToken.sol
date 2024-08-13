@@ -34,14 +34,13 @@ contract IndexToken is
     // Address that can publish a new methodology.
     address public methodologist;
 
-    // Address that has privilege to mint and burn. It will be Controller and Admin to begin.
-    address public minter;
 
     string public methodology;
 
     uint256 public supplyCeiling;
 
     mapping(address => bool) public isRestricted;
+    mapping(address => bool) public isMinter;
 
     
     modifier onlyMethodologist() {
@@ -50,7 +49,7 @@ contract IndexToken is
     }
 
     modifier onlyMinter() {
-        require(msg.sender == minter, "IndexToken: caller is not the minter");
+        require(isMinter[msg.sender], "IndexToken: caller is not the minter");
         _;
     }
 
@@ -164,9 +163,9 @@ contract IndexToken is
 
     /// @notice Ownable function to set the contract that controls minting
     /// @param _minter address
-    function setMinter(address _minter) external override onlyOwner {
+    function setMinter(address _minter, bool _enable) external override onlyOwner {
         require(_minter != address(0));
-        minter = _minter;
+        isMinter[_minter] = _enable;
         emit MinterSet(_minter);
     }
 
