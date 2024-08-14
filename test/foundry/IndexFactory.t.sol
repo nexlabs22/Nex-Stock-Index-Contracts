@@ -880,6 +880,106 @@ contract OrderProcessorTest is Test {
         assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
     }
 
+    function testCompleteRedemptionMulticalProcessor() public {
+        
+        vm.startPrank(admin);
+        
+        
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        DShare(tokenAddress).mint(address(admin), 1000e18);
+        DShare(tokenAddress).approve(
+            factoryStorage.wrappedDshareAddress(tokenAddress),
+            1000e18
+        );
+        WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 10000e18);
+        indexToken.setMinter(address(factory), true);
+        
+        vm.stopPrank();
+        vm.startPrank(user);
+        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
+
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
+        IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
+        vm.stopPrank();
+        vm.prank(admin);
+        paymentToken.mint(operator, 100e18);
+        vm.prank(operator);
+        paymentToken.approve(address(issuer), 100e18);
+
+        vm.prank(operator);
+        issuer.fillOrder(order, 1000e18, 100e18, 1e18);
+        assertEq(issuer.getUnfilledAmount(id), 0);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+        
+        //check multical
+        if(factoryProcessor.checkMultical(id)){
+            assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
+            assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
+            factoryProcessor.multical(id);
+        }
+        }
+
+        // assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
+        // assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
+        // factoryProcessor.completeRedemption(nonce);
+        assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
+    }
+
+    function testCancelRdemptionProcessor() public {
+        vm.startPrank(admin);
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+        DShare(tokenAddress).mint(address(admin), 100e18);
+        DShare(tokenAddress).approve(
+            wrappedTokenAddress,
+            100e18
+        );
+        WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 100e18);
+        indexToken.setMinter(address(factory), true);
+        
+        vm.stopPrank();
+        vm.startPrank(user);
+        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
+
+
+        for(uint i = 0; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+        assertEq(issuer.getUnfilledAmount(id), orderAmount);
+        }
+
+        factory.cancelRedemption(nonce);
+        vm.stopPrank();
+        vm.startPrank(operator);
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factoryStorage.currentList(i);
+            uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
+            paymentToken.approve(address(issuer), orderAmount);
+            issuer.cancelOrder(order, " ");
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
+        }
+
+        factoryProcessor.completeCancelRedemption(nonce);
+        assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
+    }
+
     /**
     function testRebalancing() public {
         vm.startPrank(admin);
