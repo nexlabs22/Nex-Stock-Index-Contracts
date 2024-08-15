@@ -541,7 +541,7 @@ contract OrderProcessorTest is Test {
     }
     
     function testIssuance() public {
-        uint inputAmount = 1000e18;
+        uint inputAmount = 1000e6;
         vm.startPrank(admin);
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         uint quantityIn = feeAmount + inputAmount + inputAmount*10/10000;
@@ -570,16 +570,14 @@ contract OrderProcessorTest is Test {
     
     function testCompleteIssuance() public {
         vm.startPrank(admin);
-        // uint totalCurretList = factoryStorage.totalCurrentList();
-        uint inputAmount = 1000e18;
+        uint inputAmount = 1000e6;
         uint receivedAmount = 100e18/factoryStorage.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        // uint expectedAmountOut = factoryStorage.getIssuanceAmountOut(inputAmount);
         paymentToken.mint(address(user), feeAmount + inputAmount + inputAmount*10/10000);
         vm.stopPrank();
 
         vm.startPrank(user);
-
+        
         uint256 userBalanceBefore = paymentToken.balanceOf(user);
         uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
         paymentToken.approve(address(factory), feeAmount + inputAmount + inputAmount*10/10000);
@@ -610,6 +608,134 @@ contract OrderProcessorTest is Test {
         factoryProcessor.completeIssuance(nonce);
         assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
         assertEq(indexToken.balanceOf(user), 100000e18);
+    }
+
+
+    function testCompleteIssuance2() public {
+        vm.startPrank(admin);
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+        DShare(tokenAddress).mint(address(admin), 100e18);
+        DShare(tokenAddress).approve(
+            wrappedTokenAddress,
+            100e18
+        );
+        WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 100e18);
+        indexToken.setMinter(address(factory), true);
+
+        assertEq(factoryStorage.getPortfolioValue(), 10000e18);
+
+        vm.stopPrank();
+        vm.startPrank(admin);
+        uint inputAmount = 1000e6;
+        uint receivedAmount = 100e18/factoryStorage.totalCurrentList();
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        paymentToken.mint(address(user), feeAmount + inputAmount + inputAmount*10/10000);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        
+        uint256 userBalanceBefore = paymentToken.balanceOf(user);
+        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
+        paymentToken.approve(address(factory), feeAmount + inputAmount + inputAmount*10/10000);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factoryStorage.currentList(i);
+            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
+            // balances before
+            vm.startPrank(operator);
+            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(address(orderManager));
+            
+            
+            issuer.fillOrder(order, orderAmount, receivedAmount, feeAmount/factoryStorage.totalCurrentList());
+            IOrderProcessor.PricePoint memory fillPrice = issuer.latestFillPrice(order.assetToken, order.paymentToken);
+            assertTrue(
+                fillPrice.price == 0
+                    || fillPrice.price == mulDiv(orderAmount, 10 ** (18 - paymentToken.decimals()), receivedAmount)
+            );
+            assertEq(fillPrice.price, 10);
+            // balances after
+            assertEq(IERC20(tokenAddress).balanceOf(address(orderManager)), userAssetBefore + receivedAmount);
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+            
+        }
+        assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
+        factoryProcessor.completeIssuance(nonce);
+        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
+        assertEq(factoryStorage.getPortfolioValue(), 11000e18);
+        assertEq(indexToken.balanceOf(user), 110e18);
+    }
+
+    function testCompleteIssuance2InTestnet() public {
+        vm.startPrank(admin);
+        factoryStorage.setIsMainnet(false);
+        // factoryStorage.setLatestPriceDecimals(0);
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+        DShare(tokenAddress).mint(address(admin), 100e18);
+        DShare(tokenAddress).approve(
+            wrappedTokenAddress,
+            100e18
+        );
+        WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 100e18);
+        indexToken.setMinter(address(factory), true);
+
+        // assertEq(factoryStorage.getPortfolioValue(), 10000e18);
+
+        vm.stopPrank();
+        vm.startPrank(admin);
+        uint inputAmount = 1000e6;
+        uint receivedAmount = 100e18/factoryStorage.totalCurrentList();
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        paymentToken.mint(address(user), feeAmount + inputAmount + inputAmount*10/10000);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        
+        uint256 userBalanceBefore = paymentToken.balanceOf(user);
+        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
+        paymentToken.approve(address(factory), feeAmount + inputAmount + inputAmount*10/10000);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factoryStorage.currentList(i);
+            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
+            // balances before
+            vm.startPrank(operator);
+            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(address(orderManager));
+            
+            
+            issuer.fillOrder(order, orderAmount, receivedAmount, feeAmount/factoryStorage.totalCurrentList());
+            IOrderProcessor.PricePoint memory fillPrice = issuer.latestFillPrice(order.assetToken, order.paymentToken);
+            assertTrue(
+                fillPrice.price == 0
+                    || fillPrice.price == mulDiv(orderAmount, 10 ** (18 - paymentToken.decimals()), receivedAmount)
+            );
+            // balances after
+            assertEq(IERC20(tokenAddress).balanceOf(address(orderManager)), userAssetBefore + receivedAmount);
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
+            
+        }
+        assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
+        factoryProcessor.completeIssuance(nonce);
+        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
+        assertEq(factoryStorage.getPortfolioValue(), 11000e18);
+        assertEq(indexToken.balanceOf(user), 110e18);
     }
     
     function testCompleteIssuanceMultical() public {
@@ -880,106 +1006,8 @@ contract OrderProcessorTest is Test {
         assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
     }
 
-    function testCompleteRedemptionMulticalProcessor() public {
-        
-        vm.startPrank(admin);
-        
-        
-        for(uint i; i < 10; i++) {
-        address tokenAddress = factoryStorage.currentList(i);
-        DShare(tokenAddress).mint(address(admin), 1000e18);
-        DShare(tokenAddress).approve(
-            factoryStorage.wrappedDshareAddress(tokenAddress),
-            1000e18
-        );
-        WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
-        }
-        
-        indexToken.setMinter(address(admin), true);
-        indexToken.mint(address(user), 10000e18);
-        indexToken.setMinter(address(factory), true);
-        
-        vm.stopPrank();
-        vm.startPrank(user);
-        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
 
-        for(uint i; i < 10; i++) {
-        address tokenAddress = factoryStorage.currentList(i);
-        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-        IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
-        vm.stopPrank();
-        vm.prank(admin);
-        paymentToken.mint(operator, 100e18);
-        vm.prank(operator);
-        paymentToken.approve(address(issuer), 100e18);
-
-        vm.prank(operator);
-        issuer.fillOrder(order, 1000e18, 100e18, 1e18);
-        assertEq(issuer.getUnfilledAmount(id), 0);
-        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
-        
-        //check multical
-        if(factoryProcessor.checkMultical(id)){
-            assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
-            assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
-            factoryProcessor.multical(id);
-        }
-        }
-
-        // assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
-        // assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
-        // factoryProcessor.completeRedemption(nonce);
-        assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
-    }
-
-    function testCancelRdemptionProcessor() public {
-        vm.startPrank(admin);
-        for(uint i; i < 10; i++) {
-        address tokenAddress = factoryStorage.currentList(i);
-        address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
-        DShare(tokenAddress).mint(address(admin), 100e18);
-        DShare(tokenAddress).approve(
-            wrappedTokenAddress,
-            100e18
-        );
-        WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
-        }
-        
-        indexToken.setMinter(address(admin), true);
-        indexToken.mint(address(user), 100e18);
-        indexToken.setMinter(address(factory), true);
-        
-        vm.stopPrank();
-        vm.startPrank(user);
-        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
-
-
-        for(uint i = 0; i < 10; i++) {
-        address tokenAddress = factoryStorage.currentList(i);
-        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
-        assertEq(issuer.getUnfilledAmount(id), orderAmount);
-        }
-
-        factory.cancelRedemption(nonce);
-        vm.stopPrank();
-        vm.startPrank(operator);
-        for(uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
-            uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
-            paymentToken.approve(address(issuer), orderAmount);
-            issuer.cancelOrder(order, " ");
-            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
-        }
-
-        factoryProcessor.completeCancelRedemption(nonce);
-        assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
-    }
-
+    
     /**
     function testRebalancing() public {
         vm.startPrank(admin);

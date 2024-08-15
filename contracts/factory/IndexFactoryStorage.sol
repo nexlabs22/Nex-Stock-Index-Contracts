@@ -143,6 +143,10 @@ contract IndexFactoryStorage is
     latestFeeUpdate = block.timestamp;
     }
 
+    function setIsMainnet(bool _isMainnet) public onlyOwner {
+        isMainnet = _isMainnet;
+    }
+
     function setUsdcAddress(
         address _usdc,
         uint8 _usdcDecimals
