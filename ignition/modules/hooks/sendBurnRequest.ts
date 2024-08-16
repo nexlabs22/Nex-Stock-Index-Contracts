@@ -31,12 +31,12 @@ async function main() {
     // const fee = await factoryContract.calculateIssuanceFee(inputAmount);
     // console.log("Fee is", fee)
     // return;
-    console.log("approving tokens...")
-    const result = await usdcContract.connect(deployer).approve(IndexFactoryAddresses[`sepolia`], "101000000")
-    const receipt = await result.wait();
+    // console.log("approving tokens...")
+    // const result = await usdcContract.connect(deployer).approve(IndexFactoryAddresses[`sepolia`], "101000000")
+    // const receipt = await result.wait();
     console.log("sending request...")
     const result1 = await factoryContract.connect(deployer).redemption(
-        "100000000", //100 usdc
+        "100000000000000000000", //100 usdc
         {gasLimit: 5000000}
     )
     const receipt1 = await result1.wait();

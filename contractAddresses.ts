@@ -25,7 +25,7 @@ export const UsdcAddresses: AddressMap = {
 };
 
 export const Mag7IndexTokenAddresses: AddressMap = {
-    [`sepolia`]: `0x01bfC9A100c5A2A0c5B04Df40734b804aC4b2b7E`
+    [`sepolia`]: `0x1e881F3c8bF7A161E884B4D86Fe8810290d3095D`
 };
 
 export const NexVaultAddresses: AddressMap = {
@@ -33,11 +33,15 @@ export const NexVaultAddresses: AddressMap = {
 };
 
 export const IndexFactoryStorageAddresses: AddressMap = {
-    [`sepolia`]: `0xCb8d9c25c21a0011C79Ab1893AB9B8BB4319Ef13`
+    [`sepolia`]: `0xb9182570054598AC2a457E034f3C0bDfd6c60D73`
 };
 
 export const IndexFactoryAddresses: AddressMap = {
-    [`sepolia`]: `0x8581a19572910BE34aB1d6edb1b2c0BC602787Be`
+    [`sepolia`]: `0x5EBD4Ac25ADbb238941086b7e2a87672f93919a4`
+};
+
+export const IndexFactoryProcessorAddresses: AddressMap = {
+    [`sepolia`]: `0x8250b30Ae818Ab30d5A03E893Cdc850bdA08E638`
 };
 
 export const OrderManagerAddresses: AddressMap = {

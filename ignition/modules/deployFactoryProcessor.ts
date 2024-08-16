@@ -6,17 +6,17 @@ async function deployIndexToken() {
   
   const [deployer] = await ethers.getSigners();
 
-  const IndexFactory = await ethers.getContractFactory("IndexFactory");
-  console.log('Deploying IndexFactory...');
+  const IndexFactoryProcessor = await ethers.getContractFactory("IndexFactoryProcessor");
+  console.log('Deploying IndexFactoryProcessor...');
 
-  const indexFactory = await upgrades.deployProxy(IndexFactory, [
+  const indexFactoryProcessor = await upgrades.deployProxy(IndexFactoryProcessor, [
       IndexFactoryStorageAddresses[`sepolia`]
   ], { initializer: 'initialize' });
 
 //   await orderManager.deployed()
 
   console.log(
-    `indexFactory deployed: ${ await indexFactory.target}`
+    `indexFactory deployed: ${ await indexFactoryProcessor.target}`
   );
 }
 

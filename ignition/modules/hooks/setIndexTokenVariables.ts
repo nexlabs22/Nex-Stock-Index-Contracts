@@ -8,7 +8,7 @@ import {
     abi as Vault_ABI,
     bytecode as Vault_BYTECODE,
   } from '../../../artifacts/contracts/vault/NexVault.sol/NexVault.json'
-import { dShares, IndexFactoryAddresses, IndexFactoryStorageAddresses, Mag7IndexTokenAddresses, NexVaultAddresses, wrappedDshares } from "../../../contractAddresses";
+import { dShares, IndexFactoryAddresses, IndexFactoryProcessorAddresses, IndexFactoryStorageAddresses, Mag7IndexTokenAddresses, NexVaultAddresses, wrappedDshares } from "../../../contractAddresses";
 // import { goerliAnfiFactoryAddress } from "../contractAddresses";
 require("dotenv").config()
 
@@ -28,15 +28,32 @@ async function main() {
 
     console.log("setting factory as index token minter...")
     const result1 = await indexTokenContract.connect(deployer).setMinter(
-        IndexFactoryAddresses['sepolia'] as string
+        IndexFactoryAddresses['sepolia'] as string,
+        true
     )
     const receipt1 = await result1.wait();
+
+    console.log("setting factoryProcessor as index token minter...")
+    const result2 = await indexTokenContract.connect(deployer).setMinter(
+        IndexFactoryProcessorAddresses['sepolia'] as string,
+        true
+    )
+    const receipt2 = await result2.wait();
+
     console.log("setting factory as operator for vault...")
-    const result2 = await vaultContract.connect(deployer).setOperator(
+    const result3 = await vaultContract.connect(deployer).setOperator(
         IndexFactoryAddresses['sepolia'] as string,
         true
     );
-    const receipt2 = await result2.wait();
+    const receipt3 = await result3.wait();
+
+
+    console.log("setting factoryProcessor as operator for vault...")
+    const result4 = await vaultContract.connect(deployer).setOperator(
+        IndexFactoryProcessorAddresses['sepolia'] as string,
+        true
+    );
+    const receipt4 = await result4.wait();
     console.log('Ended')
 }
 

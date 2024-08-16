@@ -17,7 +17,8 @@ async function deployIndexToken() {
       '6',
       LINKAddresses[`sepolia`],
       ApiOracleAddresses[`goerli`],
-      ExternalJobIdBytes32Addresses[`goerli`]
+      ExternalJobIdBytes32Addresses[`goerli`],
+      false
   ], { initializer: 'initialize' });
 
 //   await orderManager.deployed()
