@@ -111,10 +111,21 @@ contract IndexFactory is
     
 
 
-    function requestSellOrder(address _token, uint256 _amount, address _receiver) internal returns(uint) {
+    function requestSellOrder(address _token, uint256 _amount, address _receiver) internal returns(uint, uint) {
         address wrappedDshare = factoryStorage.wrappedDshareAddress(_token);
         NexVault(factoryStorage.vault()).withdrawFunds(wrappedDshare, address(this), _amount);
-        uint orderAmount = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
+        uint orderAmount0 = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
+
+        //rounding order
+        IOrderProcessor issuer = factoryStorage.issuer();
+        uint8 decimalReduction = issuer.orderDecimalReduction(_token);
+        uint256 orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+        uint extraAmount = orderAmount0 - orderAmount;
+
+        if(extraAmount > 0){
+            IERC20(_token).approve(wrappedDshare, extraAmount);
+            WrappedDShare(wrappedDshare).deposit(extraAmount, address(factoryStorage.vault()));
+        }
 
         IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(true);
         order.assetToken = _token;
@@ -125,7 +136,8 @@ contract IndexFactory is
         OrderManager orderManager = factoryStorage.orderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         factoryStorage.setOrderInstanceById(id, order);
-        return id;
+        return (id, orderAmount);
+        
     }
     
 
@@ -174,7 +186,7 @@ contract IndexFactory is
                 orderManager.cancelOrder(requestId);
             } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || issuer.getReceivedAmount(requestId) > 0){
                 uint256 balance = issuer.getReceivedAmount(requestId);
-                uint cancelRequestId = requestSellOrder(tokenAddress, balance, address(factoryStorage.orderManager()));
+                (uint cancelRequestId, uint assetAmount) = requestSellOrder(tokenAddress, balance, address(factoryStorage.orderManager()));
                 factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(3, _issuanceNonce));
                 factoryStorage.setCancelIssuanceRequestId(_issuanceNonce, tokenAddress, cancelRequestId);
                 if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
@@ -201,18 +213,35 @@ contract IndexFactory is
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint256 amount = tokenBurnPercent * IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(factoryStorage.vault())) / 1e18;
-            uint requestId = requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
+            (uint requestId, uint assetAmount) = requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
             factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(2, redemptionNonce));
-            factoryStorage.setSellRequestAssetAmountById(requestId, amount);
+            factoryStorage.setSellRequestAssetAmountById(requestId, assetAmount);
             factoryStorage.setRedemptionRequestId(redemptionNonce, tokenAddress, requestId);
             factoryStorage.setRedemptionRequesterByNonce(redemptionNonce, msg.sender);
-            uint wrappedDsharesBalance = IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(factoryStorage.vault()));
-            uint dShareBalance = WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).previewRedeem(wrappedDsharesBalance);
-            factoryStorage.setRedemptionTokenPrimaryBalance(redemptionNonce, tokenAddress, dShareBalance);
-            factoryStorage.setRedemptionIndexTokenPrimaryTotalSupply(redemptionNonce, IERC20(factoryStorage.token()).totalSupply());
         }
         emit RequestRedemption(redemptionNonce, msg.sender, factoryStorage.usdc(), _inputAmount, 0, block.timestamp);
         return redemptionNonce;
+    }
+
+
+    function tRedemption() public {
+        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
+            address tokenAddress = factoryStorage.currentList(i);
+            uint256 amount0 = IERC20(tokenAddress).balanceOf(address(this));
+
+            IOrderProcessor issuer = factoryStorage.issuer();
+            uint8 decimalReduction = issuer.orderDecimalReduction(tokenAddress);
+            uint256 amount = amount0 - (amount0 % 10 ** (decimalReduction - 1));
+
+            OrderManager orderManager = factoryStorage.orderManager();
+            IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(true);
+            order.assetToken = tokenAddress;
+            order.assetTokenQuantity = amount;
+            order.recipient = address(orderManager);
+        
+            IERC20(tokenAddress).transfer(address(factoryStorage.orderManager()), amount);
+            uint256 id = orderManager.requestSellOrderFromCurrentBalance(tokenAddress, amount, address(orderManager));
+        }
     }
 
     

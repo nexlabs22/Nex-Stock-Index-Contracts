@@ -174,7 +174,7 @@ contract OrderProcessorTest is Test {
 
         restrictor = TransferRestrictor(address(token.transferRestrictor()));
         restrictor.grantRole(restrictor.RESTRICTOR_ROLE(), restrictor_role);
-
+        
         //nex contracts
         orderManager = new OrderManager();
         orderManager.initialize(address(paymentToken), paymentToken.decimals(), address(issuer));
@@ -263,6 +263,9 @@ contract OrderProcessorTest is Test {
             restrictors[i] = TransferRestrictor(address(tokens[i].transferRestrictor()));
             restrictors[i].grantRole(restrictors[i].RESTRICTOR_ROLE(), restrictor_role);
 
+            //set decimal reduction
+            uint8 tokenDecimals = token.decimals();
+            issuer.setOrderDecimalReduction(address(tokens[i]), tokenDecimals);
             //deploy wrapped dshare
             WrappedDShare wrappedTokensImp = new WrappedDShare();
             wrappedTokens[i] = WrappedDShare(
@@ -857,6 +860,40 @@ contract OrderProcessorTest is Test {
 
     }
 
+    function testRedemptionPartialy() public {
+        vm.startPrank(admin);
+        for(uint i; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+        uint mintAmount = 100000255 + 1e18;
+        DShare(tokenAddress).mint(address(admin), mintAmount);
+        DShare(tokenAddress).approve(
+            wrappedTokenAddress,
+            mintAmount
+        );
+        WrappedDShare(wrappedTokenAddress).deposit(mintAmount, address(vault));
+        }
+        
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 100e18);
+        indexToken.setMinter(address(factory), true);
+        
+        vm.stopPrank();
+        vm.startPrank(user);
+        uint nonce = factory.redemption(indexToken.balanceOf(address(user))/10);
+
+
+        for(uint i = 0; i < 10; i++) {
+        address tokenAddress = factoryStorage.currentList(i);
+        uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
+        uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
+        assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
+        assertEq(issuer.getUnfilledAmount(id), 1e18/10);
+        }
+        
+
+    }
+
     
     function testCompleteRedemption() public {
         
@@ -879,6 +916,7 @@ contract OrderProcessorTest is Test {
         
         vm.stopPrank();
         vm.startPrank(user);
+        assertEq(indexToken.balanceOf(user), 10000e18);
         uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
 
         for(uint i; i < 10; i++) {
@@ -903,6 +941,7 @@ contract OrderProcessorTest is Test {
         assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
         factoryProcessor.completeRedemption(nonce);
         assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
+        assertEq(indexToken.balanceOf(user), 0);
     }
 
 

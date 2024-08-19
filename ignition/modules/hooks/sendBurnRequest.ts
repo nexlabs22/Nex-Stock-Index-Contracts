@@ -36,9 +36,12 @@ async function main() {
     // const receipt = await result.wait();
     console.log("sending request...")
     const result1 = await factoryContract.connect(deployer).redemption(
-        "100000000000000000000", //100 usdc
+        "1000000000000000000000", //1000 usdc
         {gasLimit: 5000000}
     )
+    // const result1 = await factoryContract.connect(deployer).tRedemption(
+    //     {gasLimit: 5000000}
+    // )
     const receipt1 = await result1.wait();
     console.log('hash', receipt1.hash)
     console.log('Ended')

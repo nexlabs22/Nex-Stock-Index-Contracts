@@ -11,14 +11,7 @@ async function deployFactory() {
   console.log('Upgrading...');
   
   const indexFactory = await upgrades.upgradeProxy(IndexFactoryAddresses["sepolia"], IndexFactory, [
-      IndexFactoryStorageAddresses[`sepolia`],
-      OrderManagerAddresses[`sepolia`],
-      OrderProcessorAddresses[`sepolia`],
-      Mag7IndexTokenAddresses[`sepolia`],
-      NexVaultAddresses[`sepolia`],
-      UsdcAddresses[`sepolia`],
-      '6',
-      false
+      IndexFactoryStorageAddresses[`sepolia`]
   ], { initializer: 'initialize' });
 
   console.log('indexFactory upgraed.', indexFactory.target)
