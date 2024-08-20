@@ -5,15 +5,19 @@ import {
     abi as Counter_ABI,
     bytecode as Counter_BYTECODE,
   } from '../../../artifacts/contracts/test/Counter.sol/Counter.json'
+// import {
+//     abi as Factory_ABI,
+//     bytecode as Factory_BYTECODE,
+//   } from '../../../artifacts/contracts/factory/IndexFactory.sol/IndexFactory.json'
 import {
-    abi as Factory_ABI,
-    bytecode as Factory_BYTECODE,
-  } from '../../../artifacts/contracts/factory/IndexFactory.sol/IndexFactory.json'
+    abi as FactoryProcessor_ABI,
+    bytecode as FactoryProcessor_BYTECODE,
+  } from '../../../artifacts/contracts/factory/IndexFactoryProcessor.sol/IndexFactoryProcessor.json'
 import {
 abi as OrderProcessor_ABI,
 bytecode as OrderProcessor_BYTECODE,
 } from '../../../artifacts/contracts/dinary/orders/OrderProcessor.sol/OrderProcessor.json'
-import { IndexFactoryAddresses, OrderProcessorAddresses, UsdcAddresses } from '../../../contractAddresses'
+import { IndexFactoryAddresses, IndexFactoryProcessorAddresses, OrderProcessorAddresses, UsdcAddresses } from '../../../contractAddresses'
 import { privateKeyToAccount } from 'viem/accounts'
 // import { Event } from '../../../typechain-types/contracts/factory/TestIndexFactory';
 import { Multicall } from '../../../typechain-types/@openzeppelin/contracts/utils/Multicall';
@@ -53,24 +57,33 @@ async function execution(logs: any) {
 }
 
 async function multical(logs: any) {
+  try {
   const id = logs[0]?.args?.id;
-
+  console.log("checking id:", id)
   const isFilled = await client.readContract({
-    address: IndexFactoryAddresses[`sepolia`] as `0x${string}`,
-    abi: Factory_ABI,
+    address: IndexFactoryProcessorAddresses[`sepolia`] as `0x${string}`,
+    abi: FactoryProcessor_ABI,
     args: [id],
     functionName: 'checkMultical',
   })
+  
+  console.log("status is:", isFilled)
+
   if(isFilled){
   console.log("Completing...")
   const { request } = await client.simulateContract({
       account,
-      address: IndexFactoryAddresses[`sepolia`] as `0x${string}`,
-      abi: Factory_ABI,
+      address: IndexFactoryProcessorAddresses[`sepolia`] as `0x${string}`,
+      abi: FactoryProcessor_ABI,
       functionName: 'multical',
+      args: [id]
     }) // Public Action
   const hash = await client.writeContract(request) // Wallet Action
   console.log("Completed !")
+  }
+ 
+  } catch (error) {
+    console.log("Error:", error) 
   }
 }
 

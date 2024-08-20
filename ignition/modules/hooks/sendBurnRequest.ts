@@ -36,7 +36,7 @@ async function main() {
     // const receipt = await result.wait();
     console.log("sending request...")
     const result1 = await factoryContract.connect(deployer).redemption(
-        "1000000000000000000000", //1000 usdc
+        "5000000000000000000000", //5000 index token
         {gasLimit: 5000000}
     )
     // const result1 = await factoryContract.connect(deployer).tRedemption(
