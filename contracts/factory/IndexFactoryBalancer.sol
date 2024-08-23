@@ -63,6 +63,8 @@ contract IndexFactoryBalancer is
         address _factoryStorage
     ) external initializer {
         factoryStorage = IndexFactoryStorage(_factoryStorage);
+        __Ownable_init(msg.sender);
+        __Pausable_init();
     }
 
     
@@ -133,14 +135,14 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
         uint256 _rebalanceNonce,
         uint256 _portfolioValue
     ) internal {
-        for(uint i; i< factoryStorage.totalCurrentList(); i++) {
+        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint tokenValue = tokenValueByNonce[_rebalanceNonce][tokenAddress];
             uint tokenBalance = factoryStorage.getVaultDshareBalance(tokenAddress);
             uint tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
             if(tokenValuePercent > factoryStorage.tokenOracleMarketShare(tokenAddress)){
             uint amount = tokenBalance - (tokenBalance * factoryStorage.tokenOracleMarketShare(tokenAddress) / tokenValuePercent);
-            (uint requestId, uint assetAmount) = requestSellOrder(tokenAddress, amount, address(this));
+            (uint requestId, uint assetAmount) = requestSellOrder(tokenAddress, amount, address(IndexFactoryStorage.orderManager()));
             actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
             rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
             rebalanceSellAssetAmountById[requestId] = amount;
@@ -194,7 +196,21 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
         require(checkFirstRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
         uint portfolioValue = portfolioValueByNonce[_rebalanceNonce];
         uint totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
-        uint usdcBalance = IERC20(factoryStorage.usdc()).balanceOf(address(this));
+        IOrderProcessor issuer = factoryStorage.issuer();
+        uint usdcBalance;
+        for(uint i; i < factoryStorage.totalCurrentList(); i++){
+            address tokenAddress = factoryStorage.currentList(i);
+            uint requestId = requestIdByNonce[_rebalanceNoncebalance][tokenAddress];
+            if(requestId > 0){
+                IOrderProcessor.Order memory order = orderInstanceById[requestId];
+                uint assetAmount = order.assetTokenQuantity;
+                if(order.isSellOrder){
+                 uint256 balance = issuer.getReceivedAmount(requestId);
+                 uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
+                 usdcBalance += balance - feeTaken;
+                }
+            }
+        }
         _buyUnderweightedAssets(_rebalanceNonce, totalShortagePercent, usdcBalance);
     }
 

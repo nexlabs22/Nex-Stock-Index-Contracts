@@ -212,17 +212,10 @@ contract OrderProcessorTest is Test {
             true
         );
 
-        // factoryBalancer = new IndexFactoryBalancer();
-        // factoryBalancer.initialize(
-        //     address(factoryStorage),
-        //     address(orderManager),
-        //     address(issuer),
-        //     payable(address(indexToken)),
-        //     address(vault),
-        //     address(paymentToken),
-        //     paymentToken.decimals(),
-        //     true //isMainnet
-        // );
+        factoryBalancer = new IndexFactoryBalancer();
+        factoryBalancer.initialize(
+            address(factoryStorage)
+        );
 
         factory = new IndexFactory();
         factory.initialize(
@@ -1047,7 +1040,7 @@ contract OrderProcessorTest is Test {
 
 
     
-    /**
+    
     function testRebalancing() public {
         vm.startPrank(admin);
         for(uint i; i < 10; i++) {
@@ -1080,10 +1073,11 @@ contract OrderProcessorTest is Test {
 
         assertEq(factoryStorage.getVaultDshareBalance(factoryStorage.currentList(1)), 1000e18);
 
-
+        
         updateOracleList2();
+        
         uint nonce = factoryBalancer.firstRebalanceAction();
-
+        
         for(uint i; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
         uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
@@ -1103,6 +1097,7 @@ contract OrderProcessorTest is Test {
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
         }
         }
+        /**
         assertEq(factoryBalancer.checkFirstRebalanceOrdersStatus(nonce), true);
 
         assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
@@ -1122,7 +1117,7 @@ contract OrderProcessorTest is Test {
         
         vm.prank(admin);
         factoryBalancer.secondRebalanceAction(nonce);
-
+        
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
@@ -1152,6 +1147,7 @@ contract OrderProcessorTest is Test {
         assertEq(factoryBalancer.checkSecondRebalanceOrdersStatus(nonce), true);
         
         vm.prank(admin);
+        
         factoryBalancer.completeRebalanceActions(nonce);
 
         assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0))/1e18, 19950);
@@ -1183,10 +1179,10 @@ contract OrderProcessorTest is Test {
         assertEq(factoryStorage.tokenCurrentMarketShare(address(token3)), 10e18);
         assertEq(factoryStorage.tokenCurrentMarketShare(address(token4)), 10e18);
         assertEq(factoryStorage.tokenCurrentMarketShare(address(token9)), 10e18);
-        
+        */
 
     }
-    */
+    
     /**
     function testRebalancingMultical() public {
         vm.startPrank(admin);
