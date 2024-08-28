@@ -142,7 +142,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
             uint tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
             if(tokenValuePercent > factoryStorage.tokenOracleMarketShare(tokenAddress)){
             uint amount = tokenBalance - (tokenBalance * factoryStorage.tokenOracleMarketShare(tokenAddress) / tokenValuePercent);
-            (uint requestId, uint assetAmount) = requestSellOrder(tokenAddress, amount, address(IndexFactoryStorage.orderManager()));
+            (uint requestId, uint assetAmount) = requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
             actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
             rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
             rebalanceSellAssetAmountById[requestId] = amount;
@@ -200,13 +200,13 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
         uint usdcBalance;
         for(uint i; i < factoryStorage.totalCurrentList(); i++){
             address tokenAddress = factoryStorage.currentList(i);
-            uint requestId = requestIdByNonce[_rebalanceNoncebalance][tokenAddress];
+            uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if(requestId > 0){
                 IOrderProcessor.Order memory order = orderInstanceById[requestId];
                 uint assetAmount = order.assetTokenQuantity;
-                if(order.isSellOrder){
+                if(order.sell){
                  uint256 balance = issuer.getReceivedAmount(requestId);
-                 uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
+                 uint256 feeTaken = issuer.getFeesTaken(requestId);
                  usdcBalance += balance - feeTaken;
                 }
             }
