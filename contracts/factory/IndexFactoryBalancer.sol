@@ -184,7 +184,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
             uint amountAfterFee = getAmountAfterFee(percentageFeeRate, paymentAmount) - flatFee;
             uint256 esFee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amountAfterFee);
             IERC20(factoryStorage.usdc()).approve(address(factoryStorage.orderManager()), paymentAmount);
-            uint requestId = requestBuyOrder(tokenAddress, amountAfterFee, address(this));
+            uint requestId = requestBuyOrder(tokenAddress, amountAfterFee, address(factoryStorage.orderManager()));
             actionInfoById[requestId] = ActionInfo(6, _rebalanceNonce);
             rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
             rebalanceBuyPayedAmountById[requestId] = amountAfterFee;
@@ -202,7 +202,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
             address tokenAddress = factoryStorage.currentList(i);
             uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if(requestId > 0){
-                IOrderProcessor.Order memory order = orderInstanceById[requestId];
+                IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
                 uint assetAmount = order.assetTokenQuantity;
                 if(order.sell){
                  uint256 balance = issuer.getReceivedAmount(requestId);
@@ -223,13 +223,21 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
 
     function completeRebalanceActions(uint _rebalanceNonce) public onlyOwner {
         require(checkSecondRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
+        IOrderProcessor issuer = factoryStorage.issuer();
         for(uint i; i< factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
-            uint tokenBalance = IERC20(tokenAddress).balanceOf(address(this));
+            uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
+            if(requestId > 0){
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
+            if(!order.sell){
+            uint tokenBalance = issuer.getReceivedAmount(requestId);
             if(tokenBalance > 0){
+            OrderManager(factoryStorage.orderManager()).withdrawFunds(tokenAddress, address(this), tokenBalance);
             IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), tokenBalance);
             WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(tokenBalance, address(factoryStorage.vault()));
             }
+            }
+        }
         }
         factoryStorage.updateCurrentList();
     }

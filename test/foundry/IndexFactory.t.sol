@@ -1171,7 +1171,11 @@ contract OrderProcessorTest is Test {
         if(id > 0){
         uint orderAmount = factoryBalancer.rebalanceSellAssetAmountById(id);
         uint payingAmount = orderAmount*10;
-        IOrderProcessor.Order memory order = factoryBalancer.getOrderInstanceById(id);
+        IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
+        // console.log(id);
+        // console.log(order.assetTokenQuantity);
+        // console.log(order.paymentTokenQuantity);
+        // console.log(order.sell);
         vm.stopPrank();
         vm.prank(admin);
         paymentToken.mint(operator, payingAmount);
@@ -1184,7 +1188,7 @@ contract OrderProcessorTest is Test {
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
         }
         }
-        /**
+        
         assertEq(factoryBalancer.checkFirstRebalanceOrdersStatus(nonce), true);
 
         assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)), 10000e18);
@@ -1198,13 +1202,12 @@ contract OrderProcessorTest is Test {
         assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)), 10000e18);
         assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)), 10000e18);
 
-        assertEq(paymentToken.balanceOf(address(factoryBalancer)), 10000e18);
+        assertEq(paymentToken.balanceOf(address(orderManager)), 10000e18);
         // assertEq(factory.estimateAmountAfterFee(10000e18), 0);
         // assertEq(factoryStorage.calculateIssuanceFee(9950248756218904472636), 0);
         
         vm.prank(admin);
         factoryBalancer.secondRebalanceAction(nonce);
-        
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
@@ -1212,10 +1215,9 @@ contract OrderProcessorTest is Test {
             if(id > 0 && orderAmount > 0){
             uint receivedAmount = orderAmount/10;
             uint fees = factoryStorage.calculateBuyRequestFee(orderAmount);
-            IOrderProcessor.Order memory order = factoryBalancer.getOrderInstanceById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
             // balances before
             vm.startPrank(operator);
-            // uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(factory.coaByIssuanceNonce(nonce));
             
             
             issuer.fillOrder(order, orderAmount, receivedAmount, fees);
@@ -1231,8 +1233,8 @@ contract OrderProcessorTest is Test {
         
         vm.stopPrank();
 
-        assertEq(factoryBalancer.checkSecondRebalanceOrdersStatus(nonce), true);
         
+        assertEq(factoryBalancer.checkSecondRebalanceOrdersStatus(nonce), true);
         vm.prank(admin);
         
         factoryBalancer.completeRebalanceActions(nonce);
@@ -1250,7 +1252,7 @@ contract OrderProcessorTest is Test {
         
         assertEq(paymentToken.balanceOf(address(factoryBalancer))/1e18, 0);
 
-
+        
         //check to see current list is updated
          // token current list
         assertEq(factoryStorage.currentList(0), address(token0));
@@ -1266,11 +1268,11 @@ contract OrderProcessorTest is Test {
         assertEq(factoryStorage.tokenCurrentMarketShare(address(token3)), 10e18);
         assertEq(factoryStorage.tokenCurrentMarketShare(address(token4)), 10e18);
         assertEq(factoryStorage.tokenCurrentMarketShare(address(token9)), 10e18);
-        */
+        
 
     }
     
-    /**
+    
     function testRebalancingMultical() public {
         vm.startPrank(admin);
         for(uint i; i < 10; i++) {
@@ -1306,13 +1308,13 @@ contract OrderProcessorTest is Test {
 
         updateOracleList2();
 
-        uint nonce = factory.firstRebalanceAction();
-
+        uint nonce = factoryBalancer.firstRebalanceAction();
+        
         for(uint i; i < 10; i++) {
         address tokenAddress = factoryStorage.currentList(i);
-        uint id = factory.rebalanceRequestId(nonce, tokenAddress);
+        uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
         if(id > 0){
-        uint orderAmount = factory.rebalanceSellAssetAmountById(id);
+        uint orderAmount = factoryBalancer.rebalanceSellAssetAmountById(id);
         uint payingAmount = orderAmount*10;
         IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
         vm.stopPrank();
@@ -1326,24 +1328,26 @@ contract OrderProcessorTest is Test {
         assertEq(issuer.getUnfilledAmount(id), 0);
         assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
         }
-        if(factoryProcessor.checkMultical(id)){
+        if(factoryBalancer.checkMultical(id)){
             vm.stopPrank();
             vm.prank(admin);
-            factoryProcessor.multical(id);
+            factoryBalancer.multical(id);
         }
         }
+        
         // vm.prank(admin);
         // factory.secondRebalanceAction(nonce);
-        assertEq(factory.checkFirstRebalanceOrdersStatus(nonce), true);
+        assertEq(factoryBalancer.checkFirstRebalanceOrdersStatus(nonce), true);
 
         
-        assertEq(factory.checkSecondRebalanceOrdersStatus(nonce), false);
+        assertEq(factoryBalancer.checkSecondRebalanceOrdersStatus(nonce), false);
         // vm.prank(admin);
         // factory.secondRebalanceAction(nonce);
+        
         for(uint i = 0; i < 10; i++) {
             address tokenAddress = factoryStorage.currentList(i);
-            uint id = factory.rebalanceRequestId(nonce, tokenAddress);
-            uint orderAmount = factory.rebalanceBuyPayedAmountById(id);
+            uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryBalancer.rebalanceBuyPayedAmountById(id);
             if(id > 0 && orderAmount > 0 && uint8(issuer.getOrderStatus(id)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)){
             uint receivedAmount = orderAmount/10;
             uint fees = factoryStorage.calculateBuyRequestFee(orderAmount);
@@ -1360,21 +1364,21 @@ contract OrderProcessorTest is Test {
             );
             // balances after
             assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.FULFILLED));
-            if(factoryProcessor.checkMultical(id)){
+            if(factoryBalancer.checkMultical(id)){
                 vm.stopPrank();
                 vm.prank(admin);
-                factoryProcessor.multical(id);
+                factoryBalancer.multical(id);
             }
             }
             
         }
-
+        
         // vm.stopPrank();
 
-        assertEq(factory.checkSecondRebalanceOrdersStatus(nonce), true);
+        assertEq(factoryBalancer.checkSecondRebalanceOrdersStatus(nonce), true);
         
         // vm.prank(admin);
-        // factory.completeRebalanceActions(nonce);
+        // factoryBalancer.completeRebalanceActions(nonce);
 
         assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(0))/1e18, 19950);
         assertEq(factoryStorage.getVaultDshareValue(factoryStorage.currentList(1))/1e18, 5000);
@@ -1410,7 +1414,7 @@ contract OrderProcessorTest is Test {
         
     }
      
-    */
+    
 
     
 }
