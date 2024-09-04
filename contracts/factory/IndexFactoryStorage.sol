@@ -346,6 +346,7 @@ contract IndexFactoryStorage is
         uint dshareBalance = getVaultDshareBalance(_token);
         return (dshareBalance * tokenPrice)/1e18;
     }
+    
 
     function getPortfolioValue() public view returns(uint){
         uint portfolioValue;
