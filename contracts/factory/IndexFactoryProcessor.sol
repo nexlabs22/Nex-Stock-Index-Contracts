@@ -134,8 +134,11 @@ contract IndexFactoryProcessor is
         IOrderProcessor issuer = factoryStorage.issuer();
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
-            uint requestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
-            uint256 balance = issuer.getReceivedAmount(requestId);
+            uint requestId = factoryStorage.cancelIssuanceRequestId(_issuanceNonce, tokenAddress);
+            uint256 balance;
+            if(requestId > 0){
+            balance += issuer.getReceivedAmount(requestId);
+            }
             uint unfilledAmount = factoryStorage.cancelIssuanceUnfilledAmount(_issuanceNonce, tokenAddress);
             totalBalance += (balance + unfilledAmount);
         }

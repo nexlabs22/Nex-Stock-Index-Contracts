@@ -183,6 +183,7 @@ contract IndexFactory is
             IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE) && issuer.getReceivedAmount(requestId) == 0){
                 OrderManager orderManager = factoryStorage.orderManager();
+                factoryStorage.setCancelIssuanceUnfilledAmount(_issuanceNonce, tokenAddress, issuer.getUnfilledAmount(requestId));
                 orderManager.cancelOrder(requestId);
             } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || issuer.getReceivedAmount(requestId) > 0){
                 uint256 balance = issuer.getReceivedAmount(requestId);
