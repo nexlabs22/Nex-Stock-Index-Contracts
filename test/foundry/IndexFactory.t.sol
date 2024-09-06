@@ -842,19 +842,19 @@ contract OrderProcessorTest is Test {
         }
         assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), false);
 
-        // factory.cancelIssuance(nonce);
-        // vm.stopPrank();
-        // vm.startPrank(operator);
-        // for(uint i = 0; i < 10; i++) {
-        //     address tokenAddress = factoryStorage.currentList(i);
-        //     uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
-        //     uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
-        //     IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
-        //     paymentToken.approve(address(issuer), orderAmount);
-        //     issuer.cancelOrder(order, " ");
-        //     assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
-        // }
-        // factoryProcessor.completeCancelIssuance(nonce);
+        factory.cancelIssuance(nonce);
+        vm.stopPrank();
+        vm.startPrank(operator);
+        for(uint i = 0; i < 10; i++) {
+            address tokenAddress = factoryStorage.currentList(i);
+            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
+            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
+            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
+            paymentToken.approve(address(issuer), orderAmount);
+            issuer.cancelOrder(order, " ");
+            assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
+        }
+        factoryProcessor.completeCancelIssuance(nonce);
         // assertEq(factoryStorage.cancelIssuanceComplted(nonce), true);
     }
     

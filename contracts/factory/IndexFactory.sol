@@ -12,6 +12,7 @@ import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
 import "./IndexFactoryStorage.sol";
+import "./IndexFactoryProcessor.sol";
 import "./OrderManager.sol";
 
 /// @title Index Token Factory
@@ -177,6 +178,7 @@ contract IndexFactory is
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
         require(msg.sender == requester, "Only requester can cancel the issuance");
         IOrderProcessor issuer = factoryStorage.issuer();
+        uint latestCancelIssuanceReqeustId;
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint requestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
@@ -190,6 +192,7 @@ contract IndexFactory is
                 (uint cancelRequestId, uint assetAmount) = requestSellOrder(tokenAddress, balance, address(factoryStorage.orderManager()));
                 factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(3, _issuanceNonce));
                 factoryStorage.setCancelIssuanceRequestId(_issuanceNonce, tokenAddress, cancelRequestId);
+                latestCancelIssuanceReqeustId = cancelRequestId;
                 if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
                 factoryStorage.setCancelIssuanceUnfilledAmount(_issuanceNonce, tokenAddress, issuer.getUnfilledAmount(requestId));
                 OrderManager orderManager = factoryStorage.orderManager();
@@ -224,27 +227,6 @@ contract IndexFactory is
         return redemptionNonce;
     }
 
-
-    function tRedemption() public {
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
-            uint256 amount0 = IERC20(tokenAddress).balanceOf(address(this));
-
-            IOrderProcessor issuer = factoryStorage.issuer();
-            uint8 decimalReduction = issuer.orderDecimalReduction(tokenAddress);
-            uint256 amount = amount0 - (amount0 % 10 ** (decimalReduction - 1));
-
-            OrderManager orderManager = factoryStorage.orderManager();
-            IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(true);
-            order.assetToken = tokenAddress;
-            order.assetTokenQuantity = amount;
-            order.recipient = address(orderManager);
-        
-            IERC20(tokenAddress).transfer(address(factoryStorage.orderManager()), amount);
-            uint256 id = orderManager.requestSellOrderFromCurrentBalance(tokenAddress, amount, address(orderManager));
-        }
-    }
-
     
 
     
@@ -263,6 +245,7 @@ contract IndexFactory is
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE) && filledAmount == 0){
                 OrderManager orderManager = factoryStorage.orderManager();
                 orderManager.cancelOrder(requestId);
+                factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
                 factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress, unFilledAmount);
             }else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || filledAmount > 0){
                 uint cancelRequestId = requestBuyOrder(tokenAddress, filledAmount, address(factoryStorage.orderManager()));
