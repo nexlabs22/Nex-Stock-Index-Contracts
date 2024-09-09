@@ -524,9 +524,16 @@ contract IndexFactoryStorage is
             address tokenAddress = currentList[i];
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             uint receivedAmount = issuer.getReceivedAmount(requestId);
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED) && receivedAmount == 0){
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
+                if(receivedAmount == 0){
                 completedCount += 1;
-            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) && receivedAmount == 0){
+                }else{
+                  uint cancelRequestId = cancelIssuanceRequestId[_issuanceNonce][tokenAddress];
+                  if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
+                        completedCount += 1;
+                  }  
+                }
+            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 uint cancelRequestId = cancelIssuanceRequestId[_issuanceNonce][tokenAddress];
                 if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                     completedCount += 1;
@@ -600,9 +607,16 @@ contract IndexFactoryStorage is
             address tokenAddress = currentList[i];
             uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
             uint receivedAmount = issuer.getReceivedAmount(requestId);
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED) && receivedAmount == 0){
+            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
+                if(receivedAmount == 0){
                 completedCount += 1;
-            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) && receivedAmount == 0){
+                }else{
+                   uint cancelRequestId = cancelRedemptionRequestId[_redemptionNonce][tokenAddress];
+                   if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
+                    completedCount += 1;
+                   } 
+                }
+            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 uint cancelRequestId = cancelRedemptionRequestId[_redemptionNonce][tokenAddress];
                 if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                     completedCount += 1;
