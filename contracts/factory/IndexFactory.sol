@@ -140,6 +140,27 @@ contract IndexFactory is
         return (id, orderAmount);
         
     }
+
+    function requestSellOrderFromOrderManagerBalance(address _token, uint256 _amount, address _receiver) internal returns(uint, uint) {
+       
+
+        //rounding order
+        IOrderProcessor issuer = factoryStorage.issuer();
+        uint8 decimalReduction = issuer.orderDecimalReduction(_token);
+        uint256 orderAmount = _amount - (_amount % 10 ** (decimalReduction - 1));
+        uint extraAmount = _amount - orderAmount;
+
+
+        IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(true);
+        order.assetToken = _token;
+        order.assetTokenQuantity = orderAmount;
+        order.recipient = _receiver;
+        
+        OrderManager orderManager = factoryStorage.orderManager();
+        uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
+        factoryStorage.setOrderInstanceById(id, order);
+        return (id, orderAmount);
+    }
     
 
 
@@ -189,9 +210,10 @@ contract IndexFactory is
                 orderManager.cancelOrder(requestId);
             } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || issuer.getReceivedAmount(requestId) > 0){
                 uint256 balance = issuer.getReceivedAmount(requestId);
-                (uint cancelRequestId, uint assetAmount) = requestSellOrder(tokenAddress, balance, address(factoryStorage.orderManager()));
+                (uint cancelRequestId, uint assetAmount) = requestSellOrderFromOrderManagerBalance(tokenAddress, balance, address(factoryStorage.orderManager()));
                 factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(3, _issuanceNonce));
                 factoryStorage.setCancelIssuanceRequestId(_issuanceNonce, tokenAddress, cancelRequestId);
+                factoryStorage.setSellRequestAssetAmountById(cancelRequestId, assetAmount);
                 latestCancelIssuanceReqeustId = cancelRequestId;
                 if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
                 factoryStorage.setCancelIssuanceUnfilledAmount(_issuanceNonce, tokenAddress, issuer.getUnfilledAmount(requestId));
@@ -229,7 +251,25 @@ contract IndexFactory is
 
     
 
-    
+    function _cancelExecutedRedemption(
+      address _tokenAddress,
+        uint _redemptionNonce,
+        uint _requestId,
+        uint _filledAmount,
+        uint _unFilledAmount
+    ) internal {
+        IOrderProcessor issuer = factoryStorage.issuer();
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(factoryStorage.usdc()));
+        uint amountAfterFee = factoryStorage.getAmountAfterFee(percentageFeeRate, _filledAmount) - flatFee;
+        uint cancelRequestId = requestBuyOrder(_tokenAddress, amountAfterFee, address(factoryStorage.orderManager()));
+        factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
+        factoryStorage.setCancelRedemptionRequestId(_redemptionNonce, _tokenAddress, cancelRequestId);
+        if(uint8(issuer.getOrderStatus(_requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
+            factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, _tokenAddress, _unFilledAmount);
+            OrderManager orderManager = factoryStorage.orderManager();
+            orderManager.cancelOrder(_requestId);
+        }
+    }
 
     function cancelRedemption(uint _redemptionNonce) public {
         require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
@@ -248,14 +288,23 @@ contract IndexFactory is
                 factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
                 factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress, unFilledAmount);
             }else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED) || filledAmount > 0){
-                uint cancelRequestId = requestBuyOrder(tokenAddress, filledAmount, address(factoryStorage.orderManager()));
-                factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
-                factoryStorage.setCancelRedemptionRequestId(_redemptionNonce, tokenAddress, requestId);
-                if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
-                    factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress, unFilledAmount);
-                    OrderManager orderManager = factoryStorage.orderManager();
-                    orderManager.cancelOrder(requestId);
-                }
+                _cancelExecutedRedemption(
+                    tokenAddress,
+                    _redemptionNonce,
+                    requestId,
+                    filledAmount,
+                    unFilledAmount
+                );
+                // (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(factoryStorage.usdc()));
+                // uint amountAfterFee = factoryStorage.getAmountAfterFee(percentageFeeRate, filledAmount) - flatFee;
+                // uint cancelRequestId = requestBuyOrder(tokenAddress, amountAfterFee, address(factoryStorage.orderManager()));
+                // factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
+                // factoryStorage.setCancelRedemptionRequestId(_redemptionNonce, tokenAddress, requestId);
+                // if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
+                //     factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress, unFilledAmount);
+                //     OrderManager orderManager = factoryStorage.orderManager();
+                //     orderManager.cancelOrder(requestId);
+                // }
             }
         }
     }

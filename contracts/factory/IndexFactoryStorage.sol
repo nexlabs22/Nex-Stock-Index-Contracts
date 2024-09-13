@@ -337,7 +337,7 @@ contract IndexFactoryStorage is
         return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
     }
 
-    function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
+    function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) public pure returns (uint256) {
         return percentageFeeRate != 0 ? PrbMath.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate)) : 0;
     }
     
