@@ -45,6 +45,15 @@ contract IndexFactory is
         uint time
     );
 
+    event RequestCancelIssuance(
+        uint indexed nonce,
+        address indexed user,
+        address inputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
+
     event Issuanced(
         uint indexed nonce,
         address indexed user,
@@ -55,6 +64,15 @@ contract IndexFactory is
     );
 
     event RequestRedemption(
+        uint indexed nonce,
+        address indexed user,
+        address outputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
+
+    event RequestCancelRedemption(
         uint indexed nonce,
         address indexed user,
         address outputToken,
@@ -222,6 +240,7 @@ contract IndexFactory is
                 }
             }
         }
+        emit RequestCancelIssuance(_issuanceNonce, requester, factoryStorage.usdc(), factoryStorage.issuanceInputAmount(_issuanceNonce), 0, block.timestamp);
     }
 
     
@@ -295,18 +314,9 @@ contract IndexFactory is
                     filledAmount,
                     unFilledAmount
                 );
-                // (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(factoryStorage.usdc()));
-                // uint amountAfterFee = factoryStorage.getAmountAfterFee(percentageFeeRate, filledAmount) - flatFee;
-                // uint cancelRequestId = requestBuyOrder(tokenAddress, amountAfterFee, address(factoryStorage.orderManager()));
-                // factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
-                // factoryStorage.setCancelRedemptionRequestId(_redemptionNonce, tokenAddress, requestId);
-                // if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
-                //     factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress, unFilledAmount);
-                //     OrderManager orderManager = factoryStorage.orderManager();
-                //     orderManager.cancelOrder(requestId);
-                // }
             }
         }
+        emit RequestCancelRedemption(_redemptionNonce, requester, factoryStorage.usdc(), factoryStorage.redemptionInputAmount(_redemptionNonce), 0, block.timestamp);
     }
 
     

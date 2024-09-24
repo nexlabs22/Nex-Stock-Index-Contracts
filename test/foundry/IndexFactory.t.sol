@@ -868,9 +868,6 @@ contract OrderProcessorTest is Test {
         vm.startPrank(user);
         paymentToken.approve(address(factory), quantityIn);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
-        
-
-
         _fillAllBuyOrders(nonce, receivedAmount, feeAmount);
         assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
         vm.stopPrank();
@@ -912,7 +909,6 @@ contract OrderProcessorTest is Test {
         assertEq(issuer.getUnfilledAmount(id), orderAmount);
         }
         
-
     }
 
     function testRedemptionPartialy() public {

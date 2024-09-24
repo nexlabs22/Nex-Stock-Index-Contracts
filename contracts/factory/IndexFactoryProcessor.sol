@@ -47,8 +47,26 @@ contract IndexFactoryProcessor is
         uint time
     );
 
+    event IssuanceCancelled(
+        uint indexed nonce,
+        address indexed user,
+        address inputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
+
 
     event Redemption(
+        uint indexed nonce,
+        address indexed user,
+        address outputToken,
+        uint inputAmount,
+        uint outputAmount,
+        uint time
+    );
+
+    event RedemptionCancelled(
         uint indexed nonce,
         address indexed user,
         address outputToken,
@@ -148,6 +166,7 @@ contract IndexFactoryProcessor is
         OrderManager orderManager = factoryStorage.orderManager();
         orderManager.withdrawFunds(factoryStorage.usdc(), requester, totalBalance);
         factoryStorage.setCancelIssuanceComplted(_issuanceNonce, true);
+        emit IssuanceCancelled(_issuanceNonce, requester, factoryStorage.usdc(), factoryStorage.issuanceInputAmount(_issuanceNonce), 0, block.timestamp);
     }
 
     
@@ -197,6 +216,7 @@ contract IndexFactoryProcessor is
         IndexToken token = factoryStorage.token();
         token.mint(requester, factoryStorage.burnedTokenAmountByNonce(_redemptionNonce));
         factoryStorage.setCancelRedemptionComplted(_redemptionNonce, true);
+        emit RedemptionCancelled(_redemptionNonce, requester, factoryStorage.usdc(), factoryStorage.redemptionInputAmount(_redemptionNonce), 0, block.timestamp);
     }
 
     

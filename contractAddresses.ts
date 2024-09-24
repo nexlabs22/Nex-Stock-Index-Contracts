@@ -1,3 +1,5 @@
+//sepolia counter address = 0x007F64Ad841C4Bc26E290b2137eD8374466A1359
+
 export type AddressMap = { [blockchain: string]: string };
 
 export const OrderProcessorAddresses: AddressMap = {
