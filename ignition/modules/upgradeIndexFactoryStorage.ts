@@ -6,20 +6,22 @@ import { ApiOracleAddresses, ExternalJobIdBytes32Addresses, IndexFactoryAddresse
 async function deployFactory() {
   
   const [deployer] = await ethers.getSigners();
-
+  // console.log(deployer.address);
+  // return;
   const IndexFactoryStorage = await ethers.getContractFactory("IndexFactoryStorage");
   console.log('Upgrading...');
   
-  const indexFactoryStorage = await upgrades.upgradeProxy(IndexFactoryAddresses["sepolia"], IndexFactoryStorage, [
-      IndexFactoryStorageAddresses[`sepolia`],
-      OrderManagerAddresses[`sepolia`],
-      OrderProcessorAddresses[`sepolia`],
-      Mag7IndexTokenAddresses[`sepolia`],
-      NexVaultAddresses[`sepolia`],
-      UsdcAddresses[`sepolia`],
-      '6',
-      false
-  ], { initializer: 'initialize' });
+  const indexFactoryStorage = await upgrades.upgradeProxy(IndexFactoryStorageAddresses["sepolia"], IndexFactoryStorage, [
+    OrderProcessorAddresses[`sepolia`],
+    Mag7IndexTokenAddresses[`sepolia`],
+    NexVaultAddresses[`sepolia`],
+    UsdcAddresses[`sepolia`],
+    '6',
+    LINKAddresses[`sepolia`],
+    ApiOracleAddresses[`goerli`],
+    ExternalJobIdBytes32Addresses[`goerli`],
+    false
+  ], { initializer: 'initialize' }, {gasLimit: 60000});
 
   console.log('indexFactoryStorage upgraed.', indexFactoryStorage.target)
 //   await indexFactory.waitForDeployment()
