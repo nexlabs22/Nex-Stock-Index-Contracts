@@ -187,7 +187,7 @@ contract IndexFactory is
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
         IERC20(factoryStorage.usdc()).transferFrom(msg.sender, address(factoryStorage.orderManager()), quantityIn);
-        IERC20(factoryStorage.usdc()).transferFrom(msg.sender, owner(), feeAmount);
+        IERC20(factoryStorage.usdc()).transferFrom(msg.sender, factoryStorage.feeReceiver(), feeAmount);
         
         
         factoryStorage.increaseIssuanceNonce();

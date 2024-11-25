@@ -188,7 +188,7 @@ contract IndexFactoryProcessor is
         }
         uint fee = (totalBalance * factoryStorage.feeRate()) / 10000;
         OrderManager orderManager = factoryStorage.orderManager();
-        orderManager.withdrawFunds(factoryStorage.usdc(), owner(), fee);
+        orderManager.withdrawFunds(factoryStorage.usdc(), factoryStorage.feeReceiver(), fee);
         orderManager.withdrawFunds(factoryStorage.usdc(), requester, totalBalance - fee);
         factoryStorage.setRedemptionIsCompleted(_redemptionNonce, true);
         emit Redemption(_redemptionNonce, requester, factoryStorage.usdc(), factoryStorage.redemptionInputAmount(_redemptionNonce), totalBalance, block.timestamp);

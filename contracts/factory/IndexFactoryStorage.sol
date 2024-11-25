@@ -47,6 +47,7 @@ contract IndexFactoryStorage is
 
     uint public totalOracleList;
     uint public totalCurrentList;
+    
 
     mapping(uint => address) public oracleList;
     mapping(uint => address) public currentList;
@@ -61,6 +62,8 @@ contract IndexFactoryStorage is
 
     
     mapping(address => address) public priceFeedByTokenAddress;
+    
+
 
     IndexToken public token;
     NexVault public vault;
@@ -77,6 +80,8 @@ contract IndexFactoryStorage is
     uint public redemptionNonce;
 
     uint8 public latestPriceDecimals;
+    address public feeReceiver;
+
 
     mapping(uint => bool) public issuanceIsCompleted;
     mapping(uint => bool) public redemptionIsCompleted;
@@ -128,6 +133,7 @@ contract IndexFactoryStorage is
         urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
         isMainnet = _isMainnet;
         feeRate = 10;
+        feeReceiver = msg.sender;
     }
 
     modifier onlyFactory() {
@@ -141,6 +147,10 @@ contract IndexFactoryStorage is
     require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
     feeRate = _newFee;
     latestFeeUpdate = block.timestamp;
+    }
+
+    function setFeeReceiver(address _feeReceiver) public onlyOwner {
+        feeReceiver = _feeReceiver;
     }
 
     function setIsMainnet(bool _isMainnet) public onlyOwner {

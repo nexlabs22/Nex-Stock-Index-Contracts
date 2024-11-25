@@ -70,6 +70,10 @@ const config: HardhatUserConfig = {
     // strict: true,
     // only: [':ERC20$'],
   },
+  defender: {
+    apiKey: process.env.API_KEY,
+    apiSecret: process.env.API_SECRET,
+  }
 };
 
 export default config;

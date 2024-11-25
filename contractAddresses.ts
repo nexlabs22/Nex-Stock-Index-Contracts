@@ -54,6 +54,9 @@ export const TestFactoryAddresses: AddressMap = {
     [`sepolia`]: `0xFA6fefD6616b600aC17A5E42403EBE218Ad210E1`
 };
 
+export const sepoliaFeeManagerAddress = "0x0f2A687Af0f9b85568795299E6b1F33006f47Ee0"
+
+
 
 export const dShares = [
     '0xD771a71E5bb303da787b4ba2ce559e39dc6eD85c', //apple 0

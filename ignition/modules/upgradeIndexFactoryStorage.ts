@@ -21,7 +21,7 @@ async function deployFactory() {
     ApiOracleAddresses[`goerli`],
     ExternalJobIdBytes32Addresses[`goerli`],
     false
-  ], { initializer: 'initialize' }, {gasLimit: 60000});
+  ], { initializer: 'initialize' }, {gasLimit: 6000000});
 
   console.log('indexFactoryStorage upgraed.', indexFactoryStorage.target)
 //   await indexFactory.waitForDeployment()
