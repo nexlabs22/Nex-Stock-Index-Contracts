@@ -27,6 +27,7 @@ contract CounterTest is Test {
     event MintFeeToReceiver(address feeReceiver, uint256 timestamp, uint256 totalSupply, uint256 amount);
     event ToggledRestricted(address indexed account, bool isRestricted);
 
+    error EnforcedPause();
 
     function setUp() public {
         indexToken = new IndexToken();
@@ -60,7 +61,8 @@ contract CounterTest is Test {
     function testMintWhenNotPaused() public {
         indexToken.pause();
         vm.startPrank(minter);
-        vm.expectRevert("Pausable: paused");
+        // vm.expectRevert("Pausable: paused");
+        vm.expectRevert(EnforcedPause.selector);
         indexToken.mint(address(this), 1000e18);
         assertEq(indexToken.balanceOf(address(this)), 0);
         vm.stopPrank();
@@ -112,7 +114,8 @@ contract CounterTest is Test {
     function testBurnWhenNotPaused() public {
         indexToken.pause();
         vm.startPrank(minter);
-        vm.expectRevert("Pausable: paused");
+        // vm.expectRevert("Pausable: paused");
+        vm.expectRevert(EnforcedPause.selector);
         indexToken.burn(address(this), 1000e18);
     }
 
@@ -304,7 +307,8 @@ contract CounterTest is Test {
         vm.stopPrank();
         //pause
         indexToken.pause();
-        vm.expectRevert("Pausable: paused");
+        // vm.expectRevert("Pausable: paused");
+        vm.expectRevert(EnforcedPause.selector);
         indexToken.transfer(minter, 100e18);
         //unpause
         indexToken.unpause();
@@ -360,7 +364,8 @@ contract CounterTest is Test {
         vm.stopPrank();
         //pause
         indexToken.pause();
-        vm.expectRevert("Pausable: paused");
+        // vm.expectRevert("Pausable: paused");
+        vm.expectRevert(EnforcedPause.selector);
         indexToken.transferFrom(minter, feeReceiver, 100e18);
         //unpause
         indexToken.unpause();

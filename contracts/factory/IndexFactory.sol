@@ -30,7 +30,6 @@ contract IndexFactory is
     }
 
     
-    
 
 
     IndexFactoryStorage public factoryStorage;
@@ -90,6 +89,10 @@ contract IndexFactory is
         uint time
     );
 
+    /**
+     * @dev Initializes the contract with the given factory storage address.
+     * @param _factoryStorage The address of the factory storage contract.
+     */
     function initialize(
         address _factoryStorage
     ) external initializer {
@@ -104,6 +107,11 @@ contract IndexFactory is
 
 
 
+    /**
+     * @dev Sets the factory storage address.
+     * @param _factoryStorage The address of the new factory storage contract.
+     * @return bool indicating success.
+     */
     function setIndexFactoryStorage(address _factoryStorage) external onlyOwner returns (bool) {
         require(_factoryStorage != address(0), "invalid factory storage address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
@@ -113,6 +121,13 @@ contract IndexFactory is
 
     
 
+    /**
+     * @dev Requests a buy order.
+     * @param _token The address of the token to buy.
+     * @param _orderAmount The amount of the token to buy.
+     * @param _receiver The address to receive the bought tokens.
+     * @return uint The ID of the buy order.
+     */
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
        
         
@@ -130,6 +145,13 @@ contract IndexFactory is
     
 
 
+    /**
+     * @dev Requests a sell order.
+     * @param _token The address of the token to sell.
+     * @param _amount The amount of the token to sell.
+     * @param _receiver The address to receive the sold tokens.
+     * @return (uint, uint) The ID of the sell order and the order amount.
+     */
     function requestSellOrder(address _token, uint256 _amount, address _receiver) internal returns(uint, uint) {
         address wrappedDshare = factoryStorage.wrappedDshareAddress(_token);
         NexVault(factoryStorage.vault()).withdrawFunds(wrappedDshare, address(this), _amount);
@@ -159,6 +181,13 @@ contract IndexFactory is
         
     }
 
+    /**
+     * @dev Requests a sell order from the order manager's balance.
+     * @param _token The address of the token to sell.
+     * @param _amount The amount of the token to sell.
+     * @param _receiver The address to receive the sold tokens.
+     * @return (uint, uint) The ID of the sell order and the order amount.
+     */
     function requestSellOrderFromOrderManagerBalance(address _token, uint256 _amount, address _receiver) internal returns(uint, uint) {
        
 
@@ -182,6 +211,11 @@ contract IndexFactory is
     
 
 
+    /**
+     * @dev Issues index tokens.
+     * @param _inputAmount The amount of input tokens.
+     * @return uint256 The issuance nonce.
+     */
     function issuanceIndexTokens(uint _inputAmount) public returns(uint256) {
         uint feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
@@ -212,6 +246,10 @@ contract IndexFactory is
 
     
 
+    /**
+     * @dev Cancels an issuance.
+     * @param _issuanceNonce The nonce of the issuance to cancel.
+     */
     function cancelIssuance(uint256 _issuanceNonce) public {
         require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
@@ -247,6 +285,11 @@ contract IndexFactory is
     
 
 
+    /**
+     * @dev Redeems index tokens.
+     * @param _inputAmount The amount of input tokens.
+     * @return uint The redemption nonce.
+     */
     function redemption(uint _inputAmount) public returns(uint) {
         factoryStorage.increaseRedemptionNonce();
         uint redemptionNonce = factoryStorage.redemptionNonce();
@@ -270,6 +313,14 @@ contract IndexFactory is
 
     
 
+    /**
+     * @dev Cancels an executed redemption.
+     * @param _tokenAddress The address of the token.
+     * @param _redemptionNonce The nonce of the redemption.
+     * @param _requestId The ID of the request.
+     * @param _filledAmount The filled amount.
+     * @param _unFilledAmount The unfilled amount.
+     */
     function _cancelExecutedRedemption(
       address _tokenAddress,
         uint _redemptionNonce,
@@ -290,6 +341,10 @@ contract IndexFactory is
         }
     }
 
+    /**
+     * @dev Cancels a redemption.
+     * @param _redemptionNonce The nonce of the redemption to cancel.
+     */
     function cancelRedemption(uint _redemptionNonce) public {
         require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
@@ -321,10 +376,16 @@ contract IndexFactory is
 
     
 
+    /**
+     * @dev Pauses the contract.
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @dev Unpauses the contract.
+     */
     function unpause() external onlyOwner {
         _unpause();
     }

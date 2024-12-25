@@ -19,9 +19,8 @@ import "../libraries/Commen.sol" as PrbMath;
 // import "./IndexFactoryBalancer.sol";
 // import "./IndexFactoryProcessor.sol";
 
-/// @title Index Token Factory
-/// @author NEX Labs Protocol
-/// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
+/// @title Index Token Factory Storage
+/// @notice Stores data and provides functions for managing index token issuance and redemption
 contract IndexFactoryStorage is
     Initializable,
     ChainlinkClient,
@@ -34,37 +33,44 @@ contract IndexFactoryStorage is
         uint nonce; 
     }
     
+    // Base URL for fetching data
     string public baseUrl;
+    // URL parameters for fetching data
     string public urlParams;
 
+    // Addresses of factory contracts
     address public factoryAddress;
     address public factoryBalancerAddress;
     address public factoryProcessorAddress;
 
+    // Chainlink oracle data
     bytes32 public externalJobId;
     uint256 public oraclePayment;
     uint public lastUpdateTime;
 
+    // Total number of oracles and current list
     uint public totalOracleList;
     uint public totalCurrentList;
     
-
+    // Mappings for oracle and current lists
     mapping(uint => address) public oracleList;
     mapping(uint => address) public currentList;
 
+    // Mappings for wrapped DShare addresses
     mapping(address => address) public wrappedDshareAddress;
 
+    // Mappings for token indices
     mapping(address => uint) public tokenOracleListIndex;
     mapping(address => uint) public tokenCurrentListIndex;
 
+    // Mappings for token market shares
     mapping(address => uint) public tokenCurrentMarketShare;
     mapping(address => uint) public tokenOracleMarketShare;
 
-    
+    // Mappings for price feeds by token address
     mapping(address => address) public priceFeedByTokenAddress;
-    
 
-
+    // Contract instances
     IndexToken public token;
     NexVault public vault;
     IOrderProcessor public issuer;
@@ -73,7 +79,7 @@ contract IndexFactoryStorage is
     OrderManager public orderManager;
     bool public isMainnet;
 
-    // new
+    // New variables
     uint8 public feeRate; // 10/10000 = 0.1%
     uint256 public latestFeeUpdate;
     uint public issuanceNonce;
@@ -82,7 +88,7 @@ contract IndexFactoryStorage is
     uint8 public latestPriceDecimals;
     address public feeReceiver;
 
-
+    // Mappings for issuance and redemption data
     mapping(uint => bool) public issuanceIsCompleted;
     mapping(uint => bool) public redemptionIsCompleted;
     mapping(uint => uint) public burnedTokenAmountByNonce;
@@ -107,6 +113,16 @@ contract IndexFactoryStorage is
     mapping(uint => mapping(address => uint)) public cancelIssuanceUnfilledAmount;
     mapping(uint => mapping(address => uint)) public cancelRedemptionUnfilledAmount;
 
+    /// @notice Initializes the contract with the given parameters
+    /// @param _issuer The address of the issuer
+    /// @param _token The address of the token
+    /// @param _vault The address of the vault
+    /// @param _usdc The address of the USDC token
+    /// @param _usdcDecimals The decimals of the USDC token
+    /// @param _chainlinkToken The address of the Chainlink token
+    /// @param _oracleAddress The address of the oracle
+    /// @param _externalJobId The job ID for the oracle
+    /// @param _isMainnet Boolean indicating if the contract is on mainnet
     function initialize(
         address _issuer,
         address _token,
@@ -124,7 +140,7 @@ contract IndexFactoryStorage is
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         __Ownable_init(msg.sender);
-        //set oracle data
+        // Set oracle data
         setChainlinkToken(_chainlinkToken);
         setChainlinkOracle(_oracleAddress);
         externalJobId = _externalJobId;
@@ -136,27 +152,38 @@ contract IndexFactoryStorage is
         feeReceiver = msg.sender;
     }
 
+    /// @notice Modifier to restrict access to factory contracts
     modifier onlyFactory() {
         require(msg.sender == factoryAddress || msg.sender == factoryProcessorAddress || msg.sender == factoryBalancerAddress, "Caller is not a factory contract");
         _;
     }
-    //Notice: newFee should be between 1 to 100 (0.01% - 1%)
+
+    /// @notice Sets the fee rate for transactions
+    /// @param _newFee The new fee rate to set
     function setFeeRate(uint8 _newFee) public onlyOwner {
-    uint256 distance = block.timestamp - latestFeeUpdate;
-    require(distance / 60 / 60 > 12, "You should wait at least 12 hours after the latest update");
-    require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
-    feeRate = _newFee;
-    latestFeeUpdate = block.timestamp;
+        uint256 distance = block.timestamp - latestFeeUpdate;
+        require(distance / 60 / 60 > 12, "You should wait at least 12 hours after the latest update");
+        require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
+        feeRate = _newFee;
+        latestFeeUpdate = block.timestamp;
     }
 
+    /// @notice Sets the fee receiver address
+    /// @param _feeReceiver The address to receive fees
     function setFeeReceiver(address _feeReceiver) public onlyOwner {
         feeReceiver = _feeReceiver;
     }
 
+    /// @notice Sets the mainnet status
+    /// @param _isMainnet Boolean indicating if the contract is on mainnet
     function setIsMainnet(bool _isMainnet) public onlyOwner {
         isMainnet = _isMainnet;
     }
 
+    /// @notice Sets the USDC address and decimals
+    /// @param _usdc The address of the USDC token
+    /// @param _usdcDecimals The decimals of the USDC token
+    /// @return bool indicating success
     function setUsdcAddress(
         address _usdc,
         uint8 _usdcDecimals
@@ -167,10 +194,15 @@ contract IndexFactoryStorage is
         return true;
     }
 
+    /// @notice Sets the latest price decimals
+    /// @param _decimals The decimals of the latest price
     function setLatestPriceDecimals(uint8 _decimals) public onlyOwner {
         latestPriceDecimals = _decimals;
     }
 
+    /// @notice Sets the token address
+    /// @param _token The address of the token
+    /// @return bool indicating success
     function setTokenAddress(
         address _token
     ) public onlyOwner returns (bool) {
@@ -179,6 +211,9 @@ contract IndexFactoryStorage is
         return true;
     }
 
+    /// @notice Sets the order manager address
+    /// @param _orderManager The address of the order manager
+    /// @return bool indicating success
     function setOrderManager(address _orderManager) external onlyOwner returns (bool) {
         require(_orderManager != address(0), "invalid order manager address");
         orderManager = OrderManager(_orderManager);
