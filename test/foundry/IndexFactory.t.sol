@@ -30,10 +30,10 @@ import {WrappedDShare} from "../../contracts/dinary/WrappedDShare.sol";
 import {MockV3Aggregator} from "../../contracts/test/MockV3Aggregator.sol";
 import { ContractDeployer } from "./ContractDeployer.sol";
 
-contract IndexFactoryTest is ContractDeployer, Test {
-//    using GetMockDShareFactory for DShareFactory;
+contract IndexFactoryTest is Test {
+   using GetMockDShareFactory for DShareFactory;
 
-//    bytes32 jobId = "6b88e0402e5d415eb946e528b8e0c7ba";
+   bytes32 jobId = "6b88e0402e5d415eb946e528b8e0c7ba";
 
     event TreasurySet(address indexed treasury);
     event VaultSet(address indexed vault);
@@ -67,77 +67,77 @@ contract IndexFactoryTest is ContractDeployer, Test {
     event CancelRequested(uint256 indexed id, address indexed requester);
     event OrderCancelled(uint256 indexed id, address indexed recipient, string reason);
 
-    // struct FeeRates {
-    //     uint64 perOrderFeeBuy;
-    //     uint24 percentageFeeRateBuy;
-    //     uint64 perOrderFeeSell;
-    //     uint24 percentageFeeRateSell;
-    // }
+    struct FeeRates {
+        uint64 perOrderFeeBuy;
+        uint24 percentageFeeRateBuy;
+        uint64 perOrderFeeSell;
+        uint24 percentageFeeRateSell;
+    }
 
-    // DShareFactory tokenFactory;
-    // DShare token;
-    // OrderProcessor issuer;
-    // MockToken paymentToken;
-    // SigUtils sigUtils;
-    // TransferRestrictor restrictor;
+    DShareFactory tokenFactory;
+    DShare token;
+    OrderProcessor issuer;
+    MockToken paymentToken;
+    SigUtils sigUtils;
+    TransferRestrictor restrictor;
 
-    // OrderManager orderManager;
-    // IndexToken public indexToken;
-    // MockApiOracle public oracle;
-    // LinkToken link;
-    // IndexFactory public factory;
-    // IndexFactoryProcessor public factoryProcessor;
-    // MockV3Aggregator public ethPriceOracle;
-    // NexVault public vault;
-    // IndexFactoryStorage public factoryStorage;
-    // IndexFactoryBalancer public factoryBalancer;
+    OrderManager orderManager;
+    IndexToken public indexToken;
+    MockApiOracle public oracle;
+    LinkToken link;
+    IndexFactory public factory;
+    IndexFactoryProcessor public factoryProcessor;
+    MockV3Aggregator public ethPriceOracle;
+    NexVault public vault;
+    IndexFactoryStorage public factoryStorage;
+    IndexFactoryBalancer public factoryBalancer;
 
 
-    // uint256 userPrivateKey;
-    // uint256 adminPrivateKey;
-    // address user;
-    // address admin;
+    uint256 userPrivateKey;
+    uint256 adminPrivateKey;
+    address user;
+    address admin;
 
-    // address constant operator = address(3);
-    // address constant treasury = address(4);
-    // address public restrictor_role = address(1);
+    address constant operator = address(3);
+    address constant treasury = address(4);
+    address public restrictor_role = address(1);
 
-    // uint256 dummyOrderFees;
+    uint256 dummyOrderFees;
 
-    // address feeReceiver = vm.addr(1);
+    address feeReceiver = vm.addr(1);
 
-    // DShare token0;
-    // DShare token1;
-    // DShare token2;
-    // DShare token3;
-    // DShare token4;
-    // DShare token5;
-    // DShare token6;
-    // DShare token7;
-    // DShare token8;
-    // DShare token9;
+    DShare token0;
+    DShare token1;
+    DShare token2;
+    DShare token3;
+    DShare token4;
+    DShare token5;
+    DShare token6;
+    DShare token7;
+    DShare token8;
+    DShare token9;
 
-    // WrappedDShare wrappedToken0;
-    // WrappedDShare wrappedToken1;
-    // WrappedDShare wrappedToken2;
-    // WrappedDShare wrappedToken3;
-    // WrappedDShare wrappedToken4;
-    // WrappedDShare wrappedToken5;
-    // WrappedDShare wrappedToken6;
-    // WrappedDShare wrappedToken7;
-    // WrappedDShare wrappedToken8;
-    // WrappedDShare wrappedToken9;
+    WrappedDShare wrappedToken0;
+    WrappedDShare wrappedToken1;
+    WrappedDShare wrappedToken2;
+    WrappedDShare wrappedToken3;
+    WrappedDShare wrappedToken4;
+    WrappedDShare wrappedToken5;
+    WrappedDShare wrappedToken6;
+    WrappedDShare wrappedToken7;
+    WrappedDShare wrappedToken8;
+    WrappedDShare wrappedToken9;
 
-    // MockV3Aggregator priceFeed0;
-    // MockV3Aggregator priceFeed1;
-    // MockV3Aggregator priceFeed2;
-    // MockV3Aggregator priceFeed3;
-    // MockV3Aggregator priceFeed4;
-    // MockV3Aggregator priceFeed5;
-    // MockV3Aggregator priceFeed6;
-    // MockV3Aggregator priceFeed7;
-    // MockV3Aggregator priceFeed8;
-    // MockV3Aggregator priceFeed9;
+    MockV3Aggregator priceFeed0;
+    MockV3Aggregator priceFeed1;
+    MockV3Aggregator priceFeed2;
+    MockV3Aggregator priceFeed3;
+    MockV3Aggregator priceFeed4;
+    MockV3Aggregator priceFeed5;
+    MockV3Aggregator priceFeed6;
+    MockV3Aggregator priceFeed7;
+    MockV3Aggregator priceFeed8;
+    MockV3Aggregator priceFeed9;
 
 
 
