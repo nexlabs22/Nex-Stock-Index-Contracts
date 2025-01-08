@@ -55,6 +55,9 @@ contract OrderManager is
         uint8 _usdcDecimals,
         address _issuer
     ) external initializer {
+        require(_usdc != address(0), "invalid token address");
+        require(_issuer != address(0), "invalid issuer address");
+        require(_usdcDecimals > 0, "invalid decimals");
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         issuer = IOrderProcessor(_issuer);
@@ -102,6 +105,9 @@ contract OrderManager is
     }
     
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) external returns(uint) {
+        require(_token != address(0), "invalid token address");
+        require(_receiver != address(0), "invalid address");
+        require(_orderAmount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
@@ -124,6 +130,9 @@ contract OrderManager is
     }
 
     function requestBuyOrderFromCurrentBalance(address _token, uint256 _orderAmount, address _receiver) external returns(uint) {
+        require(_token != address(0), "invalid token address");
+        require(_receiver != address(0), "invalid address");
+        require(_orderAmount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
@@ -146,6 +155,9 @@ contract OrderManager is
 
 
     function requestSellOrder(address _token, uint256 _amount, address _receiver) external returns(uint) {
+        require(_token != address(0), "invalid token address");
+        require(_receiver != address(0), "invalid address");
+        require(_amount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
@@ -163,6 +175,9 @@ contract OrderManager is
     }
 
     function requestSellOrderFromCurrentBalance(address _token, uint256 _amount, address _receiver) external returns(uint) {
+        require(_token != address(0), "invalid token address");
+        require(_receiver != address(0), "invalid address");
+        require(_amount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
@@ -179,12 +194,16 @@ contract OrderManager is
     }
 
     function withdrawFunds(address _token, address _to, uint256 _amount) external {
+        require(_token != address(0), "invalid token address");
+        require(_to != address(0), "invalid address");
+        require(_amount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         emit FundsWithdrawn(_token, _to, _amount);
         IERC20(_token).transfer(_to, _amount);
     }
 
     function cancelOrder(uint256 _requestId) external {
+        require(_requestId > 0, "Invalid Request Id");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         issuer.requestCancel(_requestId);
     }

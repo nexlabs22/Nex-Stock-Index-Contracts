@@ -62,6 +62,7 @@ contract IndexFactoryBalancer is
     function initialize(
         address _factoryStorage
     ) external initializer {
+        require(_factoryStorage != address(0), "invalid token address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
         __Ownable_init(msg.sender);
         __Pausable_init();

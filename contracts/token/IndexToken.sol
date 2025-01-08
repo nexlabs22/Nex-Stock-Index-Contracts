@@ -61,7 +61,11 @@ contract IndexToken is
         address _feeReceiver,
         uint256 _supplyCeiling
     ) external override initializer {
-        require(_feeReceiver != address(0));
+        require(bytes(tokenName).length > 0, "token name cannot be empty");
+        require(bytes(tokenSymbol).length > 0, "token symbol cannot be empty");
+        require(_feeRatePerDayScaled > 0, "fee rate must be greater than 0");
+        require(_feeReceiver != address(0), "fee receiver cannot be the zero address");
+        require(_supplyCeiling > 0, "supply ceiling must be greater than 0");
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -80,6 +84,8 @@ contract IndexToken is
     /// @param to address
     /// @param amount uint256
     function mint(address to, uint256 amount) external override whenNotPaused onlyMinter {
+        require(to != address(0), "mint to the zero address");
+        require(amount > 0, "mint amount must be greater than 0");
         require(totalSupply() + amount <= supplyCeiling, "will exceed supply ceiling");
         require(!isRestricted[to], "to is restricted");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
@@ -92,6 +98,7 @@ contract IndexToken is
     /// @param from address
     /// @param amount uint256
     function burn(address from, uint256 amount) external override whenNotPaused onlyMinter {
+        require(from != address(0), "burn from the zero address");
         require(!isRestricted[from], "from is restricted");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
         _mintToFeeReceiver();
@@ -140,6 +147,7 @@ contract IndexToken is
     /// @notice Callable only by the methodoligst to store on chain data about the underlying weight of the token
     /// @param _methodology string
     function setMethodology(string memory _methodology) external override onlyMethodologist {
+        require(bytes(_methodology).length > 0, "methodology cannot be empty");
         methodology = _methodology;
         emit MethodologySet(_methodology);
     }
@@ -200,6 +208,8 @@ contract IndexToken is
     /// @param amount uint256
     /// @return bool
     function transfer(address to, uint256 amount) public override whenNotPaused returns (bool) {
+        require(to != address(0), "transfer to the zero address");
+        require(amount <= balanceOf(msg.sender), "transfer amount exceeds balance");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
         require(!isRestricted[to], "to is restricted");
 
@@ -217,6 +227,9 @@ contract IndexToken is
         address to,
         uint256 amount
     ) public override whenNotPaused returns (bool) {
+        require(from != address(0), "transfer from the zero address");
+        require(to != address(0), "transfer to the zero address");
+        require(amount <= balanceOf(from), "transfer amount exceeds balance");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
         require(!isRestricted[to], "to is restricted");
         require(!isRestricted[from], "from is restricted");

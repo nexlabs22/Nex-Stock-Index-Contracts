@@ -96,6 +96,7 @@ contract IndexFactory is
     function initialize(
         address _factoryStorage
     ) external initializer {
+        require(_factoryStorage != address(0), "invalid factory storage address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
        
         __Ownable_init(msg.sender);
@@ -129,7 +130,7 @@ contract IndexFactory is
      * @return uint The ID of the buy order.
      */
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns(uint) {
-       
+        
         
         IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(false);
         order.recipient = _receiver;
@@ -217,6 +218,7 @@ contract IndexFactory is
      * @return uint256 The issuance nonce.
      */
     function issuanceIndexTokens(uint _inputAmount) public returns(uint256) {
+        require(_inputAmount > 0, "Invalid input amount");
         uint feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
@@ -291,6 +293,7 @@ contract IndexFactory is
      * @return uint The redemption nonce.
      */
     function redemption(uint _inputAmount) public returns(uint) {
+        require(_inputAmount > 0, "Invalid input amount");
         factoryStorage.increaseRedemptionNonce();
         uint redemptionNonce = factoryStorage.redemptionNonce();
         factoryStorage.setRedemptionInputAmount(redemptionNonce, _inputAmount);

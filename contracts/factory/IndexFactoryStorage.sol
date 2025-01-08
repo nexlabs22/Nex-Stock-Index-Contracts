@@ -171,6 +171,7 @@ contract IndexFactoryStorage is
     /// @notice Sets the fee receiver address
     /// @param _feeReceiver The address to receive fees
     function setFeeReceiver(address _feeReceiver) public onlyOwner {
+        require(_feeReceiver != address(0), "invalid fee receiver address");
         feeReceiver = _feeReceiver;
     }
 
@@ -189,6 +190,7 @@ contract IndexFactoryStorage is
         uint8 _usdcDecimals
     ) public onlyOwner returns (bool) {
         require(_usdc != address(0), "invalid token address");
+        require(_usdcDecimals > 0, "invalid decimals");
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         return true;
@@ -197,6 +199,7 @@ contract IndexFactoryStorage is
     /// @notice Sets the latest price decimals
     /// @param _decimals The decimals of the latest price
     function setLatestPriceDecimals(uint8 _decimals) public onlyOwner {
+        require(_decimals > 0, "invalid decimals");
         latestPriceDecimals = _decimals;
     }
 
@@ -252,19 +255,24 @@ contract IndexFactoryStorage is
     }
 
     function setOracleInfo(address _oracleAddress, bytes32 _externalJobId) public onlyOwner {
+        require(_oracleAddress != address(0), "invalid oracle address");
+        require(_externalJobId.length > 0, "invalid job id");
         setChainlinkOracle(_oracleAddress);
         externalJobId = _externalJobId;
     }
 
     function setFactory(address _factoryAddress) public onlyOwner {
+        require(_factoryAddress != address(0), "invalid factory address");
         factoryAddress = _factoryAddress;
     }
 
     function setFactoryBalancer(address _factoryBalancerAddress) public onlyOwner {
+        require(_factoryBalancerAddress != address(0), "invalid factory balancer address");
         factoryBalancerAddress = _factoryBalancerAddress;
     }
 
     function setFactoryProcessor(address _factoryProcessorAddress) public onlyOwner {
+        require(_factoryProcessorAddress != address(0), "invalid factory processor address");
         factoryProcessorAddress = _factoryProcessorAddress;
     }
 
@@ -365,18 +373,22 @@ contract IndexFactoryStorage is
     }
 
     function setOrderInstanceById(uint _requestId, IOrderProcessor.Order memory _order) external onlyFactory {
+        require(_requestId > 0, "Invalid Request Id");
         orderInstanceById[_requestId] = _order;
     }
 
     function getOrderInstanceById(uint _id) public view returns(IOrderProcessor.Order memory){
+        require(_id > 0, "Invalid Request Id");
         return orderInstanceById[_id];
     }
 
     function getActionInfoById(uint _id) public view returns(ActionInfo memory){
+        require(_id > 0, "Invalid Request Id");
         return actionInfoById[_id];
     }
 
     function getVaultDshareBalance(address _token) public view returns(uint){
+        require(_token != address(0), "invalid token address");
         address wrappedDshareAddress = wrappedDshareAddress[_token];
         uint wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
         return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
@@ -387,6 +399,7 @@ contract IndexFactoryStorage is
     }
     
     function getVaultDshareValue(address _token) public view returns(uint){
+        require(_token != address(0), "invalid token address");
         uint tokenPrice = priceInWei(_token);
         uint dshareBalance = getVaultDshareBalance(_token);
         return (dshareBalance * tokenPrice)/1e18;
@@ -402,7 +415,10 @@ contract IndexFactoryStorage is
         return portfolioValue;
     }
 
-    function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {        
+    function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {     
+        require(_amountDecimals <= 18, "amount decimals should be less than or equal to 18");
+        require(_chainDecimals <= 18, "chain decimals should be less than or equal to 18");
+
         if (_chainDecimals > _amountDecimals){
             return _amount * int256(10 **(_chainDecimals - _amountDecimals));
         }else{
@@ -411,7 +427,7 @@ contract IndexFactoryStorage is
     }
 
     function priceInWei(address _tokenAddress) public view returns (uint256) {
-        
+        require(_tokenAddress != address(0), "invalid token address");
         if(isMainnet){
         address feedAddress = priceFeedByTokenAddress[_tokenAddress];
         (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
@@ -441,6 +457,7 @@ contract IndexFactoryStorage is
     }
     
     function getIssuanceAmountOut(uint _amount) public view returns(uint){
+        require(_amount > 0, "Invalid amount");
         uint portfolioValue = getPortfolioValue();
         uint totalSupply = token.totalSupply();
         uint amountOut = _amount * totalSupply / portfolioValue;
@@ -448,6 +465,7 @@ contract IndexFactoryStorage is
     }
 
     function getRedemptionAmountOut(uint _amount) public view returns(uint){
+        require(_amount > 0, "Invalid amount");
         uint portfolioValue = getPortfolioValue();
         uint totalSupply = token.totalSupply();
         uint amountOut = _amount * portfolioValue / totalSupply;
@@ -457,12 +475,14 @@ contract IndexFactoryStorage is
     
 
     function calculateBuyRequestFee(uint _amount) public view returns(uint){
+        require(_amount > 0, "Invalid amount");
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _amount);
         return fee;
     }
 
     function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
+        require(_inputAmount > 0, "Invalid amount");
         uint256 fees;
         for(uint i; i < totalCurrentList; i++) {
         address tokenAddress = currentList[i];
@@ -499,6 +519,9 @@ contract IndexFactoryStorage is
     public
     recordChainlinkFulfillment(requestId)
   {
+    require(requestId.length > 0, "invalid request id");
+    require(_tokens.length > 0, "invalid tokens");
+    require(_marketShares.length > 0, "invalid market shares");
     _initData(_tokens, _marketShares);
   }
 

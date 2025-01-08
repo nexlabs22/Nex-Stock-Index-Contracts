@@ -26,6 +26,10 @@ contract NexVault is Initializable, OwnableUpgradeable {
     }
 
     function withdrawFunds(address _token, address _to, uint256 _amount) external onlyOperator {
+        require(_token != address(0), "NexVault: invalid token address");
+        require(_to != address(0), "NexVault: invalid address");
+        require(_amount > 0, "NexVault: amount must be greater than 0");
+
         emit FundsWithdrawn(_token, _to, _amount);
         IERC20(_token).safeTransfer(_to, _amount);
     }
