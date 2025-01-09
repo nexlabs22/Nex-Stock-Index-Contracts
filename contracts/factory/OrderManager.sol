@@ -199,7 +199,7 @@ contract OrderManager is
         require(_amount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         emit FundsWithdrawn(_token, _to, _amount);
-        IERC20(_token).transfer(_to, _amount);
+        require(IERC20(_token).transfer(_to, _amount), "Transfer failed");
     }
 
     function cancelOrder(uint256 _requestId) external {

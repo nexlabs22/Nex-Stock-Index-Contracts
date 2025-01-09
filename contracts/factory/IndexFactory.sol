@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
@@ -21,7 +22,8 @@ import "./OrderManager.sol";
 contract IndexFactory is
     Initializable,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     
     struct ActionInfo {
@@ -217,7 +219,7 @@ contract IndexFactory is
      * @param _inputAmount The amount of input tokens.
      * @return uint256 The issuance nonce.
      */
-    function issuanceIndexTokens(uint _inputAmount) public returns(uint256) {
+    function issuanceIndexTokens(uint _inputAmount) public nonReentrant returns(uint256) {
         require(_inputAmount > 0, "Invalid input amount");
         uint feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
@@ -292,7 +294,7 @@ contract IndexFactory is
      * @param _inputAmount The amount of input tokens.
      * @return uint The redemption nonce.
      */
-    function redemption(uint _inputAmount) public returns(uint) {
+    function redemption(uint _inputAmount) public nonReentrant returns(uint) {
         require(_inputAmount > 0, "Invalid input amount");
         factoryStorage.increaseRedemptionNonce();
         uint redemptionNonce = factoryStorage.redemptionNonce();

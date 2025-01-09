@@ -284,6 +284,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
     }
 
     function multical(uint _requestId) public {
+        require(_requestId > 0, "Invalid request id");
         ActionInfo memory actionInfo = actionInfoById[_requestId];
         if(actionInfo.actionType == 5){
             secondRebalanceAction(actionInfo.nonce);
