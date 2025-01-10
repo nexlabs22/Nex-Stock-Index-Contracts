@@ -7,6 +7,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
 import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
@@ -21,7 +23,8 @@ import "./OrderManager.sol";
 contract IndexFactoryProcessor is
     Initializable,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     
     struct ActionInfo {
@@ -103,7 +106,7 @@ contract IndexFactoryProcessor is
 
     
 
-    function completeIssuance(uint _issuanceNonce) public {
+    function completeIssuance(uint _issuanceNonce) public nonReentrant {
         require(factoryStorage.checkIssuanceOrdersStatus(_issuanceNonce), "Orders are not completed");
         require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
@@ -145,7 +148,7 @@ contract IndexFactoryProcessor is
 
 
 
-    function completeCancelIssuance(uint256 _issuanceNonce) public {
+    function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant {
         require(factoryStorage.checkCancelIssuanceStatus(_issuanceNonce), "Cancel issuance is not completed");
         require(!factoryStorage.cancelIssuanceComplted(_issuanceNonce), "The process has been completed before");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
@@ -174,7 +177,7 @@ contract IndexFactoryProcessor is
 
     
 
-    function completeRedemption(uint _redemptionNonce) public {
+    function completeRedemption(uint _redemptionNonce) public nonReentrant {
         require(factoryStorage.checkRedemptionOrdersStatus(_redemptionNonce), "Redemption orders are not completed");
         require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
@@ -195,7 +198,7 @@ contract IndexFactoryProcessor is
         emit Redemption(_redemptionNonce, requester, factoryStorage.usdc(), factoryStorage.redemptionInputAmount(_redemptionNonce), totalBalance, block.timestamp);
     }
 
-    function completeCancelRedemption(uint256 _redemptionNonce) public {
+    function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant {
         require(factoryStorage.checkCancelRedemptionStatus(_redemptionNonce), "Cancel redemption is not completed");
         require(!factoryStorage.cancelRedemptionComplted(_redemptionNonce), "The process has been completed before");
 

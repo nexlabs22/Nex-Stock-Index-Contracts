@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
 import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 
@@ -15,7 +17,8 @@ import {FeeLib} from "../dinary/common/FeeLib.sol";
 contract OrderManager is
     Initializable,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     enum RequestStatus {
         NULL,
@@ -104,7 +107,7 @@ contract OrderManager is
         return fees;
     }
     
-    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) external returns(uint) {
+    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) external nonReentrant returns(uint) {
         require(_token != address(0), "invalid token address");
         require(_receiver != address(0), "invalid address");
         require(_orderAmount > 0, "amount must be greater than 0");
@@ -129,7 +132,7 @@ contract OrderManager is
         // return 1;
     }
 
-    function requestBuyOrderFromCurrentBalance(address _token, uint256 _orderAmount, address _receiver) external returns(uint) {
+    function requestBuyOrderFromCurrentBalance(address _token, uint256 _orderAmount, address _receiver) external nonReentrant returns(uint) {
         require(_token != address(0), "invalid token address");
         require(_receiver != address(0), "invalid address");
         require(_orderAmount > 0, "amount must be greater than 0");

@@ -8,6 +8,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
 import "../chainlink/ChainlinkClient.sol";
 import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
@@ -26,7 +28,8 @@ import "../libraries/Commen.sol" as PrbMath2;
 contract IndexFactoryBalancer is
     Initializable,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     
     struct ActionInfo {
@@ -156,7 +159,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
     }
     
 
-    function firstRebalanceAction() public onlyOwner returns(uint) {
+    function firstRebalanceAction() public nonReentrant onlyOwner returns(uint) {
         rebalanceNonce += 1;
         uint portfolioValue;
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
@@ -193,7 +196,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
         }
     }
 
-    function secondRebalanceAction(uint _rebalanceNonce) public onlyOwner {
+    function secondRebalanceAction(uint _rebalanceNonce) public nonReentrant onlyOwner {
         require(checkFirstRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
         uint portfolioValue = portfolioValueByNonce[_rebalanceNonce];
         uint totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
@@ -222,7 +225,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
         return amountAfterFee;
     }
 
-    function completeRebalanceActions(uint _rebalanceNonce) public onlyOwner {
+    function completeRebalanceActions(uint _rebalanceNonce) public nonReentrant onlyOwner {
         require(checkSecondRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
         IOrderProcessor issuer = factoryStorage.issuer();
         for(uint i; i< factoryStorage.totalCurrentList(); i++) {
