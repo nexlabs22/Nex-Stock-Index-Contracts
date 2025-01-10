@@ -301,84 +301,80 @@ contract IndexFactoryStorage is
     }
 
     function setBurnedTokenAmountByNonce(uint _redemptionNonce , uint _burnedAmount) external onlyFactory {
-        require(_burnedAmount > 0, "Invalid amount");
+        require(_burnedAmount > 0, "Invalid burn amount");
         burnedTokenAmountByNonce[_redemptionNonce] = _burnedAmount;
     }
 
     function setIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid Request Id");
+        require(_requestId > 0, "Invalid issuance Request Id");
         require(_token != address(0), "Invalid token address");
         issuanceRequestId[_issuanceNonce][_token] = _requestId;
     }
 
     function setRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid Request Id");
+        require(_requestId > 0, "Invalid redemption request id");
         require(_token != address(0), "Invalid token address");
         redemptionRequestId[_redemptionNonce][_token] = _requestId;
     }
 
     function setIssuanceRequesterByNonce(uint _issuanceNonce, address _requester) external onlyFactory {
-        require(_requester != address(0), "Invalid Requester Address");
+        require(_requester != address(0), "Invalid issuance requester address");
         issuanceRequesterByNonce[_issuanceNonce] = _requester;
     }
 
     function setRedemptionRequesterByNonce(uint _redemptionNonce, address _requester) external onlyFactory {
-        require(_requester != address(0), "Invalid Requester Address");
+        require(_requester != address(0), "Invalid redemption requester address");
         redemptionRequesterByNonce[_redemptionNonce] = _requester;
     }
 
     function setCancelIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid Request Id");
+        require(_requestId > 0, "Invalid issuance request id");
         require(_token != address(0), "Invalid token address");
         cancelIssuanceRequestId[_issuanceNonce][_token] = _requestId;
     }
 
     function setCancelRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid Request Id");
+        require(_requestId > 0, "Invalid redemption request id");
         require(_token != address(0), "Invalid token address");
         cancelRedemptionRequestId[_redemptionNonce][_token] = _requestId;
     }
 
     function setBuyRequestPayedAmountById(uint _requestId, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
+        require(_amount > 0, "Invalid buy request amount");
         require(_requestId > 0, "Invalid Request Id");
         buyRequestPayedAmountById[_requestId] = _amount;
     }
 
     function setSellRequestAssetAmountById(uint _requestId, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
+        require(_amount > 0, "Invalid sell request amount");
         sellRequestAssetAmountById[_requestId] = _amount;
     }
 
     function setIssuanceTokenPrimaryBalance(uint _issuanceNonce, address _token, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
-        require(_token != address(0), "Invalid token address");
+        require(_token != address(0), "Invalid issuance primary token address");
         issuanceTokenPrimaryBalance[_issuanceNonce][_token] = _amount;
     }
 
     function setRedemptionTokenPrimaryBalance(uint _redemptionNonce, address _token, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
-        require(_token != address(0), "Invalid token address");
+        require(_token != address(0), "Invalid redemption token address");
         redemptionTokenPrimaryBalance[_redemptionNonce][_token] = _amount;
     }
 
     function setIssuanceIndexTokenPrimaryTotalSupply(uint _issuanceNonce, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
         issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce] = _amount;
     }
 
     function setRedemptionIndexTokenPrimaryTotalSupply(uint _redemptionNonce, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
         redemptionIndexTokenPrimaryTotalSupply[_redemptionNonce] = _amount;
     }
 
     function setIssuanceInputAmount(uint _issuanceNonce, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
+        require(_amount > 0, "Invalid issuance input amount");
         issuanceInputAmount[_issuanceNonce] = _amount;
     }
 
     function setRedemptionInputAmount(uint _redemptionNonce, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
+        require(_amount > 0, "Invalid redemption input amount");
         redemptionInputAmount[_redemptionNonce] = _amount;
     }
 
@@ -388,13 +384,13 @@ contract IndexFactoryStorage is
     }
 
     function setCancelIssuanceUnfilledAmount(uint _issuanceNonce, address _token, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
+        require(_amount > 0, "Invalid cancel issuance unfilled amount");
         require(_token != address(0), "Invalid token address");
         cancelIssuanceUnfilledAmount[_issuanceNonce][_token] = _amount;
     }
 
     function setCancelRedemptionUnfilledAmount(uint _redemptionNonce, address _token, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid amount");
+        require(_amount > 0, "Invalid cancel redemption unfilled amount");
         require(_token != address(0), "Invalid token address");
         cancelRedemptionUnfilledAmount[_redemptionNonce][_token] = _amount;
     }

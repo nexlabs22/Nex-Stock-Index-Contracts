@@ -191,7 +191,7 @@ contract IndexFactory is
      * @param _receiver The address to receive the sold tokens.
      * @return (uint, uint) The ID of the sell order and the order amount.
      */
-    function requestSellOrderFromOrderManagerBalance(address _token, uint256 _amount, address _receiver) internal returns(uint, uint) {
+    function requestSellOrderFromOrderManagerBalance(address _token, uint256 _amount, address _receiver) internal nonReentrant returns(uint, uint) {
        
 
         //rounding order

@@ -119,7 +119,7 @@ contract OrderManager is
         uint256 quantityIn = order.paymentTokenQuantity + fees;
        
         
-        (IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn), "Transfer failed");
+        require(IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn), "Transfer failed");
         IERC20(usdc).approve(address(issuer), quantityIn);
         
         uint256 id = issuer.createOrderStandardFees(order);
