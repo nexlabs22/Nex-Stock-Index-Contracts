@@ -224,8 +224,8 @@ contract IndexFactory is
         uint feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
-        IERC20(factoryStorage.usdc()).transferFrom(msg.sender, address(factoryStorage.orderManager()), quantityIn);
-        IERC20(factoryStorage.usdc()).transferFrom(msg.sender, factoryStorage.feeReceiver(), feeAmount);
+        require(IERC20(factoryStorage.usdc()).transferFrom(msg.sender, address(factoryStorage.orderManager()), quantityIn), "Transfer failed");
+        require(IERC20(factoryStorage.usdc()).transferFrom(msg.sender, factoryStorage.feeReceiver(), feeAmount), "Transfer failed");
         
         
         factoryStorage.increaseIssuanceNonce();

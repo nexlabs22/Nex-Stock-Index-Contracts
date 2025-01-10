@@ -119,7 +119,7 @@ contract OrderManager is
         uint256 quantityIn = order.paymentTokenQuantity + fees;
        
         
-        IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn);
+        (IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn), "Transfer failed");
         IERC20(usdc).approve(address(issuer), quantityIn);
         
         uint256 id = issuer.createOrderStandardFees(order);
@@ -165,7 +165,7 @@ contract OrderManager is
         order.assetTokenQuantity = _amount;
         order.recipient = _receiver;
         
-        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        require(IERC20(_token).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
         
         
         IERC20(_token).approve(address(issuer), _amount);

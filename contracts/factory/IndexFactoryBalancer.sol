@@ -123,7 +123,7 @@ function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver
         order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
         
-        IERC20(_token).transfer(address(factoryStorage.orderManager()), orderAmount);
+        require(IERC20(_token).transfer(address(factoryStorage.orderManager()), orderAmount), "Transfer failed");
         OrderManager orderManager = factoryStorage.orderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         factoryStorage.setOrderInstanceById(id, order);
