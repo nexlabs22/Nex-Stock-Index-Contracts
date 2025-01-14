@@ -181,7 +181,7 @@ contract IndexFactoryTest is Test {
         orderManager.initialize(address(paymentToken), paymentToken.decimals(), address(issuer));
 
         link = new LinkToken();
-        oracle = new MockApiOracle(address(link));
+        oracle = new MockApiOracle();
 
         ethPriceOracle = new MockV3Aggregator(
             18, //decimals
@@ -504,8 +504,19 @@ contract IndexFactoryTest is Test {
         
         
         link.transfer(address(factoryStorage), 1e17);
-        bytes32 requestId = factoryStorage.requestAssetsData();
-        oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
+        // bytes32 requestId = factoryStorage.requestAssetsData();
+        // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
+        bytes32 requestId = factoryStorage.requestAssetsData(
+            "console.log('Hello, World!');",
+            // FunctionsConsumer.Location.Inline, // Use the imported enum directly
+            abi.encodePacked("default"),
+            new string[](1), // Convert to dynamic array
+            new bytes[](1),  // Convert to dynamic array
+            0,
+            0
+        );
+        bytes memory data = abi.encode(assetList, tokenShares);
+        oracle.fulfillRequest(address(factoryStorage), requestId, data);
     }
 
 
@@ -537,8 +548,19 @@ contract IndexFactoryTest is Test {
         
         
         link.transfer(address(factoryStorage), 1e17);
-        bytes32 requestId = factoryStorage.requestAssetsData();
-        oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
+        // bytes32 requestId = factoryStorage.requestAssetsData();
+        // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
+        bytes32 requestId = factoryStorage.requestAssetsData(
+            "console.log('Hello, World!');",
+            // FunctionsConsumer.Location.Inline, // Use the imported enum directly
+            abi.encodePacked("default"),
+            new string[](1), // Convert to dynamic array
+            new bytes[](1),  // Convert to dynamic array
+            0,
+            0
+        );
+        bytes memory data = abi.encode(assetList, tokenShares);
+        oracle.fulfillRequest(address(factoryStorage), requestId, data);
     }
 
     function updateWrappedDshares() public {

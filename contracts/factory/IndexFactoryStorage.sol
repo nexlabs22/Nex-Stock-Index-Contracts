@@ -8,11 +8,16 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../chainlink/ChainlinkClient.sol";
+// import "../chainlink/ChainlinkClient.sol";
+
+import "../chainlink/FunctionsClient.sol";
+import "../chainlink/ConfirmedOwner.sol";
+// import "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
+import "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 import "../dinary/orders/IOrderProcessor.sol";
 import "../dinary/WrappedDShare.sol";
 import "../vault/NexVault.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "./OrderManager.sol";
 import "../libraries/Commen.sol" as PrbMath;
 // import "./IndexFactory.sol";
@@ -23,10 +28,10 @@ import "../libraries/Commen.sol" as PrbMath;
 /// @notice Stores data and provides functions for managing index token issuance and redemption
 contract IndexFactoryStorage is
     Initializable,
-    ChainlinkClient,
-    OwnableUpgradeable
+    FunctionsClient, 
+    ConfirmedOwner
 {
-    using Chainlink for Chainlink.Request;
+    using FunctionsRequest for FunctionsRequest.Request;
 
     struct ActionInfo {
         uint actionType;
@@ -44,8 +49,10 @@ contract IndexFactoryStorage is
     address public factoryProcessorAddress;
 
     // Chainlink oracle data
-    bytes32 public externalJobId;
-    uint256 public oraclePayment;
+    // bytes32 public externalJobId;
+    // uint256 public oraclePayment;
+    bytes32 public donId; // DON ID for the Functions DON to which the requests are sent
+    address public functionsRouterAddress;
     uint public lastUpdateTime;
 
     // Total number of oracles and current list
@@ -120,8 +127,8 @@ contract IndexFactoryStorage is
     /// @param _usdc The address of the USDC token
     /// @param _usdcDecimals The decimals of the USDC token
     /// @param _chainlinkToken The address of the Chainlink token
-    /// @param _oracleAddress The address of the oracle
-    /// @param _externalJobId The job ID for the oracle
+    /// @param _functionsRouterAddress The address of the functions router
+    /// @param _newDonId The don ID for the oracle
     /// @param _isMainnet Boolean indicating if the contract is on mainnet
     function initialize(
         address _issuer,
@@ -130,8 +137,8 @@ contract IndexFactoryStorage is
         address _usdc,
         uint8 _usdcDecimals,
         address _chainlinkToken,
-        address _oracleAddress,
-        bytes32 _externalJobId,
+        address _functionsRouterAddress,
+        bytes32 _newDonId,
         bool _isMainnet
     ) external initializer {
         require(_issuer != address(0), "invalid issuer address");
@@ -140,19 +147,22 @@ contract IndexFactoryStorage is
         require(_usdc != address(0), "invalid usdc address");
         require(_usdcDecimals > 0, "invalid decimals");
         require(_chainlinkToken != address(0), "invalid chainlink token address");
-        require(_oracleAddress != address(0), "invalid oracle address");
-        require(_externalJobId.length > 0, "invalid job id");
+        require(_functionsRouterAddress != address(0), "invalid functions router address");
+        require(_newDonId.length > 0, "invalid don id");
         issuer = IOrderProcessor(_issuer);
         token = IndexToken(_token);
         vault = NexVault(_vault);
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
-        __Ownable_init(msg.sender);
+        __FunctionsClient_init(_functionsRouterAddress);
+        __ConfirmedOwner_init(msg.sender);
+        // __Ownable_init(msg.sender);
         // Set oracle data
-        setChainlinkToken(_chainlinkToken);
-        setChainlinkOracle(_oracleAddress);
-        externalJobId = _externalJobId;
-        oraclePayment = ((1 * LINK_DIVISIBILITY) / 10); // n * 10**18
+        // setChainlinkToken(_chainlinkToken);
+        // setChainlinkOracle(_oracleAddress);
+        donId = _newDonId;
+        functionsRouterAddress = _functionsRouterAddress;
+        // oraclePayment = ((1 * LINK_DIVISIBILITY) / 10); // n * 10**18
         baseUrl = "https://app.nexlabs.io/api/allFundingRates";
         urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
         isMainnet = _isMainnet;
@@ -164,6 +174,14 @@ contract IndexFactoryStorage is
     modifier onlyFactory() {
         require(msg.sender == factoryAddress || msg.sender == factoryProcessorAddress || msg.sender == factoryBalancerAddress, "Caller is not a factory contract");
         _;
+    }
+
+    /**
+     * @notice Set the DON ID
+     * @param newDonId New DON ID
+     */
+    function setDonId(bytes32 newDonId) external onlyOwner {
+        donId = newDonId;
     }
 
     /// @notice Sets the fee rate for transactions
@@ -262,12 +280,7 @@ contract IndexFactoryStorage is
     urlParams = _afterAddress;
     }
 
-    function setOracleInfo(address _oracleAddress, bytes32 _externalJobId) public onlyOwner {
-        require(_oracleAddress != address(0), "invalid oracle address");
-        require(_externalJobId.length > 0, "invalid job id");
-        setChainlinkOracle(_oracleAddress);
-        externalJobId = _externalJobId;
-    }
+   
 
     function setFactory(address _factoryAddress) public onlyOwner {
         require(_factoryAddress != address(0), "invalid factory address");
@@ -532,7 +545,46 @@ contract IndexFactoryStorage is
         return string(bytes.concat(bytes(a), bytes(b)));
     }
 
-    
+    function requestAssetsData(
+        string calldata source,
+        // FunctionsRequest.Location secretsLocation,
+        bytes calldata encryptedSecretsReference,
+        string[] calldata args,
+        bytes[] calldata bytesArgs,
+        uint64 subscriptionId,
+        uint32 callbackGasLimit
+    ) public returns (bytes32) {
+        FunctionsRequest.Request memory req;
+        req.initializeRequest(FunctionsRequest.Location.Inline, FunctionsRequest.CodeLanguage.JavaScript, source);
+        // req.secretsLocation = secretsLocation;
+        req.secretsLocation = FunctionsRequest.Location.Remote;
+        req.encryptedSecretsReference = encryptedSecretsReference;
+        if (args.length > 0) {
+        req.setArgs(args);
+        }
+        if (bytesArgs.length > 0) {
+        req.setBytesArgs(bytesArgs);
+        }
+        return _sendRequest(req.encodeCBOR(), subscriptionId, callbackGasLimit, donId);
+    }
+
+    /**
+    * @notice Store latest result/error
+    * @param requestId The request ID, returned by sendRequest()
+    * @param response Aggregated response from the user code
+    * @param err Aggregated error from the user code or from the execution pipeline
+    * Either response or error parameter will be set, but never both
+    */
+    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+        (address[] memory _tokens,
+        uint256[] memory _marketShares) = abi.decode(response, (address[], uint256[]));
+        require(requestId.length > 0, "invalid request id");
+        require(_tokens.length > 0, "invalid tokens");
+        require(_marketShares.length > 0, "invalid market shares");
+        _initData(_tokens, _marketShares);
+    }
+
+    /**
     function requestAssetsData(
     )
         public
@@ -555,7 +607,7 @@ contract IndexFactoryStorage is
     require(_marketShares.length > 0, "invalid market shares");
     _initData(_tokens, _marketShares);
   }
-
+     */
 
     function _initData(address[] memory _tokens, uint256[] memory _marketShares) private {
         address[] memory tokens0 = _tokens;

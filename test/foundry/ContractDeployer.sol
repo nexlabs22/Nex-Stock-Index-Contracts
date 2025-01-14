@@ -149,7 +149,7 @@ contract ContractDeployer is Test {
         orderManager.initialize(address(paymentToken), paymentToken.decimals(), address(issuer));
 
         link = new LinkToken();
-        oracle = new MockApiOracle(address(link));
+        oracle = new MockApiOracle();
 
         ethPriceOracle = new MockV3Aggregator(
             18, //decimals
