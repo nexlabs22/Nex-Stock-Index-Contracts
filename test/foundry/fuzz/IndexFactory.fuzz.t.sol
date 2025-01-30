@@ -218,9 +218,18 @@ contract IndexTokenFactoryFuzzTests is Test {
             address(factoryStorage)
         );
 
-        factory = new IndexFactory();
-        factory.initialize(
-            address(factoryStorage)
+        // factory = new IndexFactory();
+        // factory.initialize(
+        //     address(factoryStorage)
+        // );
+        IndexFactory factoryImpl = new IndexFactory();
+        factory = IndexFactory(
+            address(
+                new ERC1967Proxy(
+                    address(factoryImpl),
+                    abi.encodeCall(IndexFactory.initialize, (address(factoryStorage)))
+                )
+            )
         );
 
         factoryProcessor = new IndexFactoryProcessor();
