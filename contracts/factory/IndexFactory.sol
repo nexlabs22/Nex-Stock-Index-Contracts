@@ -100,9 +100,10 @@ contract IndexFactory is
     ) external initializer {
         require(_factoryStorage != address(0), "invalid factory storage address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
-       
+
         __Ownable_init(msg.sender);
         __Pausable_init();
+        
     }
 
     
