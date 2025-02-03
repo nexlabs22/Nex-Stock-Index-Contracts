@@ -78,6 +78,11 @@ contract IndexToken is
         feeTimestamp = block.timestamp;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     
     /// @notice External mint function
     /// @dev Mint function can only be called externally by the controller

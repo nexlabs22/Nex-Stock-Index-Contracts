@@ -223,7 +223,7 @@ contract IndexFactory is
      * @param _inputAmount The amount of input tokens.
      * @return uint256 The issuance nonce.
      */
-    function issuanceIndexTokens(uint _inputAmount) public nonReentrant returns(uint256) {
+    function issuanceIndexTokens(uint _inputAmount) public nonReentrant whenNotPaused returns(uint256) {
         require(_inputAmount > 0, "Invalid input amount");
         uint feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
@@ -258,7 +258,7 @@ contract IndexFactory is
      * @dev Cancels an issuance.
      * @param _issuanceNonce The nonce of the issuance to cancel.
      */
-    function cancelIssuance(uint256 _issuanceNonce) public {
+    function cancelIssuance(uint256 _issuanceNonce) public whenNotPaused nonReentrant {
         require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
         require(msg.sender == requester, "Only requester can cancel the issuance");
@@ -298,7 +298,7 @@ contract IndexFactory is
      * @param _inputAmount The amount of input tokens.
      * @return uint The redemption nonce.
      */
-    function redemption(uint _inputAmount) public nonReentrant returns(uint) {
+    function redemption(uint _inputAmount) public nonReentrant whenNotPaused returns(uint) {
         require(_inputAmount > 0, "Invalid input amount");
         factoryStorage.increaseRedemptionNonce();
         uint redemptionNonce = factoryStorage.redemptionNonce();
@@ -354,7 +354,7 @@ contract IndexFactory is
      * @dev Cancels a redemption.
      * @param _redemptionNonce The nonce of the redemption to cancel.
      */
-    function cancelRedemption(uint _redemptionNonce) public nonReentrant {
+    function cancelRedemption(uint _redemptionNonce) public nonReentrant whenNotPaused {
         require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         require(msg.sender == requester, "Only requester can cancel the redemption");

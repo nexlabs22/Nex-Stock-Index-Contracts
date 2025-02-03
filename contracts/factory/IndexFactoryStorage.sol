@@ -170,6 +170,11 @@ contract IndexFactoryStorage is
         feeReceiver = msg.sender;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @notice Modifier to restrict access to factory contracts
     modifier onlyFactory() {
         require(msg.sender == factoryAddress || msg.sender == factoryProcessorAddress || msg.sender == factoryBalancerAddress, "Caller is not a factory contract");
@@ -474,7 +479,13 @@ contract IndexFactoryStorage is
         require(_tokenAddress != address(0), "invalid token address");
         if(isMainnet){
         address feedAddress = priceFeedByTokenAddress[_tokenAddress];
-        (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
+        // (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
+        (uint80 roundId,int price,,uint256 _updatedAt,) = AggregatorV3Interface(feedAddress).latestRoundData();
+        require(roundId != 0, "invalid round id");
+        require(_updatedAt != 0 && _updatedAt <= block.timestamp, "invalid updated time");
+        require(price > 0, "invalid price");
+        require(block.timestamp - _updatedAt < 1 days, "invalid updated time");
+
         uint8 priceFeedDecimals = AggregatorV3Interface(feedAddress).decimals();
         price = _toWei(price, priceFeedDecimals, 18);
         return uint256(price);

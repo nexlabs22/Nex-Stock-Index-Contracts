@@ -3,6 +3,8 @@ pragma solidity ^0.8.7;
 
 import "forge-std/Test.sol";
 import "../../contracts/token/IndexToken.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 
 contract CounterTest is Test {
 
@@ -30,13 +32,23 @@ contract CounterTest is Test {
     error EnforcedPause();
 
     function setUp() public {
-        indexToken = new IndexToken();
-        indexToken.initialize(
-            "Anti Inflation",
-            "ANFI",
-            1e18,
-            feeReceiver,
-            1000000e18
+        IndexToken indexTokenImpl = new IndexToken();
+        indexToken = IndexToken(
+            address(
+                new ERC1967Proxy(
+                    address(indexTokenImpl),
+                    abi.encodeCall(
+                        IndexToken.initialize,
+                        (
+                            "Magnificent 7",
+                            "MAG7",
+                            1e18,
+                            feeReceiver,
+                            1000000e18
+                        )
+                    )
+                )
+            )
         );
         indexToken.setMinter(minter, true);
     }

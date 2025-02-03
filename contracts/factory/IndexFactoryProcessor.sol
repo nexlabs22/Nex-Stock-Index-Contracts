@@ -89,7 +89,10 @@ contract IndexFactoryProcessor is
     }
 
     
-
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
 
 
@@ -106,7 +109,7 @@ contract IndexFactoryProcessor is
 
     
 
-    function completeIssuance(uint _issuanceNonce) public nonReentrant {
+    function completeIssuance(uint _issuanceNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkIssuanceOrdersStatus(_issuanceNonce), "Orders are not completed");
         require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
@@ -148,7 +151,7 @@ contract IndexFactoryProcessor is
 
 
 
-    function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant {
+    function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkCancelIssuanceStatus(_issuanceNonce), "Cancel issuance is not completed");
         require(!factoryStorage.cancelIssuanceComplted(_issuanceNonce), "The process has been completed before");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
@@ -177,7 +180,7 @@ contract IndexFactoryProcessor is
 
     
 
-    function completeRedemption(uint _redemptionNonce) public nonReentrant {
+    function completeRedemption(uint _redemptionNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkRedemptionOrdersStatus(_redemptionNonce), "Redemption orders are not completed");
         require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
@@ -198,7 +201,7 @@ contract IndexFactoryProcessor is
         emit Redemption(_redemptionNonce, requester, factoryStorage.usdc(), factoryStorage.redemptionInputAmount(_redemptionNonce), totalBalance, block.timestamp);
     }
 
-    function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant {
+    function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkCancelRedemptionStatus(_redemptionNonce), "Cancel redemption is not completed");
         require(!factoryStorage.cancelRedemptionComplted(_redemptionNonce), "The process has been completed before");
 

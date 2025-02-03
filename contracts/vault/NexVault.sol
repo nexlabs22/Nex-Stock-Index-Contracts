@@ -21,6 +21,11 @@ contract NexVault is Initializable, OwnableUpgradeable {
         isOperator[_operator] = true;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function setOperator(address _operator, bool _status) external onlyOwner {
         isOperator[_operator] = _status;
     }
