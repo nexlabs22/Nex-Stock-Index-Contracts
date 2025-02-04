@@ -26,6 +26,8 @@ contract IndexFactory is
     ReentrancyGuardUpgradeable
 {
     
+    using SafeERC20 for IERC20;
+
     struct ActionInfo {
         uint actionType;
         uint nonce; 
@@ -102,6 +104,7 @@ contract IndexFactory is
         factoryStorage = IndexFactoryStorage(_factoryStorage);
         __Ownable_init(msg.sender);
         __Pausable_init();
+        __ReentrancyGuard_init();
         
     }
 
@@ -180,7 +183,7 @@ contract IndexFactory is
         order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
         
-        require(IERC20(_token).transfer(address(factoryStorage.orderManager()), orderAmount), "Transfer failed");
+        IERC20(_token).safeTransfer(address(factoryStorage.orderManager()), orderAmount);
         OrderManager orderManager = factoryStorage.orderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         factoryStorage.setOrderInstanceById(id, order);
@@ -228,8 +231,8 @@ contract IndexFactory is
         uint feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
-        require(IERC20(factoryStorage.usdc()).transferFrom(msg.sender, address(factoryStorage.orderManager()), quantityIn), "Transfer failed");
-        require(IERC20(factoryStorage.usdc()).transferFrom(msg.sender, factoryStorage.feeReceiver(), feeAmount), "Transfer failed");
+        IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, address(factoryStorage.orderManager()), quantityIn);
+        IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, factoryStorage.feeReceiver(), feeAmount);
         
         
         factoryStorage.increaseIssuanceNonce();

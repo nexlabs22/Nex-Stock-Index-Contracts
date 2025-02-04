@@ -31,6 +31,7 @@ contract IndexFactoryBalancer is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
+    using SafeERC20 for IERC20;
     struct ActionInfo {
         uint actionType;
         uint nonce;
@@ -40,7 +41,6 @@ contract IndexFactoryBalancer is
 
     IndexFactoryStorage public factoryStorage;
 
-    mapping(uint => IOrderProcessor.Order) public orderInstanceById;
 
     mapping(uint => mapping(address => uint)) public rebalanceRequestId;
 
@@ -60,6 +60,7 @@ contract IndexFactoryBalancer is
         factoryStorage = IndexFactoryStorage(_factoryStorage);
         __Ownable_init(msg.sender);
         __Pausable_init();
+        __ReentrancyGuard_init();
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -88,11 +89,7 @@ contract IndexFactoryBalancer is
                 : 0;
     }
 
-    function getOrderInstanceById(
-        uint256 id
-    ) external view returns (IOrderProcessor.Order memory) {
-        return orderInstanceById[id];
-    }
+   
 
     function requestBuyOrder(
         address _token,
@@ -155,13 +152,10 @@ contract IndexFactoryBalancer is
         order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
 
-        require(
-            IERC20(_token).transfer(
+        IERC20(_token).safeTransfer(
                 address(factoryStorage.orderManager()),
                 orderAmount
-            ),
-            "Transfer failed"
-        );
+            );
         OrderManager orderManager = factoryStorage.orderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(
             _token,

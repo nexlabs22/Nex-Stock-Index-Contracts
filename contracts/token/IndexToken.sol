@@ -19,7 +19,6 @@ contract IndexToken is
     PausableUpgradeable,
     TokenInterface
 {
-    
     uint256 internal constant SCALAR = 1e20;
 
     // Inflation rate (per day) on total supply, to be accrued to the feeReceiver.
@@ -34,7 +33,6 @@ contract IndexToken is
     // Address that can publish a new methodology.
     address public methodologist;
 
-
     string public methodology;
 
     uint256 public supplyCeiling;
@@ -42,9 +40,11 @@ contract IndexToken is
     mapping(address => bool) public isRestricted;
     mapping(address => bool) public isMinter;
 
-    
     modifier onlyMethodologist() {
-        require(msg.sender == methodologist, "IndexToken: caller is not the methodologist");
+        require(
+            msg.sender == methodologist,
+            "IndexToken: caller is not the methodologist"
+        );
         _;
     }
 
@@ -53,7 +53,6 @@ contract IndexToken is
         _;
     }
 
-    
     function initialize(
         string memory tokenName,
         string memory tokenSymbol,
@@ -64,7 +63,10 @@ contract IndexToken is
         require(bytes(tokenName).length > 0, "token name cannot be empty");
         require(bytes(tokenSymbol).length > 0, "token symbol cannot be empty");
         require(_feeRatePerDayScaled > 0, "fee rate must be greater than 0");
-        require(_feeReceiver != address(0), "fee receiver cannot be the zero address");
+        require(
+            _feeReceiver != address(0),
+            "fee receiver cannot be the zero address"
+        );
         require(_supplyCeiling > 0, "supply ceiling must be greater than 0");
 
         __Ownable_init(msg.sender);
@@ -83,15 +85,20 @@ contract IndexToken is
         _disableInitializers();
     }
 
-    
     /// @notice External mint function
     /// @dev Mint function can only be called externally by the controller
     /// @param to address
     /// @param amount uint256
-    function mint(address to, uint256 amount) external override whenNotPaused onlyMinter {
+    function mint(
+        address to,
+        uint256 amount
+    ) external override whenNotPaused onlyMinter {
         require(to != address(0), "mint to the zero address");
         require(amount > 0, "mint amount must be greater than 0");
-        require(totalSupply() + amount <= supplyCeiling, "will exceed supply ceiling");
+        require(
+            totalSupply() + amount <= supplyCeiling,
+            "will exceed supply ceiling"
+        );
         require(!isRestricted[to], "to is restricted");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
         _mintToFeeReceiver();
@@ -102,7 +109,10 @@ contract IndexToken is
     /// @dev burn function can only be called externally by the controller
     /// @param from address
     /// @param amount uint256
-    function burn(address from, uint256 amount) external override whenNotPaused onlyMinter {
+    function burn(
+        address from,
+        uint256 amount
+    ) external override whenNotPaused onlyMinter {
         require(from != address(0), "burn from the zero address");
         require(!isRestricted[from], "from is restricted");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
@@ -127,23 +137,35 @@ contract IndexToken is
             }
             uint256 amount = supply - initial;
             feeTimestamp += 1 days * _days;
+
+            require(
+                totalSupply() + amount <= supplyCeiling,
+                "will exceed supply ceiling"
+            );
+
             _mint(feeReceiver, amount);
 
-            emit MintFeeToReceiver(feeReceiver, block.timestamp, totalSupply(), amount);
+            emit MintFeeToReceiver(
+                feeReceiver,
+                block.timestamp,
+                totalSupply(),
+                amount
+            );
         }
     }
 
     /// @notice Expands supply and mints fees to fee reciever
     /// @dev Can only be called by the owner externally,
     /// @dev _mintToFeeReciver is the internal function and is called after each supply/rate change
-    function mintToFeeReceiver() external override onlyOwner {
+    function mintToFeeReceiver() external override onlyOwner whenNotPaused {
         _mintToFeeReceiver();
     }
 
-    
     /// @notice Only owner function for setting the methodologist
     /// @param _methodologist address
-    function setMethodologist(address _methodologist) external override onlyOwner {
+    function setMethodologist(
+        address _methodologist
+    ) external override onlyOwner {
         require(_methodologist != address(0));
         methodologist = _methodologist;
         emit MethodologistSet(_methodologist);
@@ -151,7 +173,9 @@ contract IndexToken is
 
     /// @notice Callable only by the methodoligst to store on chain data about the underlying weight of the token
     /// @param _methodology string
-    function setMethodology(string memory _methodology) external override onlyMethodologist {
+    function setMethodology(
+        string memory _methodology
+    ) external override onlyMethodologist {
         require(bytes(_methodology).length > 0, "methodology cannot be empty");
         methodology = _methodology;
         emit MethodologySet(_methodology);
@@ -160,7 +184,9 @@ contract IndexToken is
     /// @notice Ownable function to set the fee rate
     /// @dev Given the annual fee rate this function sets and calculates the rate per second
     /// @param _feeRatePerDayScaled uint256
-    function setFeeRate(uint256 _feeRatePerDayScaled) external override onlyOwner {
+    function setFeeRate(
+        uint256 _feeRatePerDayScaled
+    ) external override onlyOwner {
         _mintToFeeReceiver();
         feeRatePerDayScaled = _feeRatePerDayScaled;
         emit FeeRateSet(_feeRatePerDayScaled);
@@ -176,7 +202,10 @@ contract IndexToken is
 
     /// @notice Ownable function to set the contract that controls minting
     /// @param _minter address
-    function setMinter(address _minter, bool _enable) external override onlyOwner {
+    function setMinter(
+        address _minter,
+        bool _enable
+    ) external override onlyOwner {
         require(_minter != address(0));
         isMinter[_minter] = _enable;
         emit MinterSet(_minter);
@@ -184,12 +213,13 @@ contract IndexToken is
 
     /// @notice Ownable function to set the limit at which the total supply cannot exceed
     /// @param _supplyCeiling uint256
-    function setSupplyCeiling(uint256 _supplyCeiling) external override onlyOwner {
+    function setSupplyCeiling(
+        uint256 _supplyCeiling
+    ) external override onlyOwner {
         supplyCeiling = _supplyCeiling;
         emit SupplyCeilingSet(_supplyCeiling);
     }
 
-    
     function pause() external override onlyOwner {
         _pause();
     }
@@ -198,7 +228,6 @@ contract IndexToken is
         _unpause();
     }
 
-    
     /// @notice Compliance feature to blacklist bad actors
     /// @dev Negates current restriction state
     /// @param who address
@@ -207,14 +236,19 @@ contract IndexToken is
         emit ToggledRestricted(who, isRestricted[who]);
     }
 
-    
     /// @notice Overriden ERC20 transfer to include restriction
     /// @param to address
     /// @param amount uint256
     /// @return bool
-    function transfer(address to, uint256 amount) public override whenNotPaused returns (bool) {
+    function transfer(
+        address to,
+        uint256 amount
+    ) public override whenNotPaused returns (bool) {
         require(to != address(0), "transfer to the zero address");
-        require(amount <= balanceOf(msg.sender), "transfer amount exceeds balance");
+        require(
+            amount <= balanceOf(msg.sender),
+            "transfer amount exceeds balance"
+        );
         require(!isRestricted[msg.sender], "msg.sender is restricted");
         require(!isRestricted[to], "to is restricted");
 

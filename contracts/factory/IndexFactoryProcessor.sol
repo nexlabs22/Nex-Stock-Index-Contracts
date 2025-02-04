@@ -13,7 +13,6 @@ import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
-// import "../libraries/Commen.sol" as PrbMath;
 import "./IndexFactoryStorage.sol";
 import "./OrderManager.sol";
 
@@ -27,10 +26,7 @@ contract IndexFactoryProcessor is
     ReentrancyGuardUpgradeable
 {
     
-    struct ActionInfo {
-        uint actionType;
-        uint nonce; 
-    }
+    
 
     
     
@@ -86,6 +82,7 @@ contract IndexFactoryProcessor is
        
         __Ownable_init(msg.sender);
         __Pausable_init();
+        __ReentrancyGuard_init();
     }
 
     
@@ -119,7 +116,6 @@ contract IndexFactoryProcessor is
         for(uint i; i < factoryStorage.totalCurrentList(); i++) {
             address tokenAddress = factoryStorage.currentList(i);
             uint256 tokenRequestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
-            // IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(tokenAddress, factoryStorage.usdc());
             uint price = factoryStorage.priceInWei(tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 receivedValue = balance*price/1e18;

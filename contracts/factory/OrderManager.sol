@@ -66,6 +66,7 @@ contract OrderManager is
         issuer = IOrderProcessor(_issuer);
         __Ownable_init(msg.sender);
         __Pausable_init();
+        __ReentrancyGuard_init();
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -117,8 +118,7 @@ contract OrderManager is
         require(_receiver != address(0), "invalid address");
         require(_orderAmount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
+        uint256 fees = calculateFees(_orderAmount);
         
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
         order.recipient = _receiver;
@@ -142,8 +142,7 @@ contract OrderManager is
         require(_receiver != address(0), "invalid address");
         require(_orderAmount > 0, "amount must be greater than 0");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _orderAmount);
+        uint256 fees = calculateFees(_orderAmount);
         
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
         order.recipient = _receiver;

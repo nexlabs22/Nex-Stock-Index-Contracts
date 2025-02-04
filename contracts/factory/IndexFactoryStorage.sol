@@ -55,6 +55,8 @@ contract IndexFactoryStorage is
     address public functionsRouterAddress;
     uint public lastUpdateTime;
 
+    uint totalDshareAddresses;
+
     // Total number of oracles and current list
     uint public totalOracleList;
     uint public totalCurrentList;
@@ -62,6 +64,7 @@ contract IndexFactoryStorage is
     // Mappings for oracle and current lists
     mapping(uint => address) public oracleList;
     mapping(uint => address) public currentList;
+
 
     // Mappings for wrapped DShare addresses
     mapping(address => address) public wrappedDshareAddress;
@@ -156,13 +159,8 @@ contract IndexFactoryStorage is
         usdcDecimals = _usdcDecimals;
         __FunctionsClient_init(_functionsRouterAddress);
         __ConfirmedOwner_init(msg.sender);
-        // __Ownable_init(msg.sender);
-        // Set oracle data
-        // setChainlinkToken(_chainlinkToken);
-        // setChainlinkOracle(_oracleAddress);
         donId = _newDonId;
         functionsRouterAddress = _functionsRouterAddress;
-        // oraclePayment = ((1 * LINK_DIVISIBILITY) / 10); // n * 10**18
         baseUrl = "https://app.nexlabs.io/api/allFundingRates";
         urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
         isMainnet = _isMainnet;
@@ -193,7 +191,7 @@ contract IndexFactoryStorage is
     /// @param _newFee The new fee rate to set
     function setFeeRate(uint8 _newFee) public onlyOwner {
         uint256 distance = block.timestamp - latestFeeUpdate;
-        require(distance / 60 / 60 > 12, "You should wait at least 12 hours after the latest update");
+        require(distance / 60 / 60 >= 12, "You should wait at least 12 hours after the latest update");
         require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
         feeRate = _newFee;
         latestFeeUpdate = block.timestamp;
@@ -479,7 +477,6 @@ contract IndexFactoryStorage is
         require(_tokenAddress != address(0), "invalid token address");
         if(isMainnet){
         address feedAddress = priceFeedByTokenAddress[_tokenAddress];
-        // (,int price,,,) = AggregatorV3Interface(feedAddress).latestRoundData();
         (uint80 roundId,int price,,uint256 _updatedAt,) = AggregatorV3Interface(feedAddress).latestRoundData();
         require(roundId != 0, "invalid round id");
         require(_updatedAt != 0 && _updatedAt <= block.timestamp, "invalid updated time");
@@ -545,7 +542,6 @@ contract IndexFactoryStorage is
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
         fees += fee;
-        // fees += amount;
         }
         return fees;
     }
@@ -558,7 +554,6 @@ contract IndexFactoryStorage is
 
     function requestAssetsData(
         string calldata source,
-        // FunctionsRequest.Location secretsLocation,
         bytes calldata encryptedSecretsReference,
         string[] calldata args,
         bytes[] calldata bytesArgs,
@@ -567,7 +562,6 @@ contract IndexFactoryStorage is
     ) public returns (bytes32) {
         FunctionsRequest.Request memory req;
         req.initializeRequest(FunctionsRequest.Location.Inline, FunctionsRequest.CodeLanguage.JavaScript, source);
-        // req.secretsLocation = secretsLocation;
         req.secretsLocation = FunctionsRequest.Location.Remote;
         req.encryptedSecretsReference = encryptedSecretsReference;
         if (args.length > 0) {
@@ -595,30 +589,7 @@ contract IndexFactoryStorage is
         _initData(_tokens, _marketShares);
     }
 
-    /**
-    function requestAssetsData(
-    )
-        public
-        returns(bytes32)
-    {
-        string memory url = concatenation(baseUrl, urlParams);
-        Chainlink.Request memory req = buildChainlinkRequest(externalJobId, address(this), this.fulfillAssetsData.selector);
-        req.add("get", url);
-        req.add("path1", "results,addresses");
-        req.add("path2", "results,marketShares");
-        return sendChainlinkRequestTo(chainlinkOracleAddress(), req, oraclePayment);
-    }
-
-  function fulfillAssetsData(bytes32 requestId, address[] memory _tokens, uint256[] memory _marketShares)
-    public
-    recordChainlinkFulfillment(requestId)
-  {
-    require(requestId.length > 0, "invalid request id");
-    require(_tokens.length > 0, "invalid tokens");
-    require(_marketShares.length > 0, "invalid market shares");
-    _initData(_tokens, _marketShares);
-  }
-     */
+    
 
     function _initData(address[] memory _tokens, uint256[] memory _marketShares) private {
         address[] memory tokens0 = _tokens;

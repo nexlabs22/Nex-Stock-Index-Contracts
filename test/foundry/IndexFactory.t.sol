@@ -244,14 +244,7 @@ contract IndexFactoryTest is Test {
                 )
             )
         );
-        // indexToken = new IndexToken();
-        // indexToken.initialize(
-        //     "Magnificent 7",
-        //     "MAG7",
-        //     1e18,
-        //     feeReceiver,
-        //     1000000e18
-        // );
+        
 
         NexVault vaultImpl = new NexVault();
         vault = NexVault(
