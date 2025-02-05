@@ -557,9 +557,6 @@ contract IndexFactoryStorage is
 
 
 
-    function concatenation(string memory a, string memory b) public pure returns (string memory) {
-        return string(bytes.concat(bytes(a), bytes(b)));
-    }
 
     function requestAssetsData(
         string calldata source,
@@ -640,24 +637,8 @@ contract IndexFactoryStorage is
         _initData(_tokens, _marketShares);
     }
     
-    function getTimestamp() internal view returns (uint256) {
-        // timestamp is only used for data maintaining purpose, it is not relied on for critical logic.
-        return block.timestamp; // solhint-disable-line not-rely-on-time
-    }
 
     
-
-    function compareStrings(
-        string memory a,
-        string memory b
-    ) internal pure returns (bool) {
-        return (keccak256(abi.encodePacked(a)) ==
-            keccak256(abi.encodePacked(b)));
-    }
-
-    function isEmptyString(string memory a) internal pure returns (bool) {
-        return (compareStrings(a, ""));
-    }
 
 
     function checkCancelIssuanceStatus(uint256 _issuanceNonce) public view returns(bool) {
