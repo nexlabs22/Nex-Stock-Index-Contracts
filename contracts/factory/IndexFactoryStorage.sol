@@ -278,6 +278,15 @@ contract IndexFactoryStorage is
         }
     }
 
+    function setWrappedDshareAndPriceFeedAddresses(address[] memory _dShares, address[] memory _wrappedDShares, address[] memory _priceFeedAddresses) public onlyOwner {
+        require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
+        require(_dShares.length == _priceFeedAddresses.length, "Array length mismatch");
+        for(uint i = 0; i < _dShares.length; i++){
+            wrappedDshareAddress[_dShares[i]] = _wrappedDShares[i];
+            priceFeedByTokenAddress[_dShares[i]] = _priceFeedAddresses[i];
+        }
+    }
+
     function setUrl(string memory _beforeAddress, string memory _afterAddress) public onlyOwner{
     baseUrl = _beforeAddress;
     urlParams = _afterAddress;

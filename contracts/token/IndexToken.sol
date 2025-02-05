@@ -129,12 +129,18 @@ contract IndexToken is
             uint256 supply = initial;
             uint256 _feeRate = feeRatePerDayScaled;
 
-            for (uint256 i; i < _days; ) {
-                supply += ((supply * _feeRate) / SCALAR);
-                unchecked {
-                    ++i;
-                }
-            }
+            // for (uint256 i; i < _days; ) {
+            //     supply += ((supply * _feeRate) / SCALAR);
+            //     unchecked {
+            //         ++i;
+            //     }
+            // }
+            
+            // Use a logarithmic approximation for compounding
+            uint256 compoundedFeeRate = SCALAR + (_feeRate * _days);
+            // Calculate the compounded supply
+            supply = (supply * compoundedFeeRate) / SCALAR;
+
             uint256 amount = supply - initial;
             feeTimestamp += 1 days * _days;
 
