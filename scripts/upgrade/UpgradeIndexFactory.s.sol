@@ -32,8 +32,8 @@ contract UpgradeIndexFactory is Script {
         console.log("New IndexFactory implementation deployed at:", address(newIndexFactoryImplementation));
 
         ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgrade(
-            ITransparentUpgradeableProxy(payable(indexFactoryProxyAddress)), address(newIndexFactoryImplementation)
+        proxyAdmin.upgradeAndCall(
+            ITransparentUpgradeableProxy(payable(indexFactoryProxyAddress)), address(newIndexFactoryImplementation), ""
         );
 
         console.log("IndexFactory proxy upgraded to new implementation at:", address(newIndexFactoryImplementation));

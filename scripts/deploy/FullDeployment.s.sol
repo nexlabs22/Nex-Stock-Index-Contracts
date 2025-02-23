@@ -18,7 +18,6 @@ import {NexVault} from "../../contracts/vault/NexVault.sol";
 contract FullDeployment is Script {
     string public targetChain; // e.g. "sepolia" or "arbitrum_mainnet"
 
-    address public issuer;
     address public usdc;
     uint8 public usdcDecimals;
     address public chainlinkToken;
@@ -34,10 +33,10 @@ contract FullDeployment is Script {
 
     address public nexVaultProxy;
     address public indexTokenProxy;
+    address public indexFactoryProcessorProxy;
     address public indexFactoryStorageProxy;
     address public indexFactoryProxy;
     address public indexFactoryBalancerProxy;
-    address public indexFactoryProcessorProxy;
     address public orderManagerProxy;
 
     function run() external {
@@ -50,11 +49,11 @@ contract FullDeployment is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        //-------------------------------------
-        // 1. Deploy NexVault
-        //-------------------------------------
+        //====================================
+        // 2. Deploy NexVault
+        //====================================
+        console.log("\n=== Deploying NexVault ===");
         {
-            console.log("\n=== Deploying NexVault ===");
             ProxyAdmin vaultProxyAdmin = new ProxyAdmin(msg.sender);
             NexVault nexVaultImplementation = new NexVault();
 
@@ -69,11 +68,11 @@ contract FullDeployment is Script {
             console.log("NexVault proxy admin:", address(vaultProxyAdmin));
         }
 
-        //-------------------------------------
-        // 2. Deploy IndexToken
-        //-------------------------------------
+        //====================================
+        // 3. Deploy IndexToken
+        //====================================
+        console.log("\n=== Deploying IndexToken ===");
         {
-            console.log("\n=== Deploying IndexToken ===");
             ProxyAdmin indexTokenProxyAdmin = new ProxyAdmin(msg.sender);
             IndexToken indexTokenImplementation = new IndexToken();
 
@@ -95,17 +94,36 @@ contract FullDeployment is Script {
             console.log("IndexToken proxy admin:", address(indexTokenProxyAdmin));
         }
 
-        //-------------------------------------
-        // 3. Deploy IndexFactoryStorage
-        //-------------------------------------
+        //====================================
+        // 4. Deploy the Processor (IndexFactoryProcessor)
+        //====================================
+        console.log("\n=== Deploying IndexFactoryProcessor (the 'processor') ===");
         {
-            console.log("\n=== Deploying IndexFactoryStorage ===");
+            ProxyAdmin processorProxyAdmin = new ProxyAdmin(msg.sender);
+            IndexFactoryProcessor processorImplementation = new IndexFactoryProcessor();
+
+            bytes memory data = abi.encodeWithSignature("initialize(address)", address(0));
+
+            TransparentUpgradeableProxy proxy =
+                new TransparentUpgradeableProxy(address(processorImplementation), address(processorProxyAdmin), data);
+            indexFactoryProcessorProxy = address(proxy);
+
+            console.log("IndexFactoryProcessor impl:", address(processorImplementation));
+            console.log("IndexFactoryProcessor proxy:", indexFactoryProcessorProxy);
+            console.log("IndexFactoryProcessor proxy admin:", address(processorProxyAdmin));
+        }
+
+        //====================================
+        // 5. Deploy IndexFactoryStorage
+        //====================================
+        console.log("\n=== Deploying IndexFactoryStorage ===");
+        {
             ProxyAdmin storageProxyAdmin = new ProxyAdmin(msg.sender);
             IndexFactoryStorage storageImplementation = new IndexFactoryStorage();
 
             bytes memory data = abi.encodeWithSignature(
                 "initialize(address,address,address,address,uint8,address,address,bytes32,bool)",
-                issuer,
+                indexFactoryProcessorProxy,
                 indexTokenProxy,
                 nexVaultProxy,
                 usdc,
@@ -125,11 +143,11 @@ contract FullDeployment is Script {
             console.log("IndexFactoryStorage proxy admin:", address(storageProxyAdmin));
         }
 
-        //-------------------------------------
-        // 4. Deploy IndexFactory
-        //-------------------------------------
+        //====================================
+        // 7. Deploy IndexFactory
+        //====================================
+        console.log("\n=== Deploying IndexFactory ===");
         {
-            console.log("\n=== Deploying IndexFactory ===");
             ProxyAdmin factoryProxyAdmin = new ProxyAdmin(msg.sender);
             IndexFactory factoryImplementation = new IndexFactory();
 
@@ -144,11 +162,11 @@ contract FullDeployment is Script {
             console.log("IndexFactory proxy admin:", address(factoryProxyAdmin));
         }
 
-        //-------------------------------------
-        // 5. Deploy IndexFactoryBalancer
-        //-------------------------------------
+        //====================================
+        // 8. Deploy IndexFactoryBalancer
+        //====================================
+        console.log("\n=== Deploying IndexFactoryBalancer ===");
         {
-            console.log("\n=== Deploying IndexFactoryBalancer ===");
             ProxyAdmin balancerProxyAdmin = new ProxyAdmin(msg.sender);
             IndexFactoryBalancer balancerImplementation = new IndexFactoryBalancer();
 
@@ -163,34 +181,17 @@ contract FullDeployment is Script {
             console.log("IndexFactoryBalancer proxy admin:", address(balancerProxyAdmin));
         }
 
-        //-------------------------------------
-        // 6. Deploy IndexFactoryProcessor
-        //-------------------------------------
+        //====================================
+        // 9. Deploy OrderManager
+        //====================================
+        console.log("\n=== Deploying OrderManager ===");
         {
-            console.log("\n=== Deploying IndexFactoryProcessor ===");
-            ProxyAdmin processorProxyAdmin = new ProxyAdmin(msg.sender);
-            IndexFactoryProcessor processorImplementation = new IndexFactoryProcessor();
-
-            bytes memory data = abi.encodeWithSignature("initialize(address)", indexFactoryStorageProxy);
-
-            TransparentUpgradeableProxy proxy =
-                new TransparentUpgradeableProxy(address(processorImplementation), address(processorProxyAdmin), data);
-            indexFactoryProcessorProxy = address(proxy);
-
-            console.log("IndexFactoryProcessor impl:", address(processorImplementation));
-            console.log("IndexFactoryProcessor proxy:", indexFactoryProcessorProxy);
-            console.log("IndexFactoryProcessor proxy admin:", address(processorProxyAdmin));
-        }
-
-        //-------------------------------------
-        // 7. Deploy OrderManager
-        //-------------------------------------
-        {
-            console.log("\n=== Deploying OrderManager ===");
             ProxyAdmin orderManagerAdmin = new ProxyAdmin(msg.sender);
             OrderManager orderManagerImplementation = new OrderManager();
 
-            bytes memory data = abi.encodeWithSignature("initialize(address,uint8,address)", usdc, usdcDecimals, issuer);
+            bytes memory data = abi.encodeWithSignature(
+                "initialize(address,uint8,address)", usdc, usdcDecimals, indexFactoryProcessorProxy
+            );
 
             TransparentUpgradeableProxy proxy =
                 new TransparentUpgradeableProxy(address(orderManagerImplementation), address(orderManagerAdmin), data);
@@ -201,12 +202,12 @@ contract FullDeployment is Script {
             console.log("OrderManager proxy admin:", address(orderManagerAdmin));
         }
 
-        //-------------------------------------
-        // 8. Post-Deployment Linking
-        //-------------------------------------
+        //====================================
+        // 10. Post-Deployment Linking
+        //====================================
         console.log("\n=== Post-Deployment Linking ===");
 
-        console.log("Setting IndexFactoryStorage references...");
+        console.log("Setting references in IndexFactoryStorage...");
         IndexFactoryStorage(indexFactoryStorageProxy).setOrderManager(orderManagerProxy);
         IndexFactoryStorage(indexFactoryStorageProxy).setFactory(indexFactoryProxy);
         IndexFactoryStorage(indexFactoryStorageProxy).setFactoryProcessor(indexFactoryProcessorProxy);
@@ -228,12 +229,13 @@ contract FullDeployment is Script {
         NexVault(nexVaultProxy).setOperator(indexFactoryBalancerProxy, true);
         NexVault(nexVaultProxy).setOperator(indexFactoryProcessorProxy, true);
 
+        IndexFactoryProcessor(indexFactoryProcessorProxy).setIndexFactoryStorage(indexFactoryStorageProxy);
+
         vm.stopBroadcast();
     }
 
     function _initChainVariables() internal {
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            issuer = vm.envAddress("SEPOLIA_ISSUER_ADDRESS");
             usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("SEPOLIA_USDC_DECIMALS"));
             chainlinkToken = vm.envAddress("SEPOLIA_CHAINLINK_TOKEN_ADDRESS");
@@ -246,7 +248,6 @@ contract FullDeployment is Script {
             feeReceiver = vm.envAddress("SEPOLIA_FEE_RECEIVER");
             supplyCeiling = vm.envUint("SEPOLIA_SUPPLY_CEILING");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            issuer = vm.envAddress("ARBITRUM_ISSUER_ADDRESS");
             usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("ARBITRUM_USDC_DECIMALS"));
             chainlinkToken = vm.envAddress("ARBITRUM_CHAINLINK_TOKEN_ADDRESS");
@@ -275,7 +276,6 @@ contract FullDeployment is Script {
             dShares[4] = vm.envAddress("SEPOLIA_GOOG_DSHARE_ADDRESS");
             dShares[5] = vm.envAddress("SEPOLIA_META_DSHARE_ADDRESS");
             dShares[6] = vm.envAddress("SEPOLIA_TSLA_DSHARE_ADDRESS");
-
             wrappedDShares[0] = vm.envAddress("SEPOLIA_APPLE_WRAPPED_DSHARE_ADDRESS");
             wrappedDShares[1] = vm.envAddress("SEPOLIA_MSFT_WRAPPED_DSHARE_ADDRESS");
             wrappedDShares[2] = vm.envAddress("SEPOLIA_NVDA_WRAPPED_DSHARE_ADDRESS");
@@ -291,7 +291,6 @@ contract FullDeployment is Script {
             dShares[4] = vm.envAddress("ARBITRUM_GOOG_DSHARE_ADDRESS");
             dShares[5] = vm.envAddress("ARBITRUM_META_DSHARE_ADDRESS");
             dShares[6] = vm.envAddress("ARBITRUM_TSLA_DSHARE_ADDRESS");
-
             wrappedDShares[0] = vm.envAddress("ARBITRUM_APPLE_WRAPPED_DSHARE_ADDRESS");
             wrappedDShares[1] = vm.envAddress("ARBITRUM_MSFT_WRAPPED_DSHARE_ADDRESS");
             wrappedDShares[2] = vm.envAddress("ARBITRUM_NVDA_WRAPPED_DSHARE_ADDRESS");
@@ -304,7 +303,6 @@ contract FullDeployment is Script {
         }
 
         IndexFactoryStorage(factoryStorageProxy).setWrappedDShareAddresses(dShares, wrappedDShares);
-
         console.log("Wrapped dShares set successfully");
     }
 }

@@ -32,8 +32,8 @@ contract UpgradeIndexToken is Script {
         console.log("New IndexToken implementation deployed at:", address(newIndexTokenImplementation));
 
         ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgrade(
-            ITransparentUpgradeableProxy(payable(indexTokenProxyAddress)), address(newIndexTokenImplementation)
+        proxyAdmin.upgradeAndCall(
+            ITransparentUpgradeableProxy(payable(indexTokenProxyAddress)), address(newIndexTokenImplementation), ""
         );
 
         console.log("IndexToken proxy upgraded to new implementation at:", address(newIndexTokenImplementation));

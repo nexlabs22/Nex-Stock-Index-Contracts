@@ -34,9 +34,10 @@ contract UpgradeIndexFactoryStorage is Script {
         );
 
         ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgrade(
+        proxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(payable(indexFactoryStorageProxyAddress)),
-            address(newIndexFactoryStorageImplementation)
+            address(newIndexFactoryStorageImplementation),
+            ""
         );
 
         console.log(

@@ -32,8 +32,8 @@ contract UpgradeOrderManager is Script {
         console.log("New OrderManager implementation deployed at:", address(newOrderManagerImplementation));
 
         ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgrade(
-            ITransparentUpgradeableProxy(payable(orderManagerProxyAddress)), address(newOrderManagerImplementation)
+        proxyAdmin.upgradeAndCall(
+            ITransparentUpgradeableProxy(payable(orderManagerProxyAddress)), address(newOrderManagerImplementation), ""
         );
 
         console.log("OrderManager proxy upgraded to new implementation at:", address(newOrderManagerImplementation));

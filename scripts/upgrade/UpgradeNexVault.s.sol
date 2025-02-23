@@ -32,7 +32,9 @@ contract UpgradeVault is Script {
         console.log("New NexVault implementation deployed at:", address(newVaultImplementation));
 
         ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgrade(ITransparentUpgradeableProxy(payable(vaultProxyAddress)), address(newVaultImplementation));
+        proxyAdmin.upgradeAndCall(
+            ITransparentUpgradeableProxy(payable(vaultProxyAddress)), address(newVaultImplementation), ""
+        );
 
         console.log("NexVault proxy upgraded to new implementation at:", address(newVaultImplementation));
 

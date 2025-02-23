@@ -34,9 +34,10 @@ contract UpgradeIndexFactoryBalancer is Script {
         );
 
         ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgrade(
+        proxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(payable(indexFactoryBalancerProxyAddress)),
-            address(newIndexFactoryBalanacerImplementation)
+            address(newIndexFactoryBalanacerImplementation),
+            ""
         );
 
         console.log(
