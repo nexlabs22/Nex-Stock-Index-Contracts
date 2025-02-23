@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
@@ -14,7 +14,7 @@ contract DeployNexVault is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
         NexVault nexVaultImplementation = new NexVault();
 
         bytes memory data = abi.encodeWithSignature("initialize(address)", address(0));

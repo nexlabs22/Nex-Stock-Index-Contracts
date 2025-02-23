@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 
-import "../../contracts/vault/Vault.sol";
+import "../../contracts/vault/NexVault.sol";
 
 contract SetVaultValues is Script {
     address indexFactoryProxy;
@@ -34,9 +34,9 @@ contract SetVaultValues is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        Vault(vaultProxy).setOperator(indexFactoryProxy, true);
-        Vault(vaultProxy).setOperator(indexFactoryBalancerProxy, true);
-        Vault(vaultProxy).setOperator(factoryProcessor, true);
+        NexVault(vaultProxy).setOperator(indexFactoryProxy, true);
+        NexVault(vaultProxy).setOperator(indexFactoryBalancerProxy, true);
+        NexVault(vaultProxy).setOperator(factoryProcessor, true);
 
         vm.stopBroadcast();
     }

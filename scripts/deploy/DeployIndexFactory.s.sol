@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
@@ -20,7 +20,6 @@ contract DeployIndexFactory is Script {
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            wethAddress = vm.envAddress("ARBITRUM_WETH_ADDRESS");
             indexFactoryStorageProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
@@ -28,14 +27,10 @@ contract DeployIndexFactory is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
         IndexFactory indexFactoryImplementation = new IndexFactory();
 
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address)",
-            indexFactoryStorageProxy,
-         
-        );
+        bytes memory data = abi.encodeWithSignature("initialize(address)", indexFactoryStorageProxy);
 
         TransparentUpgradeableProxy proxy =
             new TransparentUpgradeableProxy(address(indexFactoryImplementation), address(proxyAdmin), data);

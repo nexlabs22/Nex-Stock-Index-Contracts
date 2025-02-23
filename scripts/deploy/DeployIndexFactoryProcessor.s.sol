@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
@@ -11,7 +11,7 @@ import "../../contracts/factory/IndexFactoryProcessor.sol";
 contract DeployIndexFactoryProcessor is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        
+
         string memory targetChain = "sepolia";
         // string memory targetChain = "arbitrum_mainnet";
 
@@ -27,13 +27,10 @@ contract DeployIndexFactoryProcessor is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
         IndexFactoryProcessor indexFactoryProcessorImplementation = new IndexFactoryProcessor();
 
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address)",
-            indexFactoryStorageProxy,
-        );
+        bytes memory data = abi.encodeWithSignature("initialize(address)", indexFactoryStorageProxy);
 
         TransparentUpgradeableProxy proxy =
             new TransparentUpgradeableProxy(address(indexFactoryProcessorImplementation), address(proxyAdmin), data);

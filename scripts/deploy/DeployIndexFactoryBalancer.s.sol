@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
@@ -26,13 +26,10 @@ contract DeployIndexFactoryBalancer is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
         IndexFactoryBalancer indexFactoryBalancerImplementation = new IndexFactoryBalancer();
 
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address)",
-            indexFactoryStorageProxy,
-        );
+        bytes memory data = abi.encodeWithSignature("initialize(address)", indexFactoryStorageProxy);
 
         TransparentUpgradeableProxy proxy =
             new TransparentUpgradeableProxy(address(indexFactoryBalancerImplementation), address(proxyAdmin), data);

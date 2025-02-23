@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
@@ -15,7 +15,7 @@ contract DeployIndexToken is Script {
         string memory tokenSymbol = "MAG7";
 
         string memory targetChain = "sepolia";
-        string memory targetChain = "arbitrum_mainnet";
+        // string memory targetChain = "arbitrum_mainnet";
         uint256 feeRatePerDayScaled;
         address feeReceiver;
         uint256 supplyCeiling;
@@ -34,7 +34,7 @@ contract DeployIndexToken is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
         IndexToken indexTokenImplementation = new IndexToken();
 
         bytes memory data = abi.encodeWithSignature(
