@@ -18,9 +18,7 @@ abstract contract FunctionsClient is IFunctionsClient {
 
   error OnlyRouterCanFulfill();
 
-//   constructor(address router) {
-//     i_router = IFunctionsRouter(router);
-//   }
+
   function __FunctionsClient_init(address router) internal {
     i_router = IFunctionsRouter(router);
   }
