@@ -956,7 +956,7 @@ contract IndexFactoryTest is Test {
         assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
         factoryProcessor.completeIssuance(nonce);
         assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
-        assertEq(indexToken.balanceOf(user), 100000e18);
+        assertEq(indexToken.balanceOf(user), 10e18);
     }
 
     function testCompleteIssuance2() public {

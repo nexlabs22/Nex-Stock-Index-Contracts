@@ -59,14 +59,7 @@ contract IndexFactory is
         uint time
     );
 
-    event Issuanced(
-        uint indexed nonce,
-        address indexed user,
-        address inputToken,
-        uint inputAmount,
-        uint outputAmount,
-        uint time
-    );
+    
 
     event RequestRedemption(
         uint indexed nonce,
@@ -86,14 +79,7 @@ contract IndexFactory is
         uint time
     );
 
-    event Redemption(
-        uint indexed nonce,
-        address indexed user,
-        address outputToken,
-        uint inputAmount,
-        uint outputAmount,
-        uint time
-    );
+    
 
     /**
      * @dev Initializes the contract with the given factory storage address.

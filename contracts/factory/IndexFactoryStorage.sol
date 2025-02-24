@@ -427,6 +427,15 @@ contract IndexFactoryStorage is
         return portfolioValue;
     }
 
+    function getIndexTokenPrice() public view returns(uint){
+        uint totalSupply = token.totalSupply();
+        uint portfolioValue = getPortfolioValue();
+        if(totalSupply == 0){
+            return 0;
+        }
+        return portfolioValue * 1e18 / totalSupply;
+    }
+
     function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {     
         require(_amountDecimals <= 18, "amount decimals should be less than or equal to 18");
         require(_chainDecimals <= 18, "chain decimals should be less than or equal to 18");

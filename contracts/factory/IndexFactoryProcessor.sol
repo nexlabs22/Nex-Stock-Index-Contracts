@@ -45,6 +45,7 @@ contract IndexFactoryProcessor is
         address inputToken,
         uint inputAmount,
         uint outputAmount,
+        uint price,
         uint time
     );
 
@@ -64,6 +65,7 @@ contract IndexFactoryProcessor is
         address outputToken,
         uint inputAmount,
         uint outputAmount,
+        uint price,
         uint time
     );
 
@@ -140,16 +142,16 @@ contract IndexFactoryProcessor is
         }
             uint256 primaryTotalSupply = factoryStorage.issuanceIndexTokenPrimaryTotalSupply(_issuanceNonce);
             if(primaryTotalSupply == 0 || primaryPortfolioValue == 0){
-                uint256 mintAmount = secondaryPortfolioValue*100;
+                uint256 mintAmount = secondaryPortfolioValue/100;
                 IndexToken token = factoryStorage.token();
                 token.mint(requester, mintAmount);
-                emit Issuanced(_issuanceNonce, requester, factoryStorage.usdc(), factoryStorage.issuanceInputAmount(_issuanceNonce), mintAmount, block.timestamp);
+                emit Issuanced(_issuanceNonce, requester, factoryStorage.usdc(), factoryStorage.issuanceInputAmount(_issuanceNonce), mintAmount, factoryStorage.getIndexTokenPrice(), block.timestamp);
             }else{
                 uint256 secondaryTotalSupply = primaryTotalSupply * secondaryPortfolioValue / primaryPortfolioValue;
                 uint256 mintAmount = secondaryTotalSupply - primaryTotalSupply;
                 IndexToken token = factoryStorage.token();
                 token.mint(requester, mintAmount);
-                emit Issuanced(_issuanceNonce, requester, factoryStorage.usdc(), factoryStorage.issuanceInputAmount(_issuanceNonce), mintAmount, block.timestamp);
+                emit Issuanced(_issuanceNonce, requester, factoryStorage.usdc(), factoryStorage.issuanceInputAmount(_issuanceNonce), mintAmount, factoryStorage.getIndexTokenPrice(), block.timestamp);
             }
             factoryStorage.setIssuanceIsCompleted(_issuanceNonce, true);
     }
@@ -203,7 +205,7 @@ contract IndexFactoryProcessor is
         orderManager.withdrawFunds(factoryStorage.usdc(), factoryStorage.feeReceiver(), fee);
         orderManager.withdrawFunds(factoryStorage.usdc(), requester, totalBalance - fee);
         factoryStorage.setRedemptionIsCompleted(_redemptionNonce, true);
-        emit Redemption(_redemptionNonce, requester, factoryStorage.usdc(), factoryStorage.redemptionInputAmount(_redemptionNonce), totalBalance, block.timestamp);
+        emit Redemption(_redemptionNonce, requester, factoryStorage.usdc(), factoryStorage.redemptionInputAmount(_redemptionNonce), totalBalance, factoryStorage.getIndexTokenPrice(), block.timestamp);
     }
 
     function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
