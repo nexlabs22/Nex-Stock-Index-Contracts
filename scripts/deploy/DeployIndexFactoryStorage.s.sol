@@ -13,35 +13,30 @@ contract DeployIndexFactoryStorage is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         string memory targetChain = "sepolia";
 
+        address functionsOracleProxy;
         address issuer;
         address indexTokenProxy;
         address nexVaultProxy;
         address usdc;
         uint8 usdcDecimals;
-        address chainlinkToken;
-        address functionsRouter;
-        bytes32 newDonId;
+
         bool isMainnet;
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
+            functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
             issuer = vm.envAddress("SEPOLIA_ISSUER_ADDRESS");
             indexTokenProxy = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
             nexVaultProxy = vm.envAddress("SEPOLIA_VAULT_PROXY_ADDRESS");
             usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("SEPOLIA_USDC_DECIMALS"));
-            chainlinkToken = vm.envAddress("SEPOLIA_CHAINLINK_TOKEN_ADDRESS");
-            functionsRouter = vm.envAddress("SEPOLIA_FUNCTIONS_ROUTER_ADDRESS");
-            newDonId = vm.envBytes32("SEPOLIA_NEW_DON_ID");
             isMainnet = false;
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
+            functionsOracleProxy = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
             issuer = vm.envAddress("ARBITRUM_ISSUER_ADDRESS");
             indexTokenProxy = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
             nexVaultProxy = vm.envAddress("ARBITRUM_VAULT_PROXY_ADDRESS");
             usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("ARBITRUM_USDC_DECIMALS"));
-            chainlinkToken = vm.envAddress("ARBITRUM_CHAINLINK_TOKEN_ADDRESS");
-            functionsRouter = vm.envAddress("ARBITRUM_FUNCTIONS_ROUTER_ADDRESS");
-            newDonId = vm.envBytes32("ARBITRUM_NEW_DON_ID");
             isMainnet = true;
         } else {
             revert("Unsupported target chain");
@@ -53,15 +48,13 @@ contract DeployIndexFactoryStorage is Script {
         IndexFactoryStorage indexFactoryStorageImplementation = new IndexFactoryStorage();
 
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address,uint8,address,address,bytes32,bool)",
+            "initialize(address,address,address,address,uint8,address,bool)",
             issuer,
             indexTokenProxy,
             nexVaultProxy,
             usdc,
             usdcDecimals,
-            chainlinkToken,
-            functionsRouter,
-            newDonId,
+            functionsOracleProxy,
             isMainnet
         );
 
