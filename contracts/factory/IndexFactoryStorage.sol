@@ -2,34 +2,26 @@
 pragma solidity 0.8.25;
 
 import "../token/IndexToken.sol";
-// import "../token/RequestNFT.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-// import "../chainlink/ChainlinkClient.sol";
 
-import "../chainlink/FunctionsClient.sol";
-import "../chainlink/ConfirmedOwner.sol";
-// import "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
-import "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
+
 import "../dinary/orders/IOrderProcessor.sol";
 import "../dinary/WrappedDShare.sol";
 import "../vault/NexVault.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "./OrderManager.sol";
+import "./FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath;
-// import "./IndexFactory.sol";
-// import "./IndexFactoryBalancer.sol";
-// import "./IndexFactoryProcessor.sol";
 
 /// @title Index Token Factory Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
 contract IndexFactoryStorage is
     Initializable,
-    FunctionsClient, 
-    ConfirmedOwner
+    OwnableUpgradeable
 {
     using FunctionsRequest for FunctionsRequest.Request;
 
@@ -38,44 +30,22 @@ contract IndexFactoryStorage is
         uint nonce; 
     }
     
-    // Base URL for fetching data
-    string public baseUrl;
-    // URL parameters for fetching data
-    string public urlParams;
+    
 
     // Addresses of factory contracts
     address public factoryAddress;
     address public factoryBalancerAddress;
     address public factoryProcessorAddress;
 
-    // Chainlink oracle data
-    // bytes32 public externalJobId;
-    // uint256 public oraclePayment;
-    bytes32 public donId; // DON ID for the Functions DON to which the requests are sent
-    address public functionsRouterAddress;
-    uint public lastUpdateTime;
 
     uint totalDshareAddresses;
 
-    // Total number of oracles and current list
-    uint public totalOracleList;
-    uint public totalCurrentList;
-    
-    // Mappings for oracle and current lists
-    mapping(uint => address) public oracleList;
-    mapping(uint => address) public currentList;
 
 
     // Mappings for wrapped DShare addresses
     mapping(address => address) public wrappedDshareAddress;
 
-    // Mappings for token indices
-    mapping(address => uint) public tokenOracleListIndex;
-    mapping(address => uint) public tokenCurrentListIndex;
-
-    // Mappings for token market shares
-    mapping(address => uint) public tokenCurrentMarketShare;
-    mapping(address => uint) public tokenOracleMarketShare;
+    
 
     // Mappings for price feeds by token address
     mapping(address => address) public priceFeedByTokenAddress;
@@ -88,6 +58,7 @@ contract IndexFactoryStorage is
     uint8 public usdcDecimals;
     OrderManager public orderManager;
     bool public isMainnet;
+    FunctionsOracle public functionsOracle;
 
     // New variables
     uint8 public feeRate; // 10/10000 = 0.1%
@@ -129,9 +100,7 @@ contract IndexFactoryStorage is
     /// @param _vault The address of the vault
     /// @param _usdc The address of the USDC token
     /// @param _usdcDecimals The decimals of the USDC token
-    /// @param _chainlinkToken The address of the Chainlink token
-    /// @param _functionsRouterAddress The address of the functions router
-    /// @param _newDonId The don ID for the oracle
+    //  @param _functionsOracle the address of functions oracle contract
     /// @param _isMainnet Boolean indicating if the contract is on mainnet
     function initialize(
         address _issuer,
@@ -139,30 +108,22 @@ contract IndexFactoryStorage is
         address _vault,
         address _usdc,
         uint8 _usdcDecimals,
-        address _chainlinkToken,
-        address _functionsRouterAddress,
-        bytes32 _newDonId,
+        address _functionsOracle,
         bool _isMainnet
     ) external initializer {
         require(_issuer != address(0), "invalid issuer address");
         require(_token != address(0), "invalid token address");
         require(_vault != address(0), "invalid vault address");
         require(_usdc != address(0), "invalid usdc address");
+        require(_functionsOracle != address(0), "invalid functions oracle address");
         require(_usdcDecimals > 0, "invalid decimals");
-        require(_chainlinkToken != address(0), "invalid chainlink token address");
-        require(_functionsRouterAddress != address(0), "invalid functions router address");
-        require(_newDonId.length > 0, "invalid don id");
         issuer = IOrderProcessor(_issuer);
         token = IndexToken(_token);
         vault = NexVault(_vault);
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
-        __FunctionsClient_init(_functionsRouterAddress);
-        __ConfirmedOwner_init(msg.sender);
-        donId = _newDonId;
-        functionsRouterAddress = _functionsRouterAddress;
-        baseUrl = "https://app.nexlabs.io/api/allFundingRates";
-        urlParams = "?multiplyFunc=18&timesNegFund=true&arrays=true";
+        functionsOracle = FunctionsOracle(_functionsOracle);
+        __Ownable_init(msg.sender);
         isMainnet = _isMainnet;
         feeRate = 10;
         feeReceiver = msg.sender;
@@ -179,12 +140,11 @@ contract IndexFactoryStorage is
         _;
     }
 
-    /**
-     * @notice Set the DON ID
-     * @param newDonId New DON ID
-     */
-    function setDonId(bytes32 newDonId) external onlyOwner {
-        donId = newDonId;
+    /// @notice Sets the functions oracle address
+    /// @param _functionsOracle The address of the functions oracle
+    function setFunctionsOracle(address _functionsOracle) public onlyOwner {
+        require(_functionsOracle != address(0), "invalid functions oracle address");
+        functionsOracle = FunctionsOracle(_functionsOracle);
     }
 
     /// @notice Sets the fee rate for transactions
@@ -287,11 +247,7 @@ contract IndexFactoryStorage is
         }
     }
 
-    function setUrl(string memory _beforeAddress, string memory _afterAddress) public onlyOwner{
-    baseUrl = _beforeAddress;
-    urlParams = _afterAddress;
-    }
-
+   
    
 
     function setFactory(address _factoryAddress) public onlyOwner {
@@ -464,8 +420,8 @@ contract IndexFactoryStorage is
 
     function getPortfolioValue() public view returns(uint){
         uint portfolioValue;
-        for(uint i; i < totalCurrentList; i++) {
-            uint tokenValue = getVaultDshareValue(currentList[i]);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            uint tokenValue = getVaultDshareValue(functionsOracle.currentList(i));
             portfolioValue += tokenValue;
         }
         return portfolioValue;
@@ -545,9 +501,9 @@ contract IndexFactoryStorage is
     function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
         require(_inputAmount > 0, "Invalid amount");
         uint256 fees;
-        for(uint i; i < totalCurrentList; i++) {
-        address tokenAddress = currentList[i];
-        uint256 amount = _inputAmount * tokenCurrentMarketShare[tokenAddress] / 100e18;
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+        address tokenAddress = functionsOracle.currentList(i);
+        uint256 amount = _inputAmount * functionsOracle.tokenCurrentMarketShare(tokenAddress) / 100e18;
         (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
         uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
         fees += fee;
@@ -556,95 +512,13 @@ contract IndexFactoryStorage is
     }
 
 
-
-
-    function requestAssetsData(
-        string calldata source,
-        bytes calldata encryptedSecretsReference,
-        string[] calldata args,
-        bytes[] calldata bytesArgs,
-        uint64 subscriptionId,
-        uint32 callbackGasLimit
-    ) public returns (bytes32) {
-        FunctionsRequest.Request memory req;
-        req.initializeRequest(FunctionsRequest.Location.Inline, FunctionsRequest.CodeLanguage.JavaScript, source);
-        req.secretsLocation = FunctionsRequest.Location.Remote;
-        req.encryptedSecretsReference = encryptedSecretsReference;
-        if (args.length > 0) {
-        req.setArgs(args);
-        }
-        if (bytesArgs.length > 0) {
-        req.setBytesArgs(bytesArgs);
-        }
-        return _sendRequest(req.encodeCBOR(), subscriptionId, callbackGasLimit, donId);
-    }
-
-    /**
-    * @notice Store latest result/error
-    * @param requestId The request ID, returned by sendRequest()
-    * @param response Aggregated response from the user code
-    * @param err Aggregated error from the user code or from the execution pipeline
-    * Either response or error parameter will be set, but never both
-    */
-    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
-        (address[] memory _tokens,
-        uint256[] memory _marketShares) = abi.decode(response, (address[], uint256[]));
-        require(requestId.length > 0, "invalid request id");
-        require(_tokens.length > 0, "invalid tokens");
-        require(_marketShares.length > 0, "invalid market shares");
-        _initData(_tokens, _marketShares);
-    }
-
-    
-
-    function _initData(address[] memory _tokens, uint256[] memory _marketShares) private {
-        address[] memory tokens0 = _tokens;
-        uint[] memory marketShares0 = _marketShares;
-
-        // //save mappings
-        for(uint i =0; i < tokens0.length; i++){
-            oracleList[i] = tokens0[i];
-            tokenOracleListIndex[tokens0[i]] = i;
-            tokenOracleMarketShare[tokens0[i]] = marketShares0[i];
-            if(totalCurrentList == 0){
-                currentList[i] = tokens0[i];
-                tokenCurrentMarketShare[tokens0[i]] = marketShares0[i];
-                tokenCurrentListIndex[tokens0[i]] = i;
-            }
-        }
-        totalOracleList = tokens0.length;
-        if(totalCurrentList == 0){
-            totalCurrentList  = tokens0.length;
-        }
-        lastUpdateTime = block.timestamp;
-    }
-
-    function updateCurrentList() external {
-        require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
-        totalCurrentList = totalOracleList;
-        for(uint i = 0; i < totalOracleList; i++){
-            address tokenAddress = oracleList[i];
-            currentList[i] = tokenAddress;
-            tokenCurrentMarketShare[tokenAddress] = tokenOracleMarketShare[tokenAddress];
-            tokenCurrentListIndex[tokenAddress] = i;
-        }
-    }
-
-    function mockFillAssetsList(address[] memory _tokens, uint256[] memory _marketShares)
-    public
-    onlyOwner
-    {
-        _initData(_tokens, _marketShares);
-    }
-    
-
     
 
 
     function checkCancelIssuanceStatus(uint256 _issuanceNonce) public view returns(bool) {
         uint completedCount;
-        for(uint i; i < totalCurrentList; i++) {
-            address tokenAddress = currentList[i];
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             uint receivedAmount = issuer.getReceivedAmount(requestId);
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
@@ -663,7 +537,7 @@ contract IndexFactoryStorage is
                 }
             }
         }
-        if(completedCount == totalCurrentList){
+        if(completedCount == functionsOracle.totalCurrentList()){
             return true;
         }else{
             return false;
@@ -671,8 +545,8 @@ contract IndexFactoryStorage is
     }
 
     function isIssuanceOrderActive(uint256 _issuanceNonce) public view returns(bool) {
-        for(uint i; i < totalCurrentList; i++) {
-            address tokenAddress = currentList[i];
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
                 return true;
@@ -683,14 +557,14 @@ contract IndexFactoryStorage is
 
     function checkIssuanceOrdersStatus(uint _issuanceNonce) public view returns(bool) {
         uint completedOrdersCount;
-        for(uint i; i < totalCurrentList; i++) {
-            address tokenAddress = currentList[i];
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 completedOrdersCount += 1;
             }
         }
-        if(completedOrdersCount == totalCurrentList){
+        if(completedOrdersCount == functionsOracle.totalCurrentList()){
             return true;
         }else{
             return false;
@@ -699,14 +573,14 @@ contract IndexFactoryStorage is
 
     function checkRedemptionOrdersStatus(uint256 _redemptionNonce) public view returns(bool) {
         uint completedOrdersCount;
-        for(uint i; i < totalCurrentList; i++) {
-            address tokenAddress = currentList[i];
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
                 completedOrdersCount += 1;
             }
         }
-        if(completedOrdersCount == totalCurrentList){
+        if(completedOrdersCount == functionsOracle.totalCurrentList()){
             return true;
         }else{
             return false;
@@ -714,8 +588,8 @@ contract IndexFactoryStorage is
     }
 
     function isRedemptionOrderActive(uint256 _redemptionNonce) public view returns(bool) {
-        for(uint i; i < totalCurrentList; i++) {
-            address tokenAddress = currentList[i];
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
                 return true;
@@ -726,8 +600,8 @@ contract IndexFactoryStorage is
 
     function checkCancelRedemptionStatus(uint256 _redemptionNonce) public view returns(bool) {
         uint completedCount;
-        for(uint i; i < totalCurrentList; i++) {
-            address tokenAddress = currentList[i];
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
             uint receivedAmount = issuer.getReceivedAmount(requestId);
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
@@ -746,7 +620,7 @@ contract IndexFactoryStorage is
                 }
             }
         }
-        if(completedCount == totalCurrentList){
+        if(completedCount == functionsOracle.totalCurrentList()){
             return true;
         }else{
             return false;

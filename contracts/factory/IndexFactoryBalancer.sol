@@ -20,6 +20,7 @@ import "../dinary/WrappedDShare.sol";
 // import "../libraries/Commen.sol" as PrbMath;
 import "./IndexFactoryStorage.sol";
 import "./OrderManager.sol";
+import "./FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath2;
 
 /// @title Index Token Factory
@@ -40,6 +41,7 @@ contract IndexFactoryBalancer is
     uint public rebalanceNonce;
 
     IndexFactoryStorage public factoryStorage;
+    FunctionsOracle public functionsOracle;
 
 
     mapping(uint => mapping(address => uint)) public rebalanceRequestId;
@@ -55,9 +57,11 @@ contract IndexFactoryBalancer is
 
     mapping(uint => ActionInfo) public actionInfoById;
 
-    function initialize(address _factoryStorage) external initializer {
+    function initialize(address _factoryStorage, address _functionsOracle) external initializer {
         require(_factoryStorage != address(0), "invalid token address");
+        require(_functionsOracle != address(0), "invalid functions oracle address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
+        functionsOracle = FunctionsOracle(_functionsOracle);
         __Ownable_init(msg.sender);
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -72,6 +76,13 @@ contract IndexFactoryBalancer is
         address _indexFactoryStorage
     ) public onlyOwner returns (bool) {
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
+        return true;
+    }
+
+    function setFunctionsOracle(
+        address _functionsOracle
+    ) public onlyOwner returns (bool) {
+        functionsOracle = FunctionsOracle(_functionsOracle);
         return true;
     }
 
@@ -170,8 +181,8 @@ contract IndexFactoryBalancer is
         uint256 _rebalanceNonce,
         uint256 _portfolioValue
     ) internal {
-        for (uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint tokenValue = tokenValueByNonce[_rebalanceNonce][tokenAddress];
             uint tokenBalance = factoryStorage.getVaultDshareBalance(
                 tokenAddress
@@ -179,11 +190,11 @@ contract IndexFactoryBalancer is
             uint tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
             if (
                 tokenValuePercent >
-                factoryStorage.tokenOracleMarketShare(tokenAddress)
+                functionsOracle.tokenOracleMarketShare(tokenAddress)
             ) {
                 uint amount = tokenBalance -
                     ((tokenBalance *
-                        factoryStorage.tokenOracleMarketShare(tokenAddress)) /
+                        functionsOracle.tokenOracleMarketShare(tokenAddress)) /
                         tokenValuePercent);
                 (uint requestId, uint assetAmount) = requestSellOrder(
                     tokenAddress,
@@ -194,7 +205,7 @@ contract IndexFactoryBalancer is
                 rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
                 rebalanceSellAssetAmountById[requestId] = amount;
             } else {
-                uint shortagePercent = factoryStorage.tokenOracleMarketShare(
+                uint shortagePercent = functionsOracle.tokenOracleMarketShare(
                     tokenAddress
                 ) - tokenValuePercent;
                 tokenShortagePercentByNonce[_rebalanceNonce][
@@ -213,8 +224,8 @@ contract IndexFactoryBalancer is
     {
         rebalanceNonce += 1;
         uint portfolioValue;
-        for (uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint tokenValue = factoryStorage.getVaultDshareValue(tokenAddress);
             tokenValueByNonce[rebalanceNonce][tokenAddress] = tokenValue;
             portfolioValue += tokenValue;
@@ -230,8 +241,8 @@ contract IndexFactoryBalancer is
         uint _usdcBalance
     ) internal {
         IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint tokenShortagePercent = tokenShortagePercentByNonce[
                 _rebalanceNonce
             ][tokenAddress];
@@ -278,8 +289,8 @@ contract IndexFactoryBalancer is
         ];
         IOrderProcessor issuer = factoryStorage.issuer();
         uint usdcBalance;
-        for (uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if (requestId > 0) {
                 IOrderProcessor.Order memory order = factoryStorage
@@ -320,8 +331,8 @@ contract IndexFactoryBalancer is
             "Rebalance orders are not completed"
         );
         IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if (requestId > 0) {
                 IOrderProcessor.Order memory order = factoryStorage
@@ -349,7 +360,7 @@ contract IndexFactoryBalancer is
                 }
             }
         }
-        factoryStorage.updateCurrentList();
+        functionsOracle.updateCurrentList();
     }
 
     function checkFirstRebalanceOrdersStatus(
@@ -357,8 +368,8 @@ contract IndexFactoryBalancer is
     ) public view returns (bool) {
         uint completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             uint assetAmount = rebalanceSellAssetAmountById[requestId];
             if (
@@ -378,8 +389,8 @@ contract IndexFactoryBalancer is
     ) public view returns (bool) {
         uint completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             uint payedAmount = rebalanceBuyPayedAmountById[requestId];
             if (

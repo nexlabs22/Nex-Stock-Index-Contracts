@@ -15,6 +15,7 @@ import "../dinary/WrappedDShare.sol";
 import "./IndexFactoryStorage.sol";
 import "./IndexFactoryProcessor.sol";
 import "./OrderManager.sol";
+import "./FunctionsOracle.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -37,6 +38,7 @@ contract IndexFactory is
 
 
     IndexFactoryStorage public factoryStorage;
+    FunctionsOracle public functionsOracle;
     
 
     event RequestIssuance(
@@ -98,10 +100,12 @@ contract IndexFactory is
      * @param _factoryStorage The address of the factory storage contract.
      */
     function initialize(
-        address _factoryStorage
+        address _factoryStorage,
+        address _functionsOracle
     ) external initializer {
         require(_factoryStorage != address(0), "invalid factory storage address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
+        functionsOracle = FunctionsOracle(_functionsOracle);
         __Ownable_init(msg.sender);
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -114,8 +118,14 @@ contract IndexFactory is
         _disableInitializers();
     }
 
-
-
+    /**
+     * @dev Sets the functions oracle address.
+     * @param _functionsOracle The address of the new functions oracle contract.
+     */
+    function setFunctionsOracle(address _functionsOracle) external onlyOwner {
+        require(_functionsOracle != address(0), "invalid functions oracle address");
+        functionsOracle = FunctionsOracle(_functionsOracle);
+    }
 
     /**
      * @dev Sets the factory storage address.
@@ -238,9 +248,9 @@ contract IndexFactory is
         factoryStorage.increaseIssuanceNonce();
         uint issuanceNonce = factoryStorage.issuanceNonce();
         factoryStorage.setIssuanceInputAmount(issuanceNonce, _inputAmount);
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
-            uint256 amount = _inputAmount * factoryStorage.tokenCurrentMarketShare(tokenAddress) / 100e18;
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            uint256 amount = _inputAmount * functionsOracle.tokenCurrentMarketShare(tokenAddress) / 100e18;
             uint requestId = requestBuyOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
             factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(1, issuanceNonce));
             factoryStorage.setBuyRequestPayedAmountById(requestId, amount);
@@ -267,8 +277,8 @@ contract IndexFactory is
         require(msg.sender == requester, "Only requester can cancel the issuance");
         IOrderProcessor issuer = factoryStorage.issuer();
         uint latestCancelIssuanceReqeustId;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
             IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
             if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE) && issuer.getReceivedAmount(requestId) == 0){
@@ -310,8 +320,8 @@ contract IndexFactory is
         uint tokenBurnPercent = _inputAmount*1e18/token.totalSupply(); 
         token.burn(msg.sender, _inputAmount);
         factoryStorage.setBurnedTokenAmountByNonce(redemptionNonce, _inputAmount);
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint256 amount = tokenBurnPercent * IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(factoryStorage.vault())) / 1e18;
             (uint requestId, uint assetAmount) = requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
             factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(2, redemptionNonce));
@@ -362,8 +372,8 @@ contract IndexFactory is
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         require(msg.sender == requester, "Only requester can cancel the redemption");
         IOrderProcessor issuer = factoryStorage.issuer();
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = factoryStorage.redemptionRequestId(_redemptionNonce, tokenAddress);
             IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
             uint filledAmount = issuer.getReceivedAmount(requestId) - issuer.getFeesTaken(requestId);

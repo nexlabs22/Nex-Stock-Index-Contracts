@@ -28,7 +28,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {WrappedDShare} from "../../contracts/dinary/WrappedDShare.sol";
 import {MockV3Aggregator} from "../../contracts/test/MockV3Aggregator.sol";
-import {ContractDeployer} from "./ContractDeployer.sol";
+import {FunctionsOracle} from "../../contracts/factory/FunctionsOracle.sol";
 
 contract IndexFactoryTest is Test {
     using GetMockDShareFactory for DShareFactory;
@@ -99,6 +99,7 @@ contract IndexFactoryTest is Test {
     IndexFactoryProcessor public factoryProcessor;
     MockV3Aggregator public ethPriceOracle;
     NexVault public vault;
+    FunctionsOracle public functionsOracle;
     IndexFactoryStorage public factoryStorage;
     IndexFactoryBalancer public factoryBalancer;
 
@@ -206,7 +207,11 @@ contract IndexFactoryTest is Test {
                     address(orderManagerImpl),
                     abi.encodeCall(
                         OrderManager.initialize,
-                        (address(paymentToken), paymentToken.decimals(), address(issuer))
+                        (
+                            address(paymentToken),
+                            paymentToken.decimals(),
+                            address(issuer)
+                        )
                     )
                 )
             )
@@ -233,32 +238,34 @@ contract IndexFactoryTest is Test {
                     address(indexTokenImpl),
                     abi.encodeCall(
                         IndexToken.initialize,
-                        (
-                            "Magnificent 7",
-                            "MAG7",
-                            1e18,
-                            feeReceiver,
-                            1000000e18
-                        )
+                        ("Magnificent 7", "MAG7", 1e18, feeReceiver, 1000000e18)
                     )
                 )
             )
         );
-        
 
         NexVault vaultImpl = new NexVault();
         vault = NexVault(
             address(
                 new ERC1967Proxy(
                     address(vaultImpl),
-                    abi.encodeCall(
-                        NexVault.initialize,
-                        (address(0))
-                    )
+                    abi.encodeCall(NexVault.initialize, (address(0)))
                 )
             )
         );
 
+        FunctionsOracle functionsOracleImpl = new FunctionsOracle();
+        functionsOracle = FunctionsOracle(
+            address(
+                new ERC1967Proxy(
+                    address(functionsOracleImpl),
+                    abi.encodeCall(
+                        functionsOracleImpl.initialize,
+                        (address(oracle), jobId)
+                    )
+                )
+            )
+        );
         IndexFactoryStorage factoryStorageImpl = new IndexFactoryStorage();
         factoryStorage = IndexFactoryStorage(
             address(
@@ -272,9 +279,7 @@ contract IndexFactoryTest is Test {
                             address(vault),
                             address(paymentToken),
                             paymentToken.decimals(),
-                            address(link),
-                            address(oracle),
-                            jobId,
+                            address(functionsOracle),
                             true
                         )
                     )
@@ -301,7 +306,7 @@ contract IndexFactoryTest is Test {
                     address(factoryBalancerImpl),
                     abi.encodeCall(
                         IndexFactoryBalancer.initialize,
-                        (address(factoryStorage))
+                        (address(factoryStorage), address(functionsOracle))
                     )
                 )
             )
@@ -314,9 +319,11 @@ contract IndexFactoryTest is Test {
                     address(factoryImpl),
                     abi.encodeCall(
                         IndexFactory.initialize,
-                        (address(factoryStorage))
-                    )
+                        (
+                            address(factoryStorage), address(functionsOracle)
+                        )
                 )
+            )
             )
         );
 
@@ -327,7 +334,7 @@ contract IndexFactoryTest is Test {
                     address(factoryProcessorImpl),
                     abi.encodeCall(
                         IndexFactoryProcessor.initialize,
-                        (address(factoryStorage))
+                        (address(factoryStorage), address(functionsOracle))
                     )
                 )
             )
@@ -342,6 +349,7 @@ contract IndexFactoryTest is Test {
         factoryStorage.setFactory(address(factory));
         factoryStorage.setFactoryProcessor(address(factoryProcessor));
         factoryStorage.setFactoryBalancer(address(factoryBalancer));
+        functionsOracle.setFactoryBalancer(address(factoryBalancer));
         orderManager.setOperator(address(factory), true);
         orderManager.setOperator(address(factoryProcessor), true);
         orderManager.setOperator(address(factoryBalancer), true);
@@ -463,7 +471,7 @@ contract IndexFactoryTest is Test {
         uint _feeAmount
     ) public {
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.issuanceRequestId(_nonce, tokenAddress);
             uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
             IOrderProcessor.Order memory order = factoryStorage
@@ -478,7 +486,7 @@ contract IndexFactoryTest is Test {
                 order,
                 orderAmount,
                 _receivedAmount,
-                _feeAmount / factoryStorage.totalCurrentList()
+                _feeAmount / functionsOracle.totalCurrentList()
             );
             IOrderProcessor.PricePoint memory fillPrice = issuer
                 .latestFillPrice(order.assetToken, order.paymentToken);
@@ -506,7 +514,7 @@ contract IndexFactoryTest is Test {
         uint _feeAmount
     ) public {
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.issuanceRequestId(_nonce, tokenAddress);
             uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
             IOrderProcessor.Order memory order = factoryStorage
@@ -521,7 +529,7 @@ contract IndexFactoryTest is Test {
                 order,
                 orderAmount,
                 _receivedAmount,
-                _feeAmount / factoryStorage.totalCurrentList()
+                _feeAmount / functionsOracle.totalCurrentList()
             );
             IOrderProcessor.PricePoint memory fillPrice = issuer
                 .latestFillPrice(order.assetToken, order.paymentToken);
@@ -553,7 +561,7 @@ contract IndexFactoryTest is Test {
         uint _feeAmount
     ) public {
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.redemptionRequestId(_nonce, tokenAddress);
             uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
             IOrderProcessor.Order memory order = factoryStorage
@@ -580,7 +588,7 @@ contract IndexFactoryTest is Test {
         uint _feeAmount
     ) public {
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.redemptionRequestId(_nonce, tokenAddress);
             uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
             IOrderProcessor.Order memory order = factoryStorage
@@ -617,7 +625,7 @@ contract IndexFactoryTest is Test {
         uint _feeAmount
     ) public {
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.cancelIssuanceRequestId(
                 _nonce,
                 tokenAddress
@@ -684,10 +692,10 @@ contract IndexFactoryTest is Test {
         tokenShares[8] = 10e18;
         tokenShares[9] = 10e18;
 
-        link.transfer(address(factoryStorage), 1e17);
+        link.transfer(address(functionsOracle), 1e17);
         // bytes32 requestId = factoryStorage.requestAssetsData();
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
-        bytes32 requestId = factoryStorage.requestAssetsData(
+        bytes32 requestId = functionsOracle.requestAssetsData(
             "console.log('Hello, World!');",
             // FunctionsConsumer.Location.Inline, // Use the imported enum directly
             abi.encodePacked("default"),
@@ -697,7 +705,7 @@ contract IndexFactoryTest is Test {
             0
         );
         bytes memory data = abi.encode(assetList, tokenShares);
-        oracle.fulfillRequest(address(factoryStorage), requestId, data);
+        oracle.fulfillRequest(address(functionsOracle), requestId, data);
     }
 
     function updateOracleList2() public {
@@ -725,10 +733,10 @@ contract IndexFactoryTest is Test {
         tokenShares[8] = 10e18;
         tokenShares[9] = 10e18;
 
-        link.transfer(address(factoryStorage), 1e17);
+        link.transfer(address(functionsOracle), 1e17);
         // bytes32 requestId = factoryStorage.requestAssetsData();
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
-        bytes32 requestId = factoryStorage.requestAssetsData(
+        bytes32 requestId = functionsOracle.requestAssetsData(
             "console.log('Hello, World!');",
             // FunctionsConsumer.Location.Inline, // Use the imported enum directly
             abi.encodePacked("default"),
@@ -738,7 +746,7 @@ contract IndexFactoryTest is Test {
             0
         );
         bytes memory data = abi.encode(assetList, tokenShares);
-        oracle.fulfillRequest(address(factoryStorage), requestId, data);
+        oracle.fulfillRequest(address(functionsOracle), requestId, data);
     }
 
     function updateWrappedDshares() public {
@@ -808,26 +816,44 @@ contract IndexFactoryTest is Test {
     function testOracleList() public {
         vm.startPrank(admin);
         // token  oracle list
-        assertEq(factoryStorage.oracleList(0), address(token0));
-        assertEq(factoryStorage.oracleList(1), address(token1));
-        assertEq(factoryStorage.oracleList(2), address(token2));
-        assertEq(factoryStorage.oracleList(3), address(token3));
-        assertEq(factoryStorage.oracleList(4), address(token4));
-        assertEq(factoryStorage.oracleList(9), address(token9));
+        assertEq(functionsOracle.oracleList(0), address(token0));
+        assertEq(functionsOracle.oracleList(1), address(token1));
+        assertEq(functionsOracle.oracleList(2), address(token2));
+        assertEq(functionsOracle.oracleList(3), address(token3));
+        assertEq(functionsOracle.oracleList(4), address(token4));
+        assertEq(functionsOracle.oracleList(9), address(token9));
         // token current list
-        assertEq(factoryStorage.currentList(0), address(token0));
-        assertEq(factoryStorage.currentList(1), address(token1));
-        assertEq(factoryStorage.currentList(2), address(token2));
-        assertEq(factoryStorage.currentList(3), address(token3));
-        assertEq(factoryStorage.currentList(4), address(token4));
-        assertEq(factoryStorage.currentList(9), address(token9));
+        assertEq(functionsOracle.currentList(0), address(token0));
+        assertEq(functionsOracle.currentList(1), address(token1));
+        assertEq(functionsOracle.currentList(2), address(token2));
+        assertEq(functionsOracle.currentList(3), address(token3));
+        assertEq(functionsOracle.currentList(4), address(token4));
+        assertEq(functionsOracle.currentList(9), address(token9));
         // token shares
-        assertEq(factoryStorage.tokenOracleMarketShare(address(token0)), 10e18);
-        assertEq(factoryStorage.tokenOracleMarketShare(address(token1)), 10e18);
-        assertEq(factoryStorage.tokenOracleMarketShare(address(token2)), 10e18);
-        assertEq(factoryStorage.tokenOracleMarketShare(address(token3)), 10e18);
-        assertEq(factoryStorage.tokenOracleMarketShare(address(token4)), 10e18);
-        assertEq(factoryStorage.tokenOracleMarketShare(address(token9)), 10e18);
+        assertEq(
+            functionsOracle.tokenOracleMarketShare(address(token0)),
+            10e18
+        );
+        assertEq(
+            functionsOracle.tokenOracleMarketShare(address(token1)),
+            10e18
+        );
+        assertEq(
+            functionsOracle.tokenOracleMarketShare(address(token2)),
+            10e18
+        );
+        assertEq(
+            functionsOracle.tokenOracleMarketShare(address(token3)),
+            10e18
+        );
+        assertEq(
+            functionsOracle.tokenOracleMarketShare(address(token4)),
+            10e18
+        );
+        assertEq(
+            functionsOracle.tokenOracleMarketShare(address(token9)),
+            10e18
+        );
 
         vm.stopPrank();
     }
@@ -888,7 +914,7 @@ contract IndexFactoryTest is Test {
         uint nonce = factory.issuanceIndexTokens(inputAmount);
 
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
             uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
             assertEq(
@@ -908,7 +934,7 @@ contract IndexFactoryTest is Test {
     function testCompleteIssuance() public {
         vm.startPrank(admin);
         uint inputAmount = 1000e6;
-        uint receivedAmount = 100e18 / factoryStorage.totalCurrentList();
+        uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         paymentToken.mint(
             address(user),
@@ -936,7 +962,7 @@ contract IndexFactoryTest is Test {
     function testCompleteIssuance2() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
                 tokenAddress
             );
@@ -954,7 +980,7 @@ contract IndexFactoryTest is Test {
         vm.stopPrank();
         vm.startPrank(admin);
         uint inputAmount = 1000e6;
-        uint receivedAmount = 100e18 / factoryStorage.totalCurrentList();
+        uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         paymentToken.mint(
             address(user),
@@ -985,7 +1011,7 @@ contract IndexFactoryTest is Test {
         factoryStorage.setIsMainnet(false);
         // factoryStorage.setLatestPriceDecimals(0);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
                 tokenAddress
             );
@@ -1003,7 +1029,7 @@ contract IndexFactoryTest is Test {
         vm.stopPrank();
         vm.startPrank(admin);
         uint inputAmount = 1000e6;
-        uint receivedAmount = 100e18 / factoryStorage.totalCurrentList();
+        uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         paymentToken.mint(
             address(user),
@@ -1031,9 +1057,9 @@ contract IndexFactoryTest is Test {
 
     function testCompleteIssuanceMultical() public {
         vm.startPrank(admin);
-        // uint totalCurretList = factoryStorage.totalCurrentList();
+        // uint totalCurretList = functionsOracle.totalCurrentList();
         uint inputAmount = 1000e18;
-        uint receivedAmount = 100e18 / factoryStorage.totalCurrentList();
+        uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         // uint expectedAmountOut = factoryStorage.getIssuanceAmountOut(inputAmount);
         paymentToken.mint(
@@ -1071,7 +1097,7 @@ contract IndexFactoryTest is Test {
         uint nonce = factory.issuanceIndexTokens(inputAmount);
 
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
             uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
             assertEq(
@@ -1086,7 +1112,7 @@ contract IndexFactoryTest is Test {
         vm.stopPrank();
         vm.startPrank(operator);
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
             uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
             IOrderProcessor.Order memory order = factoryStorage
@@ -1105,7 +1131,7 @@ contract IndexFactoryTest is Test {
     function testCancelPartialIssuance() public {
         vm.startPrank(admin);
         uint inputAmount = 1000e18;
-        uint receivedAmount = 100e18 / factoryStorage.totalCurrentList();
+        uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
         uint quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
         paymentToken.mint(address(user), quantityIn);
@@ -1128,7 +1154,7 @@ contract IndexFactoryTest is Test {
     function testRedemption() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
                 tokenAddress
             );
@@ -1146,7 +1172,7 @@ contract IndexFactoryTest is Test {
         uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
 
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
             uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
             assertEq(
@@ -1160,7 +1186,7 @@ contract IndexFactoryTest is Test {
     function testRedemptionPartialy() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
                 tokenAddress
             );
@@ -1184,7 +1210,7 @@ contract IndexFactoryTest is Test {
         );
 
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
             uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
             assertEq(
@@ -1199,7 +1225,7 @@ contract IndexFactoryTest is Test {
         vm.startPrank(admin);
 
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             DShare(tokenAddress).mint(address(admin), 1000e18);
             DShare(tokenAddress).approve(
                 factoryStorage.wrappedDshareAddress(tokenAddress),
@@ -1231,7 +1257,7 @@ contract IndexFactoryTest is Test {
         vm.startPrank(admin);
 
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             DShare(tokenAddress).mint(address(admin), 1000e18);
             DShare(tokenAddress).approve(
                 factoryStorage.wrappedDshareAddress(tokenAddress),
@@ -1260,7 +1286,7 @@ contract IndexFactoryTest is Test {
     function testCancelRdemption() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
                 tokenAddress
             );
@@ -1278,7 +1304,7 @@ contract IndexFactoryTest is Test {
         uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
 
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
             uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
             assertEq(
@@ -1292,7 +1318,7 @@ contract IndexFactoryTest is Test {
         vm.stopPrank();
         vm.startPrank(operator);
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
             uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
             IOrderProcessor.Order memory order = factoryStorage
@@ -1312,7 +1338,7 @@ contract IndexFactoryTest is Test {
     function testCancelParitalRedemption() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
                 tokenAddress
             );
@@ -1331,7 +1357,7 @@ contract IndexFactoryTest is Test {
         _fillAllSellOrders(nonce, 10000e18, 1e18);
 
         // for(uint i = 0; i < 10; i++) {
-        // address tokenAddress = factoryStorage.currentList(i);
+        // address tokenAddress = functionsOracle.currentList(i);
         // uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
         // uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
         // assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
@@ -1343,7 +1369,7 @@ contract IndexFactoryTest is Test {
         // vm.stopPrank();
         // vm.startPrank(operator);
         // for(uint i = 0; i < 10; i++) {
-        //     address tokenAddress = factoryStorage.currentList(i);
+        //     address tokenAddress = functionsOracle.currentList(i);
         //     uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
         //     uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
         //     IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
@@ -1359,7 +1385,7 @@ contract IndexFactoryTest is Test {
     function testRebalancing() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             DShare(tokenAddress).mint(address(admin), 1000e18);
             DShare(tokenAddress).approve(
                 factoryStorage.wrappedDshareAddress(tokenAddress),
@@ -1376,48 +1402,50 @@ contract IndexFactoryTest is Test {
         uint portfolioValue = factoryStorage.getPortfolioValue();
         assertEq(portfolioValue, 10000e18 * 10);
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(2)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(3)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(4)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(5)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(6)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(7)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(8)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(9)),
             10000e18
         );
 
         assertEq(
-            factoryStorage.getVaultDshareBalance(factoryStorage.currentList(1)),
+            factoryStorage.getVaultDshareBalance(
+                functionsOracle.currentList(1)
+            ),
             1000e18
         );
 
@@ -1426,7 +1454,7 @@ contract IndexFactoryTest is Test {
         uint nonce = factoryBalancer.firstRebalanceAction();
 
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
             if (id > 0) {
                 uint orderAmount = factoryBalancer.rebalanceSellAssetAmountById(
@@ -1458,43 +1486,43 @@ contract IndexFactoryTest is Test {
         assertEq(factoryBalancer.checkFirstRebalanceOrdersStatus(nonce), true);
 
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)),
             5000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(2)),
             5000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(3)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(4)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(5)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(6)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(7)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(8)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(9)),
             10000e18
         );
 
@@ -1505,7 +1533,7 @@ contract IndexFactoryTest is Test {
         vm.prank(admin);
         factoryBalancer.secondRebalanceAction(nonce);
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
             uint orderAmount = factoryBalancer.rebalanceBuyPayedAmountById(id);
             if (id > 0 && orderAmount > 0) {
@@ -1544,52 +1572,52 @@ contract IndexFactoryTest is Test {
         factoryBalancer.completeRebalanceActions(nonce);
 
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)) /
                 1e18,
             19950
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)) /
                 1e18,
             5000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(2)) /
                 1e18,
             5000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(3)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(4)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(5)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(6)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(7)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(8)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(9)) /
                 1e18,
             10000
         );
@@ -1598,29 +1626,35 @@ contract IndexFactoryTest is Test {
 
         //check to see current list is updated
         // token current list
-        assertEq(factoryStorage.currentList(0), address(token0));
-        assertEq(factoryStorage.currentList(1), address(token1));
-        assertEq(factoryStorage.currentList(2), address(token2));
-        assertEq(factoryStorage.currentList(3), address(token3));
-        assertEq(factoryStorage.currentList(4), address(token4));
-        assertEq(factoryStorage.currentList(9), address(token9));
+        assertEq(functionsOracle.currentList(0), address(token0));
+        assertEq(functionsOracle.currentList(1), address(token1));
+        assertEq(functionsOracle.currentList(2), address(token2));
+        assertEq(functionsOracle.currentList(3), address(token3));
+        assertEq(functionsOracle.currentList(4), address(token4));
+        assertEq(functionsOracle.currentList(9), address(token9));
         // token shares
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token0)),
+            functionsOracle.tokenCurrentMarketShare(address(token0)),
             20e18
         );
-        assertEq(factoryStorage.tokenCurrentMarketShare(address(token1)), 5e18);
-        assertEq(factoryStorage.tokenCurrentMarketShare(address(token2)), 5e18);
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token3)),
+            functionsOracle.tokenCurrentMarketShare(address(token1)),
+            5e18
+        );
+        assertEq(
+            functionsOracle.tokenCurrentMarketShare(address(token2)),
+            5e18
+        );
+        assertEq(
+            functionsOracle.tokenCurrentMarketShare(address(token3)),
             10e18
         );
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token4)),
+            functionsOracle.tokenCurrentMarketShare(address(token4)),
             10e18
         );
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token9)),
+            functionsOracle.tokenCurrentMarketShare(address(token9)),
             10e18
         );
     }
@@ -1628,7 +1662,7 @@ contract IndexFactoryTest is Test {
     function testRebalancingMultical() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             DShare(tokenAddress).mint(address(admin), 1000e18);
             DShare(tokenAddress).approve(
                 factoryStorage.wrappedDshareAddress(tokenAddress),
@@ -1645,48 +1679,50 @@ contract IndexFactoryTest is Test {
         uint portfolioValue = factoryStorage.getPortfolioValue();
         assertEq(portfolioValue, 10000e18 * 10);
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(2)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(3)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(4)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(5)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(6)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(7)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(8)),
             10000e18
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)),
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(9)),
             10000e18
         );
 
         assertEq(
-            factoryStorage.getVaultDshareBalance(factoryStorage.currentList(1)),
+            factoryStorage.getVaultDshareBalance(
+                functionsOracle.currentList(1)
+            ),
             1000e18
         );
 
@@ -1695,7 +1731,7 @@ contract IndexFactoryTest is Test {
         uint nonce = factoryBalancer.firstRebalanceAction();
 
         for (uint i; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
             if (id > 0) {
                 uint orderAmount = factoryBalancer.rebalanceSellAssetAmountById(
@@ -1737,7 +1773,7 @@ contract IndexFactoryTest is Test {
         // factory.secondRebalanceAction(nonce);
 
         for (uint i = 0; i < 10; i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+            address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
             uint orderAmount = factoryBalancer.rebalanceBuyPayedAmountById(id);
             if (
@@ -1786,52 +1822,52 @@ contract IndexFactoryTest is Test {
         // factoryBalancer.completeRebalanceActions(nonce);
 
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(0)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)) /
                 1e18,
             19950
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(1)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)) /
                 1e18,
             5000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(2)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(2)) /
                 1e18,
             5000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(3)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(3)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(4)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(4)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(5)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(5)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(6)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(6)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(7)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(7)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(8)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(8)) /
                 1e18,
             10000
         );
         assertEq(
-            factoryStorage.getVaultDshareValue(factoryStorage.currentList(9)) /
+            factoryStorage.getVaultDshareValue(functionsOracle.currentList(9)) /
                 1e18,
             10000
         );
@@ -1840,29 +1876,35 @@ contract IndexFactoryTest is Test {
 
         //check to see current list is updated
         // token current list
-        assertEq(factoryStorage.currentList(0), address(token0));
-        assertEq(factoryStorage.currentList(1), address(token1));
-        assertEq(factoryStorage.currentList(2), address(token2));
-        assertEq(factoryStorage.currentList(3), address(token3));
-        assertEq(factoryStorage.currentList(4), address(token4));
-        assertEq(factoryStorage.currentList(9), address(token9));
+        assertEq(functionsOracle.currentList(0), address(token0));
+        assertEq(functionsOracle.currentList(1), address(token1));
+        assertEq(functionsOracle.currentList(2), address(token2));
+        assertEq(functionsOracle.currentList(3), address(token3));
+        assertEq(functionsOracle.currentList(4), address(token4));
+        assertEq(functionsOracle.currentList(9), address(token9));
         // token shares
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token0)),
+            functionsOracle.tokenCurrentMarketShare(address(token0)),
             20e18
         );
-        assertEq(factoryStorage.tokenCurrentMarketShare(address(token1)), 5e18);
-        assertEq(factoryStorage.tokenCurrentMarketShare(address(token2)), 5e18);
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token3)),
+            functionsOracle.tokenCurrentMarketShare(address(token1)),
+            5e18
+        );
+        assertEq(
+            functionsOracle.tokenCurrentMarketShare(address(token2)),
+            5e18
+        );
+        assertEq(
+            functionsOracle.tokenCurrentMarketShare(address(token3)),
             10e18
         );
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token4)),
+            functionsOracle.tokenCurrentMarketShare(address(token4)),
             10e18
         );
         assertEq(
-            factoryStorage.tokenCurrentMarketShare(address(token9)),
+            functionsOracle.tokenCurrentMarketShare(address(token9)),
             10e18
         );
 

@@ -15,6 +15,7 @@ import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
 import "./IndexFactoryStorage.sol";
 import "./OrderManager.sol";
+import "./FunctionsOracle.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -33,6 +34,7 @@ contract IndexFactoryProcessor is
 
 
     IndexFactoryStorage public factoryStorage;
+    FunctionsOracle public functionsOracle;
     
 
     
@@ -75,10 +77,13 @@ contract IndexFactoryProcessor is
     );
 
     function initialize(
-        address _factoryStorage
+        address _factoryStorage,
+        address _functionsOracle
     ) external initializer {
         require(_factoryStorage != address(0), "invalid factory storage address");
+        require(_functionsOracle != address(0), "invalid functions oracle address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
+        functionsOracle = FunctionsOracle(_functionsOracle);
        
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -91,7 +96,11 @@ contract IndexFactoryProcessor is
         _disableInitializers();
     }
 
-
+    function setFunctionsOracle(address _functionsOracle) external onlyOwner returns (bool) {
+        require(_functionsOracle != address(0), "invalid functions oracle address");
+        functionsOracle = FunctionsOracle(_functionsOracle);
+        return true;
+    }
 
     function setIndexFactoryStorage(address _factoryStorage) external onlyOwner returns (bool) {
         require(_factoryStorage != address(0), "invalid factory storage address");
@@ -113,8 +122,8 @@ contract IndexFactoryProcessor is
         IOrderProcessor issuer = factoryStorage.issuer();
         uint primaryPortfolioValue;
         uint secondaryPortfolioValue;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenRequestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
             uint price = factoryStorage.priceInWei(tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
@@ -153,8 +162,8 @@ contract IndexFactoryProcessor is
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
         uint totalBalance;
         IOrderProcessor issuer = factoryStorage.issuer();
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint requestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
             uint cancelRequestId = factoryStorage.cancelIssuanceRequestId(_issuanceNonce, tokenAddress);
             uint256 balance;
@@ -182,8 +191,8 @@ contract IndexFactoryProcessor is
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         IOrderProcessor issuer = factoryStorage.issuer();
         uint totalBalance;
-        for(uint i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenRequestId = factoryStorage.redemptionRequestId(_redemptionNonce, tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
@@ -203,8 +212,8 @@ contract IndexFactoryProcessor is
 
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         IOrderProcessor issuer = factoryStorage.issuer();
-        for(uint i; i < factoryStorage.totalCurrentList(); i++){
-            address tokenAddress = factoryStorage.currentList(i);
+        for(uint i; i < functionsOracle.totalCurrentList(); i++){
+            address tokenAddress = functionsOracle.currentList(i);
             uint tokenRequestId = factoryStorage.cancelRedemptionRequestId(_redemptionNonce, tokenAddress);
             uint filledAmount = issuer.getReceivedAmount(tokenRequestId) - issuer.getFeesTaken(tokenRequestId);
             uint unFilledAmount = factoryStorage.cancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress);
