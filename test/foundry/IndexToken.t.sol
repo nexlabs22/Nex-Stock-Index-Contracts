@@ -3,6 +3,8 @@ pragma solidity ^0.8.7;
 
 import "forge-std/Test.sol";
 import "../../contracts/token/IndexToken.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 
 contract CounterTest is Test {
 
@@ -30,13 +32,23 @@ contract CounterTest is Test {
     error EnforcedPause();
 
     function setUp() public {
-        indexToken = new IndexToken();
-        indexToken.initialize(
-            "Anti Inflation",
-            "ANFI",
-            1e18,
-            feeReceiver,
-            1000000e18
+        IndexToken indexTokenImpl = new IndexToken();
+        indexToken = IndexToken(
+            address(
+                new ERC1967Proxy(
+                    address(indexTokenImpl),
+                    abi.encodeCall(
+                        IndexToken.initialize,
+                        (
+                            "Magnificent 7",
+                            "MAG7",
+                            1e18,
+                            feeReceiver,
+                            1000000e18
+                        )
+                    )
+                )
+            )
         );
         indexToken.setMinter(minter, true);
     }
@@ -199,12 +211,17 @@ contract CounterTest is Test {
         uint feePerDay = indexToken.feeRatePerDayScaled();
         uint totalSupply = indexToken.totalSupply();
         uint supply = totalSupply;
-        for (uint256 i; i < _days; ) {
-                supply += ((supply * feePerDay) / SCALAR);
-                unchecked {
-                    ++i;
-                }
-        }
+        // for (uint256 i; i < _days; ) {
+        //         supply += ((supply * feePerDay) / SCALAR);
+        //         unchecked {
+        //             ++i;
+        //         }
+        // }
+        // Use a logarithmic approximation for compounding
+        uint256 compoundedFeeRate = SCALAR + (feePerDay * _days);
+        // Calculate the compounded supply
+        supply = (supply * compoundedFeeRate) / SCALAR;
+        
         uint expectedFeeAmount = supply - totalSupply;
         //mint another 1000 token and check fee
         indexToken.mint(address(this), 1000e18);

@@ -12,15 +12,7 @@ contract ConfirmedOwnerWithProposal is IOwnable {
   event OwnershipTransferRequested(address indexed from, address indexed to);
   event OwnershipTransferred(address indexed from, address indexed to);
 
-//   constructor(address newOwner, address pendingOwner) {
-//     // solhint-disable-next-line gas-custom-errors
-//     require(newOwner != address(0), "Cannot set owner to zero");
 
-//     s_owner = newOwner;
-//     if (pendingOwner != address(0)) {
-//       _transferOwnership(pendingOwner);
-//     }
-//   }
 
   function __ConfirmedOwnerWithProposal_init(address newOwner, address pendingOwner) internal {
     // solhint-disable-next-line gas-custom-errors

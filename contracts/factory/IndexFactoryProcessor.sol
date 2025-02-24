@@ -13,20 +13,16 @@ import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
-// import "../libraries/Commen.sol" as PrbMath;
 import "./IndexFactoryStorage.sol";
 import "./OrderManager.sol";
+import "./FunctionsOracle.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
 contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
-    struct ActionInfo {
-        uint256 actionType;
-        uint256 nonce;
-    }
-
     IndexFactoryStorage public factoryStorage;
+    FunctionsOracle public functionsOracle;
 
     event Issuanced(
         uint256 indexed nonce,
@@ -34,6 +30,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         address inputToken,
         uint256 inputAmount,
         uint256 outputAmount,
+        uint256 price,
         uint256 time
     );
 
@@ -52,6 +49,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         address outputToken,
         uint256 inputAmount,
         uint256 outputAmount,
+        uint256 price,
         uint256 time
     );
 
@@ -64,12 +62,26 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         uint256 time
     );
 
-    function initialize(address _factoryStorage) external initializer {
+    function initialize(address _factoryStorage, address _functionsOracle) external initializer {
         require(_factoryStorage != address(0), "invalid factory storage address");
+        require(_functionsOracle != address(0), "invalid functions oracle address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
+        functionsOracle = FunctionsOracle(_functionsOracle);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
+        __ReentrancyGuard_init();
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function setFunctionsOracle(address _functionsOracle) external onlyOwner returns (bool) {
+        require(_functionsOracle != address(0), "invalid functions oracle address");
+        functionsOracle = FunctionsOracle(_functionsOracle);
+        return true;
     }
 
     function setIndexFactoryStorage(address _factoryStorage) external onlyOwner returns (bool) {
@@ -78,17 +90,16 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         return true;
     }
 
-    function completeIssuance(uint256 _issuanceNonce) public nonReentrant {
+    function completeIssuance(uint256 _issuanceNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkIssuanceOrdersStatus(_issuanceNonce), "Orders are not completed");
         require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
         IOrderProcessor issuer = factoryStorage.issuer();
         uint256 primaryPortfolioValue;
         uint256 secondaryPortfolioValue;
-        for (uint256 i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenRequestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
-            // IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(tokenAddress, factoryStorage.usdc());
             uint256 price = factoryStorage.priceInWei(tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 receivedValue = balance * price / 1e18;
@@ -106,7 +117,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         }
         uint256 primaryTotalSupply = factoryStorage.issuanceIndexTokenPrimaryTotalSupply(_issuanceNonce);
         if (primaryTotalSupply == 0 || primaryPortfolioValue == 0) {
-            uint256 mintAmount = secondaryPortfolioValue * 100;
+            uint256 mintAmount = secondaryPortfolioValue / 100;
             IndexToken token = factoryStorage.token();
             token.mint(requester, mintAmount);
             emit Issuanced(
@@ -115,6 +126,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
                 factoryStorage.usdc(),
                 factoryStorage.issuanceInputAmount(_issuanceNonce),
                 mintAmount,
+                factoryStorage.getIndexTokenPrice(),
                 block.timestamp
             );
         } else {
@@ -128,20 +140,21 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
                 factoryStorage.usdc(),
                 factoryStorage.issuanceInputAmount(_issuanceNonce),
                 mintAmount,
+                factoryStorage.getIndexTokenPrice(),
                 block.timestamp
             );
         }
         factoryStorage.setIssuanceIsCompleted(_issuanceNonce, true);
     }
 
-    function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant {
+    function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkCancelIssuanceStatus(_issuanceNonce), "Cancel issuance is not completed");
         require(!factoryStorage.cancelIssuanceComplted(_issuanceNonce), "The process has been completed before");
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
         uint256 totalBalance;
         IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint256 i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint256 requestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
             uint256 cancelRequestId = factoryStorage.cancelIssuanceRequestId(_issuanceNonce, tokenAddress);
             uint256 balance;
@@ -166,14 +179,14 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         );
     }
 
-    function completeRedemption(uint256 _redemptionNonce) public nonReentrant {
+    function completeRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkRedemptionOrdersStatus(_redemptionNonce), "Redemption orders are not completed");
         require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         IOrderProcessor issuer = factoryStorage.issuer();
         uint256 totalBalance;
-        for (uint256 i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenRequestId = factoryStorage.redemptionRequestId(_redemptionNonce, tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
@@ -190,18 +203,19 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
             factoryStorage.usdc(),
             factoryStorage.redemptionInputAmount(_redemptionNonce),
             totalBalance,
+            factoryStorage.getIndexTokenPrice(),
             block.timestamp
         );
     }
 
-    function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant {
+    function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
         require(factoryStorage.checkCancelRedemptionStatus(_redemptionNonce), "Cancel redemption is not completed");
         require(!factoryStorage.cancelRedemptionComplted(_redemptionNonce), "The process has been completed before");
 
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint256 i; i < factoryStorage.totalCurrentList(); i++) {
-            address tokenAddress = factoryStorage.currentList(i);
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenRequestId = factoryStorage.cancelRedemptionRequestId(_redemptionNonce, tokenAddress);
             uint256 filledAmount = issuer.getReceivedAmount(tokenRequestId) - issuer.getFeesTaken(tokenRequestId);
             uint256 unFilledAmount = factoryStorage.cancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress);
