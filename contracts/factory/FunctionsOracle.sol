@@ -76,7 +76,14 @@ contract FunctionsOracle is
     }
 
     
-
+    /**
+     * @notice Set the Functions Router address
+     * @param _functionsRouterAddress New Functions Router address
+     */
+    function setFunctionsRouterAddress(address _functionsRouterAddress) external onlyOwner {
+        require(_functionsRouterAddress != address(0), "invalid functions router address");
+        functionsRouterAddress = _functionsRouterAddress;
+    }
    
 
     function setFactoryBalancer(address _factoryBalancerAddress) public onlyOwner {
