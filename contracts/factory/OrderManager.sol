@@ -45,14 +45,10 @@ contract OrderManager is
     uint8 public usdcDecimals;
 
     mapping(address => bool) public isOperator;
-    
 
-    
     event BuyRequest(uint indexed id, uint time, uint inutAmount);
     event SellRequest(uint indexed id, uint time, uint inutAmount);
 
-    
-    
     function initialize(
         address _usdc,
         uint8 _usdcDecimals,
@@ -74,6 +70,10 @@ contract OrderManager is
         _disableInitializers();
     }
 
+    function setIssuer(address _issuer) external onlyOwner {
+        require(_issuer != address(0), "invalid issuer address");
+        issuer = IOrderProcessor(_issuer);
+    }
 
     function setUsdcAddress(
         address _usdc,
@@ -85,51 +85,64 @@ contract OrderManager is
         return true;
     }
 
-    
     function setOperator(address _operator, bool _status) public onlyOwner {
         isOperator[_operator] = _status;
     }
 
-    
-
-    function getPrimaryOrder(bool sell) internal view returns (IOrderProcessor.Order memory) {
-        return IOrderProcessor.Order({
-            requestTimestamp: uint64(block.timestamp),
-            recipient: address(this),
-            assetToken: address(0),
-            paymentToken: address(usdc),
-            sell: sell,
-            orderType: IOrderProcessor.OrderType.MARKET,
-            assetTokenQuantity: sell ? 100 ether : 0,
-            paymentTokenQuantity: sell ? 0 : 100 ether,
-            price: 0,
-            tif: IOrderProcessor.TIF.GTC
-        });
+    function getPrimaryOrder(
+        bool sell
+    ) internal view returns (IOrderProcessor.Order memory) {
+        return
+            IOrderProcessor.Order({
+                requestTimestamp: uint64(block.timestamp),
+                recipient: address(this),
+                assetToken: address(0),
+                paymentToken: address(usdc),
+                sell: sell,
+                orderType: IOrderProcessor.OrderType.MARKET,
+                assetTokenQuantity: sell ? 100 ether : 0,
+                paymentTokenQuantity: sell ? 0 : 100 ether,
+                price: 0,
+                tif: IOrderProcessor.TIF.GTC
+            });
     }
 
     function calculateFees(uint256 orderAmount) public view returns (uint256) {
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fees = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, orderAmount);
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(
+            false,
+            address(usdc)
+        );
+        uint256 fees = flatFee +
+            FeeLib.applyPercentageFee(percentageFeeRate, orderAmount);
         return fees;
     }
-    
-    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) external nonReentrant whenNotPaused returns(uint) {
+
+    function requestBuyOrder(
+        address _token,
+        uint256 _orderAmount,
+        address _receiver
+    ) external nonReentrant whenNotPaused returns (uint) {
         require(_token != address(0), "invalid token address");
         require(_receiver != address(0), "invalid address");
         require(_orderAmount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        require(
+            isOperator[msg.sender] || msg.sender == owner(),
+            "Not authorized Sender For Buy And Sell"
+        );
         uint256 fees = calculateFees(_orderAmount);
-        
+
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
         order.recipient = _receiver;
         order.assetToken = address(_token);
         order.paymentTokenQuantity = _orderAmount;
         uint256 quantityIn = order.paymentTokenQuantity + fees;
-       
-        
-        require(IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn), "Transfer failed");
+
+        require(
+            IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn),
+            "Transfer failed"
+        );
         IERC20(usdc).approve(address(issuer), quantityIn);
-        
+
         uint256 id = issuer.createOrderStandardFees(order);
         // orderInstanceById[id] = order;
         emit BuyRequest(id, block.timestamp, _orderAmount);
@@ -137,22 +150,28 @@ contract OrderManager is
         // return 1;
     }
 
-    function requestBuyOrderFromCurrentBalance(address _token, uint256 _orderAmount, address _receiver) external nonReentrant whenNotPaused returns(uint) {
+    function requestBuyOrderFromCurrentBalance(
+        address _token,
+        uint256 _orderAmount,
+        address _receiver
+    ) external nonReentrant whenNotPaused returns (uint) {
         require(_token != address(0), "invalid token address");
         require(_receiver != address(0), "invalid address");
         require(_orderAmount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        require(
+            isOperator[msg.sender] || msg.sender == owner(),
+            "Not authorized Sender For Buy And Sell"
+        );
         uint256 fees = calculateFees(_orderAmount);
-        
+
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
         order.recipient = _receiver;
         order.assetToken = address(_token);
         order.paymentTokenQuantity = _orderAmount;
         uint256 quantityIn = order.paymentTokenQuantity + fees;
-       
-        
+
         IERC20(usdc).approve(address(issuer), quantityIn);
-        
+
         uint256 id = issuer.createOrderStandardFees(order);
         // orderInstanceById[id] = order;
         emit BuyRequest(id, block.timestamp, _orderAmount);
@@ -160,59 +179,82 @@ contract OrderManager is
         // return 1;
     }
 
-
-    function requestSellOrder(address _token, uint256 _amount, address _receiver) external nonReentrant whenNotPaused returns(uint) {
+    function requestSellOrder(
+        address _token,
+        uint256 _amount,
+        address _receiver
+    ) external nonReentrant whenNotPaused returns (uint) {
         require(_token != address(0), "invalid token address");
         require(_receiver != address(0), "invalid address");
         require(_amount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
-        
+        require(
+            isOperator[msg.sender] || msg.sender == owner(),
+            "Not authorized Sender For Buy And Sell"
+        );
+
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
         order.assetTokenQuantity = _amount;
         order.recipient = _receiver;
-        
-        require(IERC20(_token).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
-        
-        
+
+        require(
+            IERC20(_token).transferFrom(msg.sender, address(this), _amount),
+            "Transfer failed"
+        );
+
         IERC20(_token).approve(address(issuer), _amount);
         uint256 id = issuer.createOrderStandardFees(order);
-       
+
         return id;
     }
 
-    function requestSellOrderFromCurrentBalance(address _token, uint256 _amount, address _receiver) external nonReentrant whenNotPaused returns(uint) {
+    function requestSellOrderFromCurrentBalance(
+        address _token,
+        uint256 _amount,
+        address _receiver
+    ) external nonReentrant whenNotPaused returns (uint) {
         require(_token != address(0), "invalid token address");
         require(_receiver != address(0), "invalid address");
         require(_amount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
-        
+        require(
+            isOperator[msg.sender] || msg.sender == owner(),
+            "Not authorized Sender For Buy And Sell"
+        );
+
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
         order.assetTokenQuantity = _amount;
         order.recipient = _receiver;
-        
-        
+
         IERC20(_token).approve(address(issuer), _amount);
-       
+
         uint256 id = issuer.createOrderStandardFees(order);
-        
+
         return id;
     }
 
-    function withdrawFunds(address _token, address _to, uint256 _amount) external {
+    function withdrawFunds(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) external {
         require(_token != address(0), "invalid token address");
         require(_to != address(0), "invalid address");
         require(_amount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        require(
+            isOperator[msg.sender] || msg.sender == owner(),
+            "Not authorized Sender For Buy And Sell"
+        );
         emit FundsWithdrawn(_token, _to, _amount);
         require(IERC20(_token).transfer(_to, _amount), "Transfer failed");
     }
 
     function cancelOrder(uint256 _requestId) external whenNotPaused {
         require(_requestId > 0, "Invalid Request Id");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        require(
+            isOperator[msg.sender] || msg.sender == owner(),
+            "Not authorized Sender For Buy And Sell"
+        );
         issuer.requestCancel(_requestId);
     }
-    
 }
