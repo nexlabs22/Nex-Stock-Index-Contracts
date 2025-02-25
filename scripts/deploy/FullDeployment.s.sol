@@ -20,7 +20,7 @@ contract FullDeployment is Script {
     // We detect which chain we’re deploying to. E.g. "sepolia", "arbitrum_mainnet", etc.
     string public targetChain;
 
-    address public constant PRE_DEPLOYED_ORDER_MANAGER = 0x0666056AcFaFf5EDB09F01Da15fe99d3B4eEE5F9;
+    // address public constant PRE_DEPLOYED_ORDER_MANAGER = 0x0666056AcFaFf5EDB09F01Da15fe99d3B4eEE5F9;
 
     address public functionsRouter;
     bytes32 public newDonId;
@@ -47,8 +47,8 @@ contract FullDeployment is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        targetChain = "sepolia";
-        // targetChain = "arbitrum_mainnet";
+        // targetChain = "sepolia";
+        targetChain = "arbitrum_mainnet";
 
         _initChainVariables();
 
@@ -208,9 +208,14 @@ contract FullDeployment is Script {
         }
 
         console.log("\n=== Using Pre-Deployed OrderManager ===");
-        console.log("OrderManager address:", PRE_DEPLOYED_ORDER_MANAGER);
+        // console.log("OrderManager address:", PRE_DEPLOYED_ORDER_MANAGER);
 
         console.log("\n=== Post-Deployment Linking ===");
+
+        // ===============================
+        // 8. Deploy OrderManager
+        // ===============================
+        _deployOrderManager();
 
         vm.stopBroadcast();
     }
@@ -248,26 +253,21 @@ contract FullDeployment is Script {
         }
     }
 
-    // function _deployOrderManager() internal returns (address orderManagerProxy) {
-    //     console.log("\n=== Deploying OrderManager ===");
+    function _deployOrderManager() internal returns (address orderManagerProxy) {
+        console.log("\n=== Deploying OrderManager ===");
 
-    //     ProxyAdmin omProxyAdmin = new ProxyAdmin(msg.sender);
-    //     OrderManager omImplementation = new OrderManager();
+        ProxyAdmin omProxyAdmin = new ProxyAdmin(msg.sender);
+        OrderManager omImplementation = new OrderManager();
 
-    //     bytes memory data = abi.encodeWithSignature(
-    //         "initialize(address,uint8,address)",
-    //         usdc,
-    //         usdcDecimals,
-    //         issuer
-    //     );
+        bytes memory data = abi.encodeWithSignature("initialize(address,uint8,address)", usdc, usdcDecimals, issuer);
 
-    //     TransparentUpgradeableProxy proxy =
-    //         new TransparentUpgradeableProxy(address(omImplementation), address(omProxyAdmin), data);
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(omImplementation), address(omProxyAdmin), data);
 
-    //     orderManagerProxy = address(proxy);
+        orderManagerProxy = address(proxy);
 
-    //     console.log("OrderManager implementation:", address(omImplementation));
-    //     console.log("OrderManager proxy:", orderManagerProxy);
-    //     console.log("OrderManager proxy admin:", address(omProxyAdmin));
-    // }
+        console.log("OrderManager implementation:", address(omImplementation));
+        console.log("OrderManager proxy:", orderManagerProxy);
+        console.log("OrderManager proxy admin:", address(omProxyAdmin));
+    }
 }

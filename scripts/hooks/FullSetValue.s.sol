@@ -22,8 +22,8 @@ contract SetAllValues is Script {
 
     address public functionsOracleProxy;
 
-    string public targetChain = "sepolia";
-    // string public targetChain = "arbitrum_mainnet";
+    // string public targetChain = "sepolia";
+    string public targetChain = "arbitrum_mainnet";
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -61,53 +61,53 @@ contract SetAllValues is Script {
         IndexFactoryStorage(indexFactoryStorageProxy).setFactoryProcessor(factoryProcessorProxy);
         IndexFactoryStorage(indexFactoryStorageProxy).setFactoryBalancer(indexFactoryBalancerProxy);
 
-        _setWrappedDShares();
+        _setPriceFeedAddresses();
     }
 
-    function _setWrappedDShares() internal {
-        console.log("== Setting wrapped dShares on IndexFactoryStorage ==");
+    // function _setWrappedDShares() internal {
+    //     console.log("== Setting wrapped dShares on IndexFactoryStorage ==");
 
-        address[] memory dShares = new address[](7);
-        address[] memory wrappedDshares = new address[](7);
+    //     address[] memory dShares = new address[](7);
+    //     address[] memory wrappedDshares = new address[](7);
 
-        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            dShares[0] = vm.envAddress("SEPOLIA_APPLE_DSHARE_ADDRESS");
-            dShares[1] = vm.envAddress("SEPOLIA_MSFT_DSHARE_ADDRESS");
-            dShares[2] = vm.envAddress("SEPOLIA_NVDA_DSHARE_ADDRESS");
-            dShares[3] = vm.envAddress("SEPOLIA_AMZN_DSHARE_ADDRESS");
-            dShares[4] = vm.envAddress("SEPOLIA_GOOG_DSHARE_ADDRESS");
-            dShares[5] = vm.envAddress("SEPOLIA_META_DSHARE_ADDRESS");
-            dShares[6] = vm.envAddress("SEPOLIA_TSLA_DSHARE_ADDRESS");
+    //     if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
+    //         dShares[0] = vm.envAddress("SEPOLIA_APPLE_DSHARE_ADDRESS");
+    //         dShares[1] = vm.envAddress("SEPOLIA_MSFT_DSHARE_ADDRESS");
+    //         dShares[2] = vm.envAddress("SEPOLIA_NVDA_DSHARE_ADDRESS");
+    //         dShares[3] = vm.envAddress("SEPOLIA_AMZN_DSHARE_ADDRESS");
+    //         dShares[4] = vm.envAddress("SEPOLIA_GOOG_DSHARE_ADDRESS");
+    //         dShares[5] = vm.envAddress("SEPOLIA_META_DSHARE_ADDRESS");
+    //         dShares[6] = vm.envAddress("SEPOLIA_TSLA_DSHARE_ADDRESS");
 
-            wrappedDshares[0] = vm.envAddress("SEPOLIA_APPLE_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[1] = vm.envAddress("SEPOLIA_MSFT_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[2] = vm.envAddress("SEPOLIA_NVDA_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[3] = vm.envAddress("SEPOLIA_AMZN_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[4] = vm.envAddress("SEPOLIA_GOOG_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[5] = vm.envAddress("SEPOLIA_META_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[6] = vm.envAddress("SEPOLIA_TSLA_WRAPPED_DSHARE_ADDRESS");
-        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            dShares[0] = vm.envAddress("ARBITRUM_APPLE_DSHARE_ADDRESS");
-            dShares[1] = vm.envAddress("ARBITRUM_MSFT_DSHARE_ADDRESS");
-            dShares[2] = vm.envAddress("ARBITRUM_NVDA_DSHARE_ADDRESS");
-            dShares[3] = vm.envAddress("ARBITRUM_AMZN_DSHARE_ADDRESS");
-            dShares[4] = vm.envAddress("ARBITRUM_GOOG_DSHARE_ADDRESS");
-            dShares[5] = vm.envAddress("ARBITRUM_META_DSHARE_ADDRESS");
-            dShares[6] = vm.envAddress("ARBITRUM_TSLA_DSHARE_ADDRESS");
+    //         wrappedDshares[0] = vm.envAddress("SEPOLIA_APPLE_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[1] = vm.envAddress("SEPOLIA_MSFT_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[2] = vm.envAddress("SEPOLIA_NVDA_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[3] = vm.envAddress("SEPOLIA_AMZN_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[4] = vm.envAddress("SEPOLIA_GOOG_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[5] = vm.envAddress("SEPOLIA_META_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[6] = vm.envAddress("SEPOLIA_TSLA_WRAPPED_DSHARE_ADDRESS");
+    //     } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
+    //         dShares[0] = vm.envAddress("ARBITRUM_APPLE_DSHARE_ADDRESS");
+    //         dShares[1] = vm.envAddress("ARBITRUM_MSFT_DSHARE_ADDRESS");
+    //         dShares[2] = vm.envAddress("ARBITRUM_NVDA_DSHARE_ADDRESS");
+    //         dShares[3] = vm.envAddress("ARBITRUM_AMZN_DSHARE_ADDRESS");
+    //         dShares[4] = vm.envAddress("ARBITRUM_GOOG_DSHARE_ADDRESS");
+    //         dShares[5] = vm.envAddress("ARBITRUM_META_DSHARE_ADDRESS");
+    //         dShares[6] = vm.envAddress("ARBITRUM_TSLA_DSHARE_ADDRESS");
 
-            wrappedDshares[0] = vm.envAddress("ARBITRUM_APPLE_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[1] = vm.envAddress("ARBITRUM_MSFT_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[2] = vm.envAddress("ARBITRUM_NVDA_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[3] = vm.envAddress("ARBITRUM_AMZN_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[4] = vm.envAddress("ARBITRUM_GOOG_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[5] = vm.envAddress("ARBITRUM_META_WRAPPED_DSHARE_ADDRESS");
-            wrappedDshares[6] = vm.envAddress("ARBITRUM_TSLA_WRAPPED_DSHARE_ADDRESS");
-        } else {
-            revert("Unsupported target chain (wrapped dShares)");
-        }
+    //         wrappedDshares[0] = vm.envAddress("ARBITRUM_APPLE_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[1] = vm.envAddress("ARBITRUM_MSFT_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[2] = vm.envAddress("ARBITRUM_NVDA_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[3] = vm.envAddress("ARBITRUM_AMZN_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[4] = vm.envAddress("ARBITRUM_GOOG_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[5] = vm.envAddress("ARBITRUM_META_WRAPPED_DSHARE_ADDRESS");
+    //         wrappedDshares[6] = vm.envAddress("ARBITRUM_TSLA_WRAPPED_DSHARE_ADDRESS");
+    //     } else {
+    //         revert("Unsupported target chain (wrapped dShares)");
+    //     }
 
-        IndexFactoryStorage(indexFactoryStorageProxy).setWrappedDShareAddresses(dShares, wrappedDshares);
-    }
+    //     IndexFactoryStorage(indexFactoryStorageProxy).setWrappedDShareAddresses(dShares, wrappedDshares);
+    // }
 
     // ---------------------------------------------------------------------
     // Step 2: set minters in IndexToken
@@ -200,5 +200,69 @@ contract SetAllValues is Script {
         } else {
             revert("Unsupported target chain");
         }
+    }
+
+    function _setPriceFeedAddresses() public {
+        console.log("== Setting Price feed dShares on IndexFactoryStorage ==");
+
+        address[] memory dShares = new address[](7);
+        address[] memory wrappedDshares = new address[](7);
+        address[] memory priceFeedAddresses = new address[](7);
+
+        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
+            dShares[0] = vm.envAddress("SEPOLIA_APPLE_DSHARE_ADDRESS");
+            dShares[1] = vm.envAddress("SEPOLIA_MSFT_DSHARE_ADDRESS");
+            dShares[2] = vm.envAddress("SEPOLIA_NVDA_DSHARE_ADDRESS");
+            dShares[3] = vm.envAddress("SEPOLIA_AMZN_DSHARE_ADDRESS");
+            dShares[4] = vm.envAddress("SEPOLIA_GOOG_DSHARE_ADDRESS");
+            dShares[5] = vm.envAddress("SEPOLIA_META_DSHARE_ADDRESS");
+            dShares[6] = vm.envAddress("SEPOLIA_TSLA_DSHARE_ADDRESS");
+
+            wrappedDshares[0] = vm.envAddress("SEPOLIA_APPLE_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[1] = vm.envAddress("SEPOLIA_MSFT_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[2] = vm.envAddress("SEPOLIA_NVDA_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[3] = vm.envAddress("SEPOLIA_AMZN_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[4] = vm.envAddress("SEPOLIA_GOOG_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[5] = vm.envAddress("SEPOLIA_META_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[6] = vm.envAddress("SEPOLIA_TSLA_WRAPPED_DSHARE_ADDRESS");
+
+            priceFeedAddresses[0] = vm.envAddress("SEPOLIA_APPLE_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[1] = vm.envAddress("SEPOLIA_MSFT_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[2] = vm.envAddress("SEPOLIA_NVDA_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[3] = vm.envAddress("SEPOLIA_AMZN_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[4] = vm.envAddress("SEPOLIA_GOOG_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[5] = vm.envAddress("SEPOLIA_META_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[6] = vm.envAddress("SEPOLIA_TSLA_PRICE_FEED_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
+            dShares[0] = vm.envAddress("ARBITRUM_APPLE_DSHARE_ADDRESS");
+            dShares[1] = vm.envAddress("ARBITRUM_MSFT_DSHARE_ADDRESS");
+            dShares[2] = vm.envAddress("ARBITRUM_NVDA_DSHARE_ADDRESS");
+            dShares[3] = vm.envAddress("ARBITRUM_AMZN_DSHARE_ADDRESS");
+            dShares[4] = vm.envAddress("ARBITRUM_GOOG_DSHARE_ADDRESS");
+            dShares[5] = vm.envAddress("ARBITRUM_META_DSHARE_ADDRESS");
+            dShares[6] = vm.envAddress("ARBITRUM_TSLA_DSHARE_ADDRESS");
+
+            wrappedDshares[0] = vm.envAddress("ARBITRUM_APPLE_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[1] = vm.envAddress("ARBITRUM_MSFT_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[2] = vm.envAddress("ARBITRUM_NVDA_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[3] = vm.envAddress("ARBITRUM_AMZN_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[4] = vm.envAddress("ARBITRUM_GOOG_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[5] = vm.envAddress("ARBITRUM_META_WRAPPED_DSHARE_ADDRESS");
+            wrappedDshares[6] = vm.envAddress("ARBITRUM_TSLA_WRAPPED_DSHARE_ADDRESS");
+
+            priceFeedAddresses[0] = vm.envAddress("ARBITRUM_APPLE_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[1] = vm.envAddress("ARBITRUM_MSFT_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[2] = vm.envAddress("ARBITRUM_NVDA_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[3] = vm.envAddress("ARBITRUM_AMZN_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[4] = vm.envAddress("ARBITRUM_GOOG_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[5] = vm.envAddress("ARBITRUM_META_PRICE_FEED_ADDRESS");
+            priceFeedAddresses[6] = vm.envAddress("ARBITRUM_TSLA_PRICE_FEED_ADDRESS");
+        } else {
+            revert("Unsupported target chain (wrapped dShares)");
+        }
+
+        IndexFactoryStorage(indexFactoryStorageProxy).setWrappedDshareAndPriceFeedAddresses(
+            dShares, wrappedDshares, priceFeedAddresses
+        );
     }
 }
