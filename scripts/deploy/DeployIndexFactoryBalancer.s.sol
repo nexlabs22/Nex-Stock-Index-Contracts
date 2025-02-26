@@ -14,6 +14,8 @@ contract DeployIndexFactoryBalancer is Script {
         string memory targetChain = "sepolia";
         // string memory targetChain = "arbitrum_mainnet";
 
+        address deployer = vm.addr(deployerPrivateKey);
+
         address indexFactoryStorageProxy;
         address functionsOracleProxy;
 
@@ -29,14 +31,14 @@ contract DeployIndexFactoryBalancer is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
+        ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
         IndexFactoryBalancer indexFactoryBalancerImplementation = new IndexFactoryBalancer();
 
         bytes memory data =
             abi.encodeWithSignature("initialize(address,address)", indexFactoryStorageProxy, functionsOracleProxy);
 
         TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(indexFactoryBalancerImplementation), address(proxyAdmin), data);
+            new TransparentUpgradeableProxy(address(indexFactoryBalancerImplementation), deployer, data);
 
         console.log("IndexFactoryBalancer implementation deployed at:", address(indexFactoryBalancerImplementation));
         console.log("IndexFactoryBalancer proxy deployed at:", address(proxy));

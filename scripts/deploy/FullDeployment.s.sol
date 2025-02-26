@@ -20,7 +20,7 @@ contract FullDeployment is Script {
     // We detect which chain we’re deploying to. E.g. "sepolia", "arbitrum_mainnet", etc.
     string public targetChain;
 
-    // address public constant PRE_DEPLOYED_ORDER_MANAGER = 0x0666056AcFaFf5EDB09F01Da15fe99d3B4eEE5F9;
+    address public constant PRE_DEPLOYED_ORDER_MANAGER = 0x0666056AcFaFf5EDB09F01Da15fe99d3B4eEE5F9;
 
     address public functionsRouter;
     bytes32 public newDonId;
@@ -43,12 +43,17 @@ contract FullDeployment is Script {
     address public indexFactoryProcessorProxy;
     address public indexFactoryBalancerProxy;
     address public indexFactoryProxy;
+    // address public owner = 0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        // targetChain = "sepolia";
-        targetChain = "arbitrum_mainnet";
+        address owner = vm.addr(deployerPrivateKey);
+
+        console.log("Owner address", owner);
+
+        targetChain = "sepolia";
+        // targetChain = "arbitrum_mainnet";
 
         _initChainVariables();
 
@@ -59,7 +64,7 @@ contract FullDeployment is Script {
         // ===============================
         console.log("\n=== Deploying FunctionsOracle ===");
         {
-            ProxyAdmin oracleProxyAdmin = new ProxyAdmin(msg.sender);
+            ProxyAdmin oracleProxyAdmin = new ProxyAdmin(owner);
             FunctionsOracle oracleImplementation = new FunctionsOracle();
 
             bytes memory data = abi.encodeWithSignature("initialize(address,bytes32)", functionsRouter, newDonId);
@@ -79,7 +84,7 @@ contract FullDeployment is Script {
         // ===============================
         console.log("\n=== Deploying IndexToken ===");
         {
-            ProxyAdmin indexTokenProxyAdmin = new ProxyAdmin(msg.sender);
+            ProxyAdmin indexTokenProxyAdmin = new ProxyAdmin(owner);
             IndexToken indexTokenImplementation = new IndexToken();
 
             bytes memory data = abi.encodeWithSignature(
@@ -105,7 +110,7 @@ contract FullDeployment is Script {
         // ===============================
         console.log("\n=== Deploying NexVault ===");
         {
-            ProxyAdmin vaultProxyAdmin = new ProxyAdmin(msg.sender);
+            ProxyAdmin vaultProxyAdmin = new ProxyAdmin(owner);
             NexVault nexVaultImplementation = new NexVault();
 
             bytes memory data = abi.encodeWithSignature("initialize(address)", address(0));
@@ -124,7 +129,7 @@ contract FullDeployment is Script {
         // ===============================
         console.log("\n=== Deploying IndexFactoryStorage ===");
         {
-            ProxyAdmin storageProxyAdmin = new ProxyAdmin(msg.sender);
+            ProxyAdmin storageProxyAdmin = new ProxyAdmin(owner);
             IndexFactoryStorage storageImplementation = new IndexFactoryStorage();
 
             bytes memory data = abi.encodeWithSignature(
@@ -152,7 +157,7 @@ contract FullDeployment is Script {
         // ===============================
         console.log("\n=== Deploying IndexFactoryProcessor ===");
         {
-            ProxyAdmin processorProxyAdmin = new ProxyAdmin(msg.sender);
+            ProxyAdmin processorProxyAdmin = new ProxyAdmin(owner);
             IndexFactoryProcessor processorImplementation = new IndexFactoryProcessor();
 
             bytes memory data =
@@ -172,7 +177,7 @@ contract FullDeployment is Script {
         // ===============================
         console.log("\n=== Deploying IndexFactoryBalancer ===");
         {
-            ProxyAdmin balancerProxyAdmin = new ProxyAdmin(msg.sender);
+            ProxyAdmin balancerProxyAdmin = new ProxyAdmin(owner);
             IndexFactoryBalancer balancerImplementation = new IndexFactoryBalancer();
 
             bytes memory data =
@@ -192,7 +197,7 @@ contract FullDeployment is Script {
         // ===============================
         console.log("\n=== Deploying IndexFactory ===");
         {
-            ProxyAdmin factoryProxyAdmin = new ProxyAdmin(msg.sender);
+            ProxyAdmin factoryProxyAdmin = new ProxyAdmin(owner);
             IndexFactory factoryImplementation = new IndexFactory();
 
             bytes memory data =
@@ -208,14 +213,14 @@ contract FullDeployment is Script {
         }
 
         console.log("\n=== Using Pre-Deployed OrderManager ===");
-        // console.log("OrderManager address:", PRE_DEPLOYED_ORDER_MANAGER);
+        console.log("OrderManager address:", PRE_DEPLOYED_ORDER_MANAGER);
 
         console.log("\n=== Post-Deployment Linking ===");
 
         // ===============================
         // 8. Deploy OrderManager
         // ===============================
-        _deployOrderManager();
+        // _deployOrderManager();
 
         vm.stopBroadcast();
     }
@@ -253,21 +258,21 @@ contract FullDeployment is Script {
         }
     }
 
-    function _deployOrderManager() internal returns (address orderManagerProxy) {
-        console.log("\n=== Deploying OrderManager ===");
+    // function _deployOrderManager() internal returns (address orderManagerProxy) {
+    //     console.log("\n=== Deploying OrderManager ===");
 
-        ProxyAdmin omProxyAdmin = new ProxyAdmin(msg.sender);
-        OrderManager omImplementation = new OrderManager();
+    //     ProxyAdmin omProxyAdmin = new ProxyAdmin(owner);
+    //     OrderManager omImplementation = new OrderManager();
 
-        bytes memory data = abi.encodeWithSignature("initialize(address,uint8,address)", usdc, usdcDecimals, issuer);
+    //     bytes memory data = abi.encodeWithSignature("initialize(address,uint8,address)", usdc, usdcDecimals, issuer);
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(omImplementation), address(omProxyAdmin), data);
+    //     TransparentUpgradeableProxy proxy =
+    //         new TransparentUpgradeableProxy(address(omImplementation), address(omProxyAdmin), data);
 
-        orderManagerProxy = address(proxy);
+    //     orderManagerProxy = address(proxy);
 
-        console.log("OrderManager implementation:", address(omImplementation));
-        console.log("OrderManager proxy:", orderManagerProxy);
-        console.log("OrderManager proxy admin:", address(omProxyAdmin));
-    }
+    //     console.log("OrderManager implementation:", address(omImplementation));
+    //     console.log("OrderManager proxy:", orderManagerProxy);
+    //     console.log("OrderManager proxy admin:", address(omProxyAdmin));
+    // }
 }
