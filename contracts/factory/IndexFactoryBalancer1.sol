@@ -22,12 +22,10 @@ import "./IndexFactoryStorage.sol";
 import "./OrderManager.sol";
 import "./FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath2;
+// import "./IndexFactoryBalancer.sol";
 
-/// @title Index Token Factory
-/// @author NEX Labs Protocol
-/// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-/// @custom:oz-upgrades-from IndexFactoryBalancer1
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancer
+contract IndexFactoryBalancer1 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -305,6 +303,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function version() public view returns (uint256) {
-        return 7;
+        return 5;
     }
 }
