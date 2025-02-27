@@ -10,40 +10,23 @@ import "openzeppelin-foundry-upgrades/Upgrades.sol";
 import "../../contracts/factory/IndexFactoryStorage.sol";
 
 contract DeployIndexFactoryStorage is Script {
-    function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = "sepolia";
-
+    struct ChainVars {
         address functionsOracleProxy;
         address issuer;
         address indexTokenProxy;
         address nexVaultProxy;
         address usdc;
         uint8 usdcDecimals;
-
         bool isMainnet;
+    }
+
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        string memory targetChain = "sepolia";
+
+        ChainVars memory vars = _getChainVars(targetChain);
 
         address owner = vm.addr(deployerPrivateKey);
-
-        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
-            issuer = vm.envAddress("SEPOLIA_ISSUER_ADDRESS");
-            indexTokenProxy = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
-            nexVaultProxy = vm.envAddress("SEPOLIA_VAULT_PROXY_ADDRESS");
-            usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
-            usdcDecimals = uint8(vm.envUint("SEPOLIA_USDC_DECIMALS"));
-            isMainnet = false;
-        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            functionsOracleProxy = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
-            issuer = vm.envAddress("ARBITRUM_ISSUER_ADDRESS");
-            indexTokenProxy = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
-            nexVaultProxy = vm.envAddress("ARBITRUM_VAULT_PROXY_ADDRESS");
-            usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
-            usdcDecimals = uint8(vm.envUint("ARBITRUM_USDC_DECIMALS"));
-            isMainnet = true;
-        } else {
-            revert("Unsupported target chain");
-        }
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -52,12 +35,19 @@ contract DeployIndexFactoryStorage is Script {
             owner,
             abi.encodeCall(
                 IndexFactoryStorage.initialize,
-                (issuer, indexTokenProxy, nexVaultProxy, usdc, usdcDecimals, functionsOracleProxy, isMainnet)
+                (
+                    vars.issuer,
+                    vars.indexTokenProxy,
+                    vars.nexVaultProxy,
+                    vars.usdc,
+                    vars.usdcDecimals,
+                    vars.functionsOracleProxy,
+                    vars.isMainnet
+                )
             )
         );
 
         IndexFactoryStorage indexFactoryStorageImplementation = IndexFactoryStorage(proxy);
-
         address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("IndexFactoryStorage implementation deployed at:", address(indexFactoryStorageImplementation));
@@ -65,5 +55,31 @@ contract DeployIndexFactoryStorage is Script {
         console.log("ProxyAdmin for IndexFactoryStorage deployed at:", address(proxyAdmin));
 
         vm.stopBroadcast();
+    }
+
+    function _getChainVars(string memory targetChain) internal view returns (ChainVars memory) {
+        ChainVars memory vars;
+
+        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
+            vars.functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+            vars.issuer = vm.envAddress("SEPOLIA_ISSUER_ADDRESS");
+            vars.indexTokenProxy = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
+            vars.nexVaultProxy = vm.envAddress("SEPOLIA_VAULT_PROXY_ADDRESS");
+            vars.usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
+            vars.usdcDecimals = uint8(vm.envUint("SEPOLIA_USDC_DECIMALS"));
+            vars.isMainnet = false;
+        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
+            vars.functionsOracleProxy = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+            vars.issuer = vm.envAddress("ARBITRUM_ISSUER_ADDRESS");
+            vars.indexTokenProxy = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
+            vars.nexVaultProxy = vm.envAddress("ARBITRUM_VAULT_PROXY_ADDRESS");
+            vars.usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
+            vars.usdcDecimals = uint8(vm.envUint("ARBITRUM_USDC_DECIMALS"));
+            vars.isMainnet = true;
+        } else {
+            revert("Unsupported target chain");
+        }
+
+        return vars;
     }
 }
