@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {IndexFactoryStorage} from "../../../../contracts/factory/IndexFactoryStorage.sol";
 
@@ -15,35 +16,23 @@ contract UpgradeIndexFactoryStorage is Script {
 
         string memory targetChain = "sepolia";
 
-        address proxyAdminAddress;
         address indexFactoryStorageProxyAddress;
 
+        address owner = vm.addr(deployerPrivateKey);
+
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            proxyAdminAddress = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADMIN_ADDRESS");
             indexFactoryStorageProxyAddress = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            proxyAdminAddress = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADMIN_ADDRESS");
             indexFactoryStorageProxyAddress = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
 
-        IndexFactoryStorage newIndexFactoryStorageImplementation = new IndexFactoryStorage();
-        console.log(
-            "New IndexFactoryStorage implementation deployed at:", address(newIndexFactoryStorageImplementation)
-        );
+        Upgrades.upgradeProxy(indexFactoryStorageProxyAddress, "IndexFactoryStorage.sol", "", owner);
 
-        ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgradeAndCall(
-            ITransparentUpgradeableProxy(payable(indexFactoryStorageProxyAddress)),
-            address(newIndexFactoryStorageImplementation),
-            ""
-        );
+        address implAddrV2 = Upgrades.getImplementationAddress(indexFactoryStorageProxyAddress);
 
-        console.log(
-            "IndexFactoryStorage proxy upgraded to new implementation at:",
-            address(newIndexFactoryStorageImplementation)
-        );
+        console.log("IndexFactoryStorage proxy upgraded to new implementation at: ", address(implAddrV2));
 
         vm.stopBroadcast();
     }

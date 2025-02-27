@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/factory/IndexFactoryProcessor.sol";
 
@@ -18,6 +19,8 @@ contract DeployIndexFactoryProcessor is Script {
         address indexFactoryStorageProxy;
         address functionOracleProxy;
 
+        address owner = vm.addr(deployerPrivateKey);
+
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
             functionOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
@@ -29,15 +32,15 @@ contract DeployIndexFactoryProcessor is Script {
         }
 
         vm.startBroadcast(deployerPrivateKey);
+        address proxy = Upgrades.deployTransparentProxy(
+            "IndexFactoryProcessor.sol",
+            owner,
+            abi.encodeCall(IndexFactoryProcessor.initialize, (indexFactoryStorageProxy, functionOracleProxy))
+        );
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        IndexFactoryProcessor indexFactoryProcessorImplementation = new IndexFactoryProcessor();
+        IndexFactoryProcessor indexFactoryProcessorImplementation = IndexFactoryProcessor(proxy);
 
-        bytes memory data =
-            abi.encodeWithSignature("initialize(address,address)", indexFactoryStorageProxy, functionOracleProxy);
-
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(indexFactoryProcessorImplementation), address(proxyAdmin), data);
+        address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("IndexFactoryProcessor implementation deployed at:", address(indexFactoryProcessorImplementation));
         console.log("IndexFactoryProcessor proxy deployed at:", address(proxy));

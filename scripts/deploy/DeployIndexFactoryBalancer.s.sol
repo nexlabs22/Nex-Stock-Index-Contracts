@@ -51,19 +51,6 @@ contract DeployIndexFactoryBalancer is Script {
         console.log("IndexFactoryBalancer proxy deployed at:", address(proxy));
         console.log("ProxyAdmin for IndexFactoryBalancer deployed at:", address(adminAddr));
 
-        // ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
-        // IndexFactoryBalancer indexFactoryBalancerImplementation = new IndexFactoryBalancer();
-
-        // bytes memory data =
-        //     abi.encodeWithSignature("initialize(address,address)", indexFactoryStorageProxy, functionsOracleProxy);
-
-        // TransparentUpgradeableProxy proxy =
-        //     new TransparentUpgradeableProxy(address(indexFactoryBalancerImplementation), deployer, data);
-
-        // console.log("IndexFactoryBalancer implementation deployed at:", address(indexFactoryBalancerImplementation));
-        // console.log("IndexFactoryBalancer proxy deployed at:", address(proxy));
-        // console.log("ProxyAdmin for IndexFactoryBalancer deployed at:", address(proxyAdmin));
-
         vm.stopBroadcast();
     }
 }

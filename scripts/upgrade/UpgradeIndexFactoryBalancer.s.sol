@@ -16,61 +16,23 @@ contract UpgradeIndexFactoryBalancer is Script {
 
         string memory targetChain = "sepolia";
 
-        address deployer = vm.addr(deployerPrivateKey);
-
-        address indexFactoryStorageProxy;
-        address functionsOracleProxy;
-
-        address proxyAdminAddress;
         address indexFactoryBalancerProxyAddress;
 
         address owner = vm.addr(deployerPrivateKey);
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            // proxyAdminAddress = 0x274F17Ad5b14F4e69b9e383b83904D09775252aE;
-            // indexFactoryBalancerProxyAddress = 0x64426341EFe86044666b6F3FA49f17896bA3b910;
-            // proxyAdminAddress = vm.envAddress("SEPOLIA_INDEX_FACTORY_BALANCER_PROXY_ADMIN_ADDRESS");
             indexFactoryBalancerProxyAddress = vm.envAddress("SEPOLIA_INDEX_FACTORY_BALANCER_PROXY_ADDRESS");
-            // indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
-            // functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            proxyAdminAddress = vm.envAddress("ARBITRUM_INDEX_FACTORY_BALANCER_PROXY_ADMIN_ADDRESS");
             indexFactoryBalancerProxyAddress = vm.envAddress("ARBITRUM_INDEX_FACTORY_BALANCER_PROXY_ADDRESS");
-            // indexFactoryStorageProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
-            // functionsOracleProxy = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
 
         Upgrades.upgradeProxy(indexFactoryBalancerProxyAddress, "IndexFactoryBalancer.sol", "", owner);
-        // Upgrades.upgradeProxy(indexFactoryBalancerProxyAddress, "IndexFactoryBalancer1.sol", "", owner);
 
         address implAddrV2 = Upgrades.getImplementationAddress(indexFactoryBalancerProxyAddress);
 
         console.log("IndexFactoryBalancer proxy upgraded to new implementation at: ", address(implAddrV2));
-
-        // IndexFactoryBalancer newIndexFactoryBalanacerImplementation = new IndexFactoryBalancer();
-        // console.log(
-        //     "New IndexFactoryBalancer implementation deployed at:", address(newIndexFactoryBalanacerImplementation)
-        // );
-
-        // bytes memory data =
-        //     abi.encodeWithSignature("initialize(address,address)", indexFactoryStorageProxy, functionsOracleProxy);
-
-        // ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        // proxyAdmin.upgradeAndCall(
-        //     ITransparentUpgradeableProxy(indexFactoryBalancerProxyAddress),
-        //     address(newIndexFactoryBalanacerImplementation),
-        //     // deployer,
-        //     data
-        // );
-        // // bytes("")
-        // // bytes("")
-
-        // console.log(
-        //     "IndexFactoryBalancer proxy upgraded to new implementation at:",
-        //     address(newIndexFactoryBalanacerImplementation)
-        // );
 
         vm.stopBroadcast();
     }

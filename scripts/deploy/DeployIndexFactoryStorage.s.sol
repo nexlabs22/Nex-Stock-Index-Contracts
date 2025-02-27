@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/factory/IndexFactoryStorage.sol";
 
@@ -21,6 +22,8 @@ contract DeployIndexFactoryStorage is Script {
         uint8 usdcDecimals;
 
         bool isMainnet;
+
+        address owner = vm.addr(deployerPrivateKey);
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
@@ -44,22 +47,18 @@ contract DeployIndexFactoryStorage is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        IndexFactoryStorage indexFactoryStorageImplementation = new IndexFactoryStorage();
-
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address,uint8,address,bool)",
-            issuer,
-            indexTokenProxy,
-            nexVaultProxy,
-            usdc,
-            usdcDecimals,
-            functionsOracleProxy,
-            isMainnet
+        address proxy = Upgrades.deployTransparentProxy(
+            "IndexFactoryStorage.sol",
+            owner,
+            abi.encodeCall(
+                IndexFactoryStorage.initialize,
+                (issuer, indexTokenProxy, nexVaultProxy, usdc, usdcDecimals, functionsOracleProxy, isMainnet)
+            )
         );
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(indexFactoryStorageImplementation), address(proxyAdmin), data);
+        IndexFactoryStorage indexFactoryStorageImplementation = IndexFactoryStorage(proxy);
+
+        address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("IndexFactoryStorage implementation deployed at:", address(indexFactoryStorageImplementation));
         console.log("IndexFactoryStorage proxy deployed at:", address(proxy));

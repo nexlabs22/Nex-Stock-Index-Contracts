@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {IndexFactory} from "../../../../contracts/factory/IndexFactory.sol";
 
@@ -15,28 +16,23 @@ contract UpgradeIndexFactory is Script {
 
         string memory targetChain = "sepolia";
 
-        address proxyAdminAddress;
         address indexFactoryProxyAddress;
 
+        address owner = vm.addr(deployerPrivateKey);
+
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            proxyAdminAddress = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROXY_ADMIN_ADDRESS");
             indexFactoryProxyAddress = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            proxyAdminAddress = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROXY_ADMIN_ADDRESS");
             indexFactoryProxyAddress = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
 
-        IndexFactory newIndexFactoryImplementation = new IndexFactory();
-        console.log("New IndexFactory implementation deployed at:", address(newIndexFactoryImplementation));
+        Upgrades.upgradeProxy(indexFactoryProxyAddress, "IndexFactory.sol", "", owner);
 
-        ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgradeAndCall(
-            ITransparentUpgradeableProxy(payable(indexFactoryProxyAddress)), address(newIndexFactoryImplementation), ""
-        );
+        address implAddrV2 = Upgrades.getImplementationAddress(indexFactoryProxyAddress);
 
-        console.log("IndexFactory proxy upgraded to new implementation at:", address(newIndexFactoryImplementation));
+        console.log("IndexFactory proxy upgraded to new implementation at: ", address(implAddrV2));
 
         vm.stopBroadcast();
     }
