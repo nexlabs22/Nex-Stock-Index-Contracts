@@ -1,5 +1,7 @@
 node_modules
 .env
+testnetDeployment.md
+mainnetDeployment.md
 
 # Hardhat files
 /cache
@@ -8,6 +10,7 @@ node_modules
 cache/
 cache_forge
 out/
+broadcast/
 
 # TypeChain files
 /typechain
