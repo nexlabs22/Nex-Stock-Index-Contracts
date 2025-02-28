@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/factory/FunctionsOracle.sol";
 
@@ -14,6 +15,8 @@ contract DeployFunctionsOracle is Script {
 
         string memory targetChain = "sepolia";
         // string memory targetChain = "arbitrum_mainnet";
+
+        address owner = vm.addr(deployerPrivateKey);
 
         address functionsRouterAddress;
         bytes32 newDonId;
@@ -30,13 +33,13 @@ contract DeployFunctionsOracle is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        FunctionsOracle functionsOracleImplementation = new FunctionsOracle();
+        address proxy = Upgrades.deployTransparentProxy(
+            "FunctionsOracle.sol", owner, abi.encodeCall(FunctionsOracle.initialize, (functionsRouterAddress, newDonId))
+        );
 
-        bytes memory data = abi.encodeWithSignature("initialize(address,bytes32)", functionsRouterAddress, newDonId);
+        FunctionsOracle functionsOracleImplementation = FunctionsOracle(proxy);
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(functionsOracleImplementation), address(proxyAdmin), data);
+        address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("FunctionsOracle implementation deployed at:", address(functionsOracleImplementation));
         console.log("FunctionsOracle proxy deployed at:", address(proxy));

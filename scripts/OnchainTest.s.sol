@@ -31,9 +31,13 @@ contract OnchainTest is Script {
 
         // completeIssunace();
 
-        redemption();
+        // redemption();
+
+        firstRebalance();
 
         // secondRebalance();
+
+        // completeRebalance();
 
         vm.stopBroadcast();
     }
@@ -51,7 +55,15 @@ contract OnchainTest is Script {
         IndexFactoryProcessor(factoryProcessor).completeIssuance(2);
     }
 
+    function firstRebalance() public {
+        IndexFactoryBalancer(indexFactoryBalancerProxy).firstRebalanceAction();
+    }
+
     function secondRebalance() public {
         IndexFactoryBalancer(indexFactoryBalancerProxy).secondRebalanceAction(1);
+    }
+
+    function completeRebalance() public {
+        IndexFactoryBalancer(indexFactoryBalancerProxy).completeRebalanceActions(1);
     }
 }

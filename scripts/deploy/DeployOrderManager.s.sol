@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/factory/OrderManager.sol";
 
@@ -12,11 +13,14 @@ contract DeployOrderManager is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         address usdc;
         uint8 usdcDecimals;
         address issuer;
+
+        address owner = vm.addr(deployerPrivateKey);
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
@@ -32,13 +36,13 @@ contract DeployOrderManager is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        OrderManager orderManagerImplementation = new OrderManager();
+        address proxy = Upgrades.deployTransparentProxy(
+            "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdc, usdcDecimals, issuer))
+        );
 
-        bytes memory data = abi.encodeWithSignature("initialize(address,uint8,address)", usdc, usdcDecimals, issuer);
+        OrderManager orderManagerImplementation = OrderManager(proxy);
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(orderManagerImplementation), address(proxyAdmin), data);
+        address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("OrderManager implementation deployed at:", address(orderManagerImplementation));
         console.log("OrderManager proxy deployed at:", address(proxy));

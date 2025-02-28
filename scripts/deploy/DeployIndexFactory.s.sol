@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/factory/IndexFactory.sol";
 
@@ -18,6 +19,8 @@ contract DeployIndexFactory is Script {
         address indexFactoryStorageProxy;
         address functionsOracleProxy;
 
+        address owner = vm.addr(deployerPrivateKey);
+
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
             functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
@@ -30,14 +33,15 @@ contract DeployIndexFactory is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        IndexFactory indexFactoryImplementation = new IndexFactory();
+        address proxy = Upgrades.deployTransparentProxy(
+            "IndexFactory.sol",
+            owner,
+            abi.encodeCall(IndexFactory.initialize, (indexFactoryStorageProxy, functionsOracleProxy))
+        );
 
-        bytes memory data =
-            abi.encodeWithSignature("initialize(address,address)", indexFactoryStorageProxy, functionsOracleProxy);
+        IndexFactory indexFactoryImplementation = IndexFactory(proxy);
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(indexFactoryImplementation), address(proxyAdmin), data);
+        address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("IndexFactory implementation deployed at:", address(indexFactoryImplementation));
         console.log("IndexFactory proxy deployed at:", address(proxy));

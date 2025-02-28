@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/vault/NexVault.sol";
 
@@ -12,15 +13,16 @@ contract DeployNexVault is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
+        address owner = vm.addr(deployerPrivateKey);
+
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        NexVault nexVaultImplementation = new NexVault();
+        address proxy =
+            Upgrades.deployTransparentProxy("NexVault.sol", owner, abi.encodeCall(NexVault.initialize, (address(0))));
 
-        bytes memory data = abi.encodeWithSignature("initialize(address)", address(0));
+        NexVault nexVaultImplementation = NexVault(proxy);
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(nexVaultImplementation), address(proxyAdmin), data);
+        address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("NexVault implementation deployed at:", address(nexVaultImplementation));
         console.log("NexVault proxy deployed at:", address(proxy));

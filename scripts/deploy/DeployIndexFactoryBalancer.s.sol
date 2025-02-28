@@ -5,16 +5,22 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/factory/IndexFactoryBalancer.sol";
 
 contract DeployIndexFactoryBalancer is Script {
+    IndexFactoryBalancer public factoryBalancer;
+
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         string memory targetChain = "sepolia";
         // string memory targetChain = "arbitrum_mainnet";
 
-        address deployer = vm.addr(deployerPrivateKey);
+        // address deployer = vm.addr(deployerPrivateKey);
+
+        address owner = vm.addr(deployerPrivateKey);
 
         address indexFactoryStorageProxy;
         address functionsOracleProxy;
@@ -31,18 +37,19 @@ contract DeployIndexFactoryBalancer is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
-        IndexFactoryBalancer indexFactoryBalancerImplementation = new IndexFactoryBalancer();
+        address proxy = Upgrades.deployTransparentProxy(
+            "IndexFactoryBalancer.sol",
+            owner,
+            abi.encodeCall(IndexFactoryBalancer.initialize, (indexFactoryStorageProxy, functionsOracleProxy))
+        );
 
-        bytes memory data =
-            abi.encodeWithSignature("initialize(address,address)", indexFactoryStorageProxy, functionsOracleProxy);
+        IndexFactoryBalancer indexFactoryBalancerImplementation = IndexFactoryBalancer(proxy);
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(indexFactoryBalancerImplementation), deployer, data);
+        address adminAddr = Upgrades.getAdminAddress(proxy);
 
         console.log("IndexFactoryBalancer implementation deployed at:", address(indexFactoryBalancerImplementation));
         console.log("IndexFactoryBalancer proxy deployed at:", address(proxy));
-        console.log("ProxyAdmin for IndexFactoryBalancer deployed at:", address(proxyAdmin));
+        console.log("ProxyAdmin for IndexFactoryBalancer deployed at:", address(adminAddr));
 
         vm.stopBroadcast();
     }

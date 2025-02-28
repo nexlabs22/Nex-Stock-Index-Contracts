@@ -47,6 +47,9 @@ contract SetAllValues is Script {
         // 5. Set NexVault operators
         _setVaultValues();
 
+        // 5. Set FunctionsOracle operators
+        _setFunctionsOracleValues();
+
         vm.stopBroadcast();
     }
 
@@ -63,6 +66,11 @@ contract SetAllValues is Script {
 
         // _setPriceFeedAddresses();
         _setWrappedDShares();
+    }
+
+    function _setFunctionsOracleValues() internal {
+        console.log("== Setting FunctionsOracle Values ==");
+        FunctionsOracle(functionsOracleProxy).setFactoryBalancer(indexFactoryBalancerProxy);
     }
 
     function _setWrappedDShares() internal {

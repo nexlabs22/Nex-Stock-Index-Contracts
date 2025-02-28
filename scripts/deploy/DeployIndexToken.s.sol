@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {IndexToken} from "../../contracts/token/IndexToken.sol";
 
@@ -20,6 +21,8 @@ contract DeployIndexToken is Script {
         address feeReceiver;
         uint256 supplyCeiling;
 
+        address owner = vm.addr(deployerPrivateKey);
+
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             feeRatePerDayScaled = vm.envUint("SEPOLIA_FEE_RATE_PER_DAY_SCALED");
             feeReceiver = vm.envAddress("SEPOLIA_FEE_RECEIVER");
@@ -34,20 +37,17 @@ contract DeployIndexToken is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        IndexToken indexTokenImplementation = new IndexToken();
-
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(string,string,uint256,address,uint256)",
-            tokenName,
-            tokenSymbol,
-            feeRatePerDayScaled,
-            feeReceiver,
-            supplyCeiling
+        address proxy = Upgrades.deployTransparentProxy(
+            "IndexToken.sol",
+            owner,
+            abi.encodeCall(
+                IndexToken.initialize, (tokenName, tokenSymbol, feeRatePerDayScaled, feeReceiver, supplyCeiling)
+            )
         );
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(indexTokenImplementation), address(proxyAdmin), data);
+        IndexToken indexTokenImplementation = IndexToken(proxy);
+
+        address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
         console.log("IndexToken implementation deployed at:", address(indexTokenImplementation));
         console.log("IndexToken proxy deployed at:", address(proxy));

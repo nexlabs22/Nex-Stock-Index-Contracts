@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "../../contracts/factory/OrderManager.sol";
 
@@ -13,30 +14,26 @@ contract UpgradeOrderManager is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
-        address proxyAdminAddress;
         address orderManagerProxyAddress;
 
+        address owner = vm.addr(deployerPrivateKey);
+
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            proxyAdminAddress = vm.envAddress("SEPOLIA_ORDER_MANAGER_PROXY_ADMIN_ADDRESS");
             orderManagerProxyAddress = vm.envAddress("SEPOLIA_ORDER_MANAGER_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            proxyAdminAddress = vm.envAddress("ARBITRUM_ORDER_MANAGER_PROXY_ADMIN_ADDRESS");
             orderManagerProxyAddress = vm.envAddress("ARBITRUM_ORDER_MANAGER_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
 
-        OrderManager newOrderManagerImplementation = new OrderManager();
-        console.log("New OrderManager implementation deployed at:", address(newOrderManagerImplementation));
+        Upgrades.upgradeProxy(orderManagerProxyAddress, "OrderManager.sol", "", owner);
 
-        ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        proxyAdmin.upgradeAndCall(
-            ITransparentUpgradeableProxy(payable(orderManagerProxyAddress)), address(newOrderManagerImplementation), ""
-        );
+        address implAddrV2 = Upgrades.getImplementationAddress(orderManagerProxyAddress);
 
-        console.log("OrderManager proxy upgraded to new implementation at:", address(newOrderManagerImplementation));
+        console.log("OrderManager proxy upgraded to new implementation at: ", address(implAddrV2));
 
         vm.stopBroadcast();
     }
