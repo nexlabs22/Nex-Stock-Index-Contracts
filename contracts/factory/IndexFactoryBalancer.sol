@@ -131,16 +131,20 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             if (tokenValuePercent > functionsOracle.tokenOracleMarketShare(tokenAddress)) {
                 uint256 amount = tokenBalance
                     - ((tokenBalance * functionsOracle.tokenOracleMarketShare(tokenAddress)) / tokenValuePercent);
+                if(tokenValue * amount / tokenBalance > 1e18) {
                 (uint256 requestId, uint256 assetAmount) =
                     requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
                 actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
                 rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
                 rebalanceSellAssetAmountById[requestId] = amount;
+                }
             } else {
                 uint256 shortagePercent = functionsOracle.tokenOracleMarketShare(tokenAddress) - tokenValuePercent;
+                if((_portfolioValue * shortagePercent)/100e18 > 1e18) {
                 tokenShortagePercentByNonce[_rebalanceNonce][tokenAddress] = shortagePercent;
                 totalShortagePercentByNonce[_rebalanceNonce] += shortagePercent;
             }
+        }
         }
     }
 
