@@ -97,7 +97,7 @@ contract IndexFactoryBalancer is
                     1_000_000,
                     (1_000_000 + percentageFeeRate)
                 )
-                : 0;
+                : orderValue;
     }
 
    
