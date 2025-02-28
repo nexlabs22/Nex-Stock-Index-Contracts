@@ -7,7 +7,7 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import "../../contracts/factory/IndexFactoryBalancer1.sol";
+// import "../../contracts/factory/IndexFactoryBalancer1.sol";
 
 contract UpgradeIndexFactoryBalancer is Script {
     function run() external {
