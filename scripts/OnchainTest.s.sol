@@ -27,13 +27,13 @@ contract OnchainTest is Script {
 
         // string memory targetChain = "sepolia";
 
-        // issuanceIndexTokensWithUSDC();
+        issuanceIndexTokensWithUSDC();
 
         // completeIssunace();
 
         // redemption();
 
-        firstRebalance();
+        // firstRebalance();
 
         // secondRebalance();
 
