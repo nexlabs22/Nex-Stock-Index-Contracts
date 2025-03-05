@@ -8,17 +8,25 @@ import {IndexFactory} from "../../contracts/factory/IndexFactory.sol";
 import "../../contracts/token/IndexToken.sol";
 import "../../contracts/factory/IndexFactoryProcessor.sol";
 import "../contracts/factory/IndexFactoryBalancer.sol";
+import "../contracts/factory/IndexFactoryStorage.sol";
 
 contract OnchainTest is Script {
     IndexToken indexToken;
 
     address user = vm.envAddress("USER");
     // address weth = vm.envAddress("SEPOLIA_WETH_ADDRESS");
-    address usdt = vm.envAddress("SEPOLIA_USDC_ADDRESS");
-    address indexFactoryProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROXY_ADDRESS");
-    address indexTokenProxy = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
-    address factoryProcessor = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROCESSOR_PROXY_ADDRESS");
-    address indexFactoryBalancerProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_BALANCER_PROXY_ADDRESS");
+    // address usdt = vm.envAddress("SEPOLIA_USDC_ADDRESS");
+    // address indexFactoryProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROXY_ADDRESS");
+    // address indexTokenProxy = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
+    // address factoryProcessor = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROCESSOR_PROXY_ADDRESS");
+    // address indexFactoryBalancerProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_BALANCER_PROXY_ADDRESS");
+
+    address usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
+    address indexFactoryProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROXY_ADDRESS");
+    address indexTokenProxy = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
+    address factoryProcessor = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROCESSOR_PROXY_ADDRESS");
+    address indexFactoryBalancerProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_BALANCER_PROXY_ADDRESS");
+    address indexFactoryStorageProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -47,8 +55,13 @@ contract OnchainTest is Script {
     }
 
     function issuanceIndexTokensWithUSDC() public {
-        IERC20(usdt).approve(indexFactoryProxy, type(uint256).max);
-        IndexFactory(payable(indexFactoryProxy)).issuanceIndexTokens(100e6);
+        uint256 inputAmount = 20e6;
+        uint256 feeAmount = IndexFactoryStorage(indexFactoryStorageProxy).calculateIssuanceFee(inputAmount);
+        uint256 quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
+
+        IERC20(usdc).approve(indexFactoryProxy, quantityIn);
+        IndexFactory(payable(indexFactoryProxy)).issuanceIndexTokens(20e6);
+        // IndexFactory(payable(indexFactoryProxy)).issuanceIndexTokens(100e6);
     }
 
     function completeIssunace() public {

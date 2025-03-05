@@ -52,23 +52,23 @@ contract SetMockOracleData is Script {
             revert("Unsupported target chain");
         }
 
-        // uint256[] memory marketShares = new uint256[](7);
-        // marketShares[0] = 9820000000000000000; // 9.82
-        // marketShares[1] = 17660000000000000000; // 17.66
-        // marketShares[2] = 16510000000000000000; // 16.51
-        // marketShares[3] = 14430000000000000000; // 14.43
-        // marketShares[4] = 14280000000000000000; // 14.28
-        // marketShares[5] = 20170000000000000000; // 20.17
-        // marketShares[6] = 7130000000000000000; // 7.13
-
         uint256[] memory marketShares = new uint256[](7);
-        marketShares[0] = 19820000000000000000; // 19.82
+        marketShares[0] = 9820000000000000000; // 9.82
         marketShares[1] = 17660000000000000000; // 17.66
         marketShares[2] = 16510000000000000000; // 16.51
         marketShares[3] = 14430000000000000000; // 14.43
         marketShares[4] = 14280000000000000000; // 14.28
-        marketShares[5] = 10170000000000000000; // 10.17
+        marketShares[5] = 20170000000000000000; // 20.17
         marketShares[6] = 7130000000000000000; // 7.13
+
+        // uint256[] memory marketShares = new uint256[](7);
+        // marketShares[0] = 19820000000000000000; // 19.82
+        // marketShares[1] = 17660000000000000000; // 17.66
+        // marketShares[2] = 16510000000000000000; // 16.51
+        // marketShares[3] = 14430000000000000000; // 14.43
+        // marketShares[4] = 14280000000000000000; // 14.28
+        // marketShares[5] = 10170000000000000000; // 10.17
+        // marketShares[6] = 7130000000000000000; // 7.13
 
         FunctionsOracle(functionOracleProxy).mockFillAssetsList(dShares, marketShares);
     }
