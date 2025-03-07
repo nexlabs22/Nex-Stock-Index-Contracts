@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 
-import {IndexFactoryV2} from "../../contracts/factory/IndexFactoryV2.sol";
+import {IndexFactory} from "../../contracts/factory/IndexFactory.sol";
 import "../../contracts/token/IndexToken.sol";
 import "../../contracts/factory/IndexFactoryProcessor.sol";
 import "../contracts/factory/IndexFactoryBalancer.sol";
@@ -51,7 +51,7 @@ contract OnchainTest is Script {
     }
 
     function redemption() public {
-        IndexFactoryV2(payable(indexFactoryProxy)).redemption(IERC20(indexTokenProxy).balanceOf(user));
+        IndexFactory(payable(indexFactoryProxy)).redemption(IERC20(indexTokenProxy).balanceOf(user));
     }
 
     function issuanceIndexTokensWithUSDC() public {
@@ -60,7 +60,7 @@ contract OnchainTest is Script {
         uint256 quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
 
         IERC20(usdc).approve(indexFactoryProxy, quantityIn);
-        IndexFactoryV2(payable(indexFactoryProxy)).issuanceIndexTokens(20e6);
+        IndexFactory(payable(indexFactoryProxy)).issuanceIndexTokens(20e6);
         // IndexFactory(payable(indexFactoryProxy)).issuanceIndexTokens(100e6);
     }
 

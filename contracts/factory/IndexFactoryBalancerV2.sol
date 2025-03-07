@@ -26,7 +26,13 @@ import "../libraries/Commen.sol" as PrbMath2;
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancer
+contract IndexFactoryBalancerV2 is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -103,7 +109,12 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         IOrderProcessor issuer = factoryStorage.issuer();
         uint8 decimalReduction = issuer.orderDecimalReduction(_token);
 
-        uint256 orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+        uint256 orderAmount;
+        if (decimalReduction > 0) {
+            orderAmount = _amount - (_amount % 10 ** (decimalReduction - 1));
+        } else {
+            orderAmount = _amount;
+        }
         uint256 extraAmount = orderAmount0 - orderAmount;
 
         if (extraAmount > 0) {
