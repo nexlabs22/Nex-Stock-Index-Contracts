@@ -20,7 +20,8 @@ import "./FunctionsOracle.sol";
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactory
+contract IndexFactoryV2 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -179,7 +180,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         //rounding order
         IOrderProcessor issuer = factoryStorage.issuer();
         uint8 decimalReduction = issuer.orderDecimalReduction(_token);
-
         uint256 orderAmount;
         if (decimalReduction > 0) {
             orderAmount = _amount - (_amount % 10 ** (decimalReduction - 1));

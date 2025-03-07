@@ -102,7 +102,12 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         //rounding order
         IOrderProcessor issuer = factoryStorage.issuer();
         uint8 decimalReduction = issuer.orderDecimalReduction(_token);
-        uint256 orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+        uint256 orderAmount;
+        if (decimalReduction > 0) {
+            orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+        } else {
+            orderAmount = orderAmount0;
+        }
         uint256 extraAmount = orderAmount0 - orderAmount;
 
         if (extraAmount > 0) {

@@ -7,14 +7,13 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import {IndexFactory} from "../../../../contracts/factory/IndexFactory.sol";
-
 contract UpgradeIndexFactory is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         address indexFactoryProxyAddress;
 
@@ -28,7 +27,7 @@ contract UpgradeIndexFactory is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(indexFactoryProxyAddress, "IndexFactory.sol", "", owner);
+        Upgrades.upgradeProxy(indexFactoryProxyAddress, "IndexFactoryV2.sol", "", owner);
 
         address implAddrV2 = Upgrades.getImplementationAddress(indexFactoryProxyAddress);
 
