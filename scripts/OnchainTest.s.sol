@@ -39,9 +39,9 @@ contract OnchainTest is Script {
 
         // completeIssunace();
 
-        redemption();
+        // redemption();
 
-        // firstRebalance();
+        firstRebalance();
 
         // secondRebalance();
 
