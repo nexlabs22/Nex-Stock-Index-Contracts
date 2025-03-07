@@ -26,7 +26,13 @@ import "../libraries/Commen.sol" as PrbMath2;
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancerV3
+contract IndexFactoryBalancerV4 is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -103,7 +109,12 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         IOrderProcessor issuer = factoryStorage.issuer();
         uint8 decimalReduction = issuer.orderDecimalReduction(_token);
 
-        uint256 orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+        uint256 orderAmount;
+        if (decimalReduction > 0) {
+            orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+        } else {
+            orderAmount = orderAmount0;
+        }
         uint256 extraAmount = orderAmount0 - orderAmount;
 
         if (extraAmount > 0) {
@@ -127,7 +138,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenValue = tokenValueByNonce[_rebalanceNonce][tokenAddress];
-            uint256 tokenBalance = factoryStorage.getVaultDshareBalance(tokenAddress);
+            address wrappedDshare = factoryStorage.wrappedDshareAddress(tokenAddress);
+            uint256 tokenBalance = IERC20(wrappedDshare).balanceOf(address(factoryStorage.vault()));
             uint256 tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
             if (tokenValuePercent > functionsOracle.tokenOracleMarketShare(tokenAddress)) {
                 uint256 amount = tokenBalance
