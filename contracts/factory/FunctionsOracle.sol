@@ -165,12 +165,7 @@ contract FunctionsOracle is
         }
     }
 
-    function mockFillAssetsList(address[] memory _tokens, uint256[] memory _marketShares)
-    public
-    onlyOwner
-    {
-        _initData(_tokens, _marketShares);
-    }
+    
     
 
     
