@@ -88,6 +88,6 @@ contract SetIndexFactoryStorageValues is Script {
             revert("Unsupported target chain");
         }
 
-        IndexFactoryStorage(indexFactoryStorageProxy).setWrappedDShareAddresses(dShares, wrappedDshares);
+        // IndexFactoryStorage(indexFactoryStorageProxy).setWrappedDShareAddresses(dShares, wrappedDshares);
     }
 }

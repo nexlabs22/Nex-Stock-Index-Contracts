@@ -774,7 +774,7 @@ contract IndexFactoryTest is Test {
         wrappedDshareList[8] = address(wrappedToken8);
         wrappedDshareList[9] = address(wrappedToken9);
 
-        factoryStorage.setWrappedDShareAddresses(assetList, wrappedDshareList);
+        // factoryStorage.setWrappedDShareAddresses(assetList, wrappedDshareList);
     }
 
     function updatePriceFeeds() public {
@@ -802,7 +802,24 @@ contract IndexFactoryTest is Test {
         priceFeedList[8] = address(priceFeed8);
         priceFeedList[9] = address(priceFeed9);
 
-        factoryStorage.setPriceFeedAddresses(assetList, priceFeedList);
+        address[] memory wrappedDshareList = new address[](10);
+        wrappedDshareList[0] = address(wrappedToken0);
+        wrappedDshareList[1] = address(wrappedToken1);
+        wrappedDshareList[2] = address(wrappedToken2);
+        wrappedDshareList[3] = address(wrappedToken3);
+        wrappedDshareList[4] = address(wrappedToken4);
+        wrappedDshareList[5] = address(wrappedToken5);
+        wrappedDshareList[6] = address(wrappedToken6);
+        wrappedDshareList[7] = address(wrappedToken7);
+        wrappedDshareList[8] = address(wrappedToken8);
+        wrappedDshareList[9] = address(wrappedToken9);
+
+        // factoryStorage.setPriceFeedAddresses(assetList, priceFeedList);
+        factoryStorage.setWrappedDshareAndPriceFeedAddresses(
+            assetList,
+            wrappedDshareList,
+            priceFeedList
+        );
     }
 
     function _initData() public {

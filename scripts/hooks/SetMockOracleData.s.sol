@@ -70,6 +70,6 @@ contract SetMockOracleData is Script {
         marketShares[5] = 10170000000000000000; // 10.17
         marketShares[6] = 7130000000000000000; // 7.13
 
-        FunctionsOracle(functionOracleProxy).mockFillAssetsList(dShares, marketShares);
+        // FunctionsOracle(functionOracleProxy).mockFillAssetsList(dShares, marketShares);
     }
 }
