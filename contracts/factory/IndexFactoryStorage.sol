@@ -324,18 +324,13 @@ contract IndexFactoryStorage is
         issuanceTokenPrimaryBalance[_issuanceNonce][_token] = _amount;
     }
 
-    function setRedemptionTokenPrimaryBalance(uint _redemptionNonce, address _token, uint _amount) external onlyFactory {
-        require(_token != address(0), "Invalid redemption token address");
-        redemptionTokenPrimaryBalance[_redemptionNonce][_token] = _amount;
-    }
+    
 
     function setIssuanceIndexTokenPrimaryTotalSupply(uint _issuanceNonce, uint _amount) external onlyFactory {
         issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce] = _amount;
     }
 
-    function setRedemptionIndexTokenPrimaryTotalSupply(uint _redemptionNonce, uint _amount) external onlyFactory {
-        redemptionIndexTokenPrimaryTotalSupply[_redemptionNonce] = _amount;
-    }
+    
 
     function setIssuanceInputAmount(uint _issuanceNonce, uint _amount) external onlyFactory {
         require(_amount > 0, "Invalid issuance input amount");
