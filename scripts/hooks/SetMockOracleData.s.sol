@@ -10,8 +10,8 @@ contract SetMockOracleData is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        // string memory targetChain = "sepolia";
-        string memory targetChain = "arbitrum_mainnet";
+        string memory targetChain = "sepolia";
+        // string memory targetChain = "arbitrum_mainnet";
 
         address functionsOracleProxy;
 
@@ -74,3 +74,20 @@ contract SetMockOracleData is Script {
         FunctionsOracle(functionOracleProxy).mockFillAssetsList(dShares, marketShares);
     }
 }
+// Before
+// Apple: 216.98 * 0.4543
+// AMD: 100.79 * 1.7691
+// Nvidia: 115.74 * 1.4239
+// Amzn: 198.89 * 0.7310
+// Blck inch: 55.90 * 2.5618
+// Meta: 619.56 * 0.3267
+// Reddit: 130.68 * 0.5478
+
+// After
+// Apple: 216.98 * 0.9145
+// AMD: 100.79 * 1.7691
+// Nvidia: 115.74 * 1.4239
+// Amzn: 198.89 * 0.7310
+// Blck inch: 55.90 * 2.5618
+// Meta: 619.56 * 0.1647
+// Reddit: 130.68 * 0.5478

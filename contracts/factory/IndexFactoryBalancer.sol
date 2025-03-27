@@ -26,13 +26,7 @@ import "../libraries/Commen.sol" as PrbMath2;
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-/// @custom:oz-upgrades-from IndexFactoryBalancerV3
-contract IndexFactoryBalancerV4 is
-    Initializable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable
-{
+contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -259,6 +253,7 @@ contract IndexFactoryBalancerV4 is
     }
 
     function checkFirstRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
+        require(_rebalanceNonce > rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
@@ -276,6 +271,7 @@ contract IndexFactoryBalancerV4 is
     }
 
     function checkSecondRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
+        require(_rebalanceNonce > rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
