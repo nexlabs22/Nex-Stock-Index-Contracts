@@ -17,7 +17,8 @@ import {OrderManager} from "../../contracts/factory/OrderManager.sol";
 contract FullDeployment is Script {
     string public targetChain; // e.g. "sepolia" or "arbitrum_mainnet"
 
-    address public constant PRE_DEPLOYED_ORDER_MANAGER = 0x0666056AcFaFf5EDB09F01Da15fe99d3B4eEE5F9;
+    // address public constant PRE_DEPLOYED_ORDER_MANAGER = 0x0666056AcFaFf5EDB09F01Da15fe99d3B4eEE5F9;
+    address public constant PRE_DEPLOYED_ORDER_MANAGER = 0xB79962F154cD86dFBa1EF8BA5Aa224771a1aB2f2;
 
     address public functionsRouter;
     bytes32 public newDonId;
@@ -47,8 +48,8 @@ contract FullDeployment is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
 
-        targetChain = "sepolia";
-        // targetChain = "arbitrum_mainnet";
+        // targetChain = "sepolia";
+        targetChain = "arbitrum_mainnet";
 
         _initChainVariables();
 
@@ -201,16 +202,16 @@ contract FullDeployment is Script {
         vm.stopBroadcast();
     }
 
-    function _deployOrderManager(address owner) internal returns (address) {
-        console.log("\n=== Deploying OrderManager ===");
+    // function _deployOrderManager(address owner) internal returns (address) {
+    //     console.log("\n=== Deploying OrderManager ===");
 
-        address proxy = Upgrades.deployTransparentProxy(
-            "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdc, usdcDecimals, issuer))
-        );
-        console.log("OrderManager proxy:", proxy);
-        console.log("ProxyAdmin for OrderManager:", Upgrades.getAdminAddress(proxy));
-        return proxy;
-    }
+    //     address proxy = Upgrades.deployTransparentProxy(
+    //         "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdc, usdcDecimals, issuer))
+    //     );
+    //     console.log("OrderManager proxy:", proxy);
+    //     console.log("ProxyAdmin for OrderManager:", Upgrades.getAdminAddress(proxy));
+    //     return proxy;
+    // }
 
     // =========================
     // _initChainVariables

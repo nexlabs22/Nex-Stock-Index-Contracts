@@ -14,7 +14,8 @@ contract UpgradeIndexFactoryBalancer is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         address indexFactoryBalancerProxyAddress;
 
@@ -28,7 +29,7 @@ contract UpgradeIndexFactoryBalancer is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(indexFactoryBalancerProxyAddress, "IndexFactoryBalancer.sol", "", owner);
+        Upgrades.upgradeProxy(indexFactoryBalancerProxyAddress, "IndexFactoryBalancerV4.sol", "", owner);
 
         address implAddrV2 = Upgrades.getImplementationAddress(indexFactoryBalancerProxyAddress);
 
