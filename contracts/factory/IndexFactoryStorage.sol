@@ -94,6 +94,9 @@ contract IndexFactoryStorage is
     mapping(uint => mapping(address => uint)) public cancelIssuanceUnfilledAmount;
     mapping(uint => mapping(address => uint)) public cancelRedemptionUnfilledAmount;
 
+    mapping(address => uint) public tokenPendingRebalanceAmount;
+    mapping(address => mapping(uint => uint)) public tokenPendingRebalanceAmountByNonce;
+
     /// @notice Initializes the contract with the given parameters
     /// @param _issuer The address of the issuer
     /// @param _token The address of the token
@@ -251,6 +254,21 @@ contract IndexFactoryStorage is
     function setFactoryProcessor(address _factoryProcessorAddress) public onlyOwner {
         require(_factoryProcessorAddress != address(0), "invalid factory processor address");
         factoryProcessorAddress = _factoryProcessorAddress;
+    }
+
+    function increaseTokenPendingRebalanceAmount(address _token, uint _nonce, uint _amount) external onlyFactory {
+        require(_token != address(0), "invalid token address");
+        require(_amount > 0, "Invalid amount");
+        tokenPendingRebalanceAmount[_token] += _amount;
+        tokenPendingRebalanceAmountByNonce[_token][_nonce] += _amount;
+    }
+    
+    function decreaseTokenPendingRebalanceAmount(address _token, uint _nonce, uint _amount) external onlyFactory {
+        require(_token != address(0), "invalid token address");
+        require(_amount > 0, "Invalid amount");
+        require(tokenPendingRebalanceAmount[_token] >= _amount, "Insufficient pending rebalance amount");
+        tokenPendingRebalanceAmount[_token] -= _amount;
+        tokenPendingRebalanceAmountByNonce[_token][_nonce] -= _amount;
     }
 
     function increaseIssuanceNonce() external onlyFactory {

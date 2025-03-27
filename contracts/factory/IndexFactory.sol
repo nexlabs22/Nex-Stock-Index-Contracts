@@ -80,7 +80,13 @@ contract IndexFactory is
     );
 
     
-
+    modifier onlyOwnerOrOperatorOrBalancer() {
+        require(
+            msg.sender == owner() || functionsOracle.isOperator(msg.sender) || msg.sender == factoryStorage.factoryBalancerAddress(),
+            "Caller is not the owner or operator or balancer."
+        );
+        _;
+    }
     /**
      * @dev Initializes the contract with the given factory storage address.
      * @param _factoryStorage The address of the factory storage contract.
@@ -387,14 +393,14 @@ contract IndexFactory is
     /**
      * @dev Pauses the contract.
      */
-    function pause() external onlyOwner {
+    function pause() external onlyOwnerOrOperatorOrBalancer {
         _pause();
     }
 
     /**
      * @dev Unpauses the contract.
      */
-    function unpause() external onlyOwner {
+    function unpause() external onlyOwnerOrOperatorOrBalancer {
         _unpause();
     }
 

@@ -1467,8 +1467,11 @@ contract IndexFactoryTest is Test {
         );
 
         updateOracleList2();
-
+        assertEq(factory.paused(), false);
+        console.log(factoryStorage.getIndexTokenPrice());
         uint nonce = factoryBalancer.firstRebalanceAction();
+        console.log(factoryStorage.getIndexTokenPrice());
+        assertEq(factory.paused(), true);
 
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
@@ -1549,6 +1552,7 @@ contract IndexFactoryTest is Test {
 
         vm.prank(admin);
         factoryBalancer.secondRebalanceAction(nonce);
+        console.log(factoryStorage.getIndexTokenPrice());
         for (uint i = 0; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
@@ -1587,7 +1591,8 @@ contract IndexFactoryTest is Test {
         vm.prank(admin);
 
         factoryBalancer.completeRebalanceActions(nonce);
-
+        console.log(factoryStorage.getIndexTokenPrice());
+        assertEq(factory.paused(), false);
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)) /
                 1e18,
