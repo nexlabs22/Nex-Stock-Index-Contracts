@@ -56,6 +56,14 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     event SecondRebalanceAction(uint256 nonce, uint time);
     event CompleteRebalanceActions(uint256 nonce, uint time);
 
+    modifier onlyOwnerOrOperator() {
+        require(
+            msg.sender == owner() || functionsOracle.isOperator(msg.sender),
+            "Only owner or operator can call this function"
+        );
+        _;
+    }
+
     function initialize(address _factoryStorage, address _functionsOracle) external initializer {
         require(_factoryStorage != address(0), "invalid token address");
         require(_functionsOracle != address(0), "invalid functions oracle address");
@@ -161,7 +169,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
     }
 
-    function firstRebalanceAction() public nonReentrant onlyOwner returns (uint256) {
+    function firstRebalanceAction() public nonReentrant onlyOwnerOrOperator returns (uint256) {
         pauseIndexFactory();
         rebalanceNonce += 1;
         uint256 portfolioValue;
@@ -206,7 +214,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
     }
 
-    function secondRebalanceAction(uint256 _rebalanceNonce) public nonReentrant onlyOwner {
+    function secondRebalanceAction(uint256 _rebalanceNonce) public nonReentrant onlyOwnerOrOperator {
         require(checkFirstRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
         uint256 portfolioValue = portfolioValueByNonce[_rebalanceNonce];
         uint256 totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
@@ -252,7 +260,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
     }
 
-    function completeRebalanceActions(uint256 _rebalanceNonce) public nonReentrant onlyOwner {
+    function completeRebalanceActions(uint256 _rebalanceNonce) public nonReentrant onlyOwnerOrOperator {
         require(checkSecondRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
