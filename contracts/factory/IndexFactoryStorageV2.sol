@@ -18,8 +18,7 @@ import "../libraries/Commen.sol" as PrbMath;
 
 /// @title Index Token Factory Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
-/// @custom:oz-upgrades-from IndexFactoryStorageV2
-contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
+contract IndexFactoryStorageV2 is Initializable, OwnableUpgradeable {
     using FunctionsRequest for FunctionsRequest.Request;
 
     struct ActionInfo {
@@ -83,9 +82,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     mapping(uint256 => ActionInfo) public actionInfoById;
     mapping(uint256 => mapping(address => uint256)) public cancelIssuanceUnfilledAmount;
     mapping(uint256 => mapping(address => uint256)) public cancelRedemptionUnfilledAmount;
-
-    mapping(address => uint256) public tokenPendingRebalanceAmount;
-    mapping(address => mapping(uint256 => uint256)) public tokenPendingRebalanceAmountByNonce;
 
     /// @notice Initializes the contract with the given parameters
     /// @param _issuer The address of the issuer
@@ -214,6 +210,20 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         return true;
     }
 
+    function setWrappedDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
+        require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
+        for (uint256 i = 0; i < _dShares.length; i++) {
+            wrappedDshareAddress[_dShares[i]] = _wrappedDShares[i];
+        }
+    }
+
+    function setPriceFeedAddresses(address[] memory _dShares, address[] memory _priceFeedAddresses) public onlyOwner {
+        require(_dShares.length == _priceFeedAddresses.length, "Array length mismatch");
+        for (uint256 i = 0; i < _dShares.length; i++) {
+            priceFeedByTokenAddress[_dShares[i]] = _priceFeedAddresses[i];
+        }
+    }
+
     function setWrappedDshareAndPriceFeedAddresses(
         address[] memory _dShares,
         address[] memory _wrappedDShares,
@@ -240,27 +250,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     function setFactoryProcessor(address _factoryProcessorAddress) public onlyOwner {
         require(_factoryProcessorAddress != address(0), "invalid factory processor address");
         factoryProcessorAddress = _factoryProcessorAddress;
-    }
-
-    function increaseTokenPendingRebalanceAmount(address _token, uint256 _nonce, uint256 _amount)
-        external
-        onlyFactory
-    {
-        require(_token != address(0), "invalid token address");
-        require(_amount > 0, "Invalid amount");
-        tokenPendingRebalanceAmount[_token] += _amount;
-        tokenPendingRebalanceAmountByNonce[_token][_nonce] += _amount;
-    }
-
-    function decreaseTokenPendingRebalanceAmount(address _token, uint256 _nonce, uint256 _amount)
-        external
-        onlyFactory
-    {
-        require(_token != address(0), "invalid token address");
-        require(_amount > 0, "Invalid amount");
-        require(tokenPendingRebalanceAmount[_token] >= _amount, "Insufficient pending rebalance amount");
-        tokenPendingRebalanceAmount[_token] -= _amount;
-        tokenPendingRebalanceAmountByNonce[_token][_nonce] -= _amount;
     }
 
     function increaseIssuanceNonce() external onlyFactory {
@@ -346,8 +335,23 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         issuanceTokenPrimaryBalance[_issuanceNonce][_token] = _amount;
     }
 
+    function setRedemptionTokenPrimaryBalance(uint256 _redemptionNonce, address _token, uint256 _amount)
+        external
+        onlyFactory
+    {
+        require(_token != address(0), "Invalid redemption token address");
+        redemptionTokenPrimaryBalance[_redemptionNonce][_token] = _amount;
+    }
+
     function setIssuanceIndexTokenPrimaryTotalSupply(uint256 _issuanceNonce, uint256 _amount) external onlyFactory {
         issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce] = _amount;
+    }
+
+    function setRedemptionIndexTokenPrimaryTotalSupply(uint256 _redemptionNonce, uint256 _amount)
+        external
+        onlyFactory
+    {
+        redemptionIndexTokenPrimaryTotalSupply[_redemptionNonce] = _amount;
     }
 
     function setIssuanceInputAmount(uint256 _issuanceNonce, uint256 _amount) external onlyFactory {
@@ -410,9 +414,7 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         require(_token != address(0), "invalid token address");
         address wrappedDshareAddress = wrappedDshareAddress[_token];
         uint256 wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
-        uint256 dshareBalance = WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
-        uint256 finalDshareBalance = dshareBalance + tokenPendingRebalanceAmount[_token];
-        return finalDshareBalance;
+        return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
     }
 
     function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) public pure returns (uint256) {
