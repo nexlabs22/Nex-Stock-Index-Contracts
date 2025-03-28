@@ -20,8 +20,8 @@ import "./FunctionsOracle.sol";
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-/// @custom:oz-upgrades-from IndexFactoryV2
-contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactory
+contract IndexFactoryV2 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -68,19 +68,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 time
     );
 
-    modifier onlyOwnerOrOperatorOrBalancer() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender)
-                || msg.sender == factoryStorage.factoryBalancerAddress(),
-            "Caller is not the owner or operator or balancer."
-        );
-        _;
-    }
     /**
      * @dev Initializes the contract with the given factory storage address.
      * @param _factoryStorage The address of the factory storage contract.
      */
-
     function initialize(address _factoryStorage, address _functionsOracle) external initializer {
         require(_factoryStorage != address(0), "invalid factory storage address");
         factoryStorage = IndexFactoryStorage(_factoryStorage);
@@ -400,14 +391,14 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     /**
      * @dev Pauses the contract.
      */
-    function pause() external onlyOwnerOrOperatorOrBalancer {
+    function pause() external onlyOwner {
         _pause();
     }
 
     /**
      * @dev Unpauses the contract.
      */
-    function unpause() external onlyOwnerOrOperatorOrBalancer {
+    function unpause() external onlyOwner {
         _unpause();
     }
 }
