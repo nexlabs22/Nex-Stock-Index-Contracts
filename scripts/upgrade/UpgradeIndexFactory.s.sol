@@ -27,7 +27,7 @@ contract UpgradeIndexFactory is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(indexFactoryProxyAddress, "IndexFactoryV3.sol", "", owner);
+        Upgrades.upgradeProxy(indexFactoryProxyAddress, "IndexFactory.sol", "", owner);
 
         address implAddrV2 = Upgrades.getImplementationAddress(indexFactoryProxyAddress);
 
