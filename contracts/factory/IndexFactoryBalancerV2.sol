@@ -19,7 +19,6 @@ import "../dinary/WrappedDShare.sol";
 // import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 // import "../libraries/Commen.sol" as PrbMath;
 import "./IndexFactoryStorage.sol";
-import "./IndexFactory.sol";
 import "./OrderManager.sol";
 import "./FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath2;
@@ -27,8 +26,13 @@ import "../libraries/Commen.sol" as PrbMath2;
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-/// @custom:oz-upgrades-from IndexFactoryBalancerV4
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancerV3
+contract IndexFactoryBalancerV4 is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -52,18 +56,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     mapping(uint256 => uint256) public totalShortagePercentByNonce;
 
     mapping(uint256 => ActionInfo) public actionInfoById;
-
-    event FirstRebalanceAction(uint256 nonce, uint256 time);
-    event SecondRebalanceAction(uint256 nonce, uint256 time);
-    event CompleteRebalanceActions(uint256 nonce, uint256 time);
-
-    modifier onlyOwnerOrOperator() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender),
-            "Only owner or operator can call this function"
-        );
-        _;
-    }
 
     function initialize(address _factoryStorage, address _functionsOracle) external initializer {
         require(_factoryStorage != address(0), "invalid token address");
@@ -139,7 +131,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         OrderManager orderManager = factoryStorage.orderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         factoryStorage.setOrderInstanceById(id, order);
-        factoryStorage.increaseTokenPendingRebalanceAmount(_token, rebalanceNonce, orderAmount);
         return (id, orderAmount);
     }
 
@@ -170,8 +161,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
     }
 
-    function firstRebalanceAction() public nonReentrant onlyOwnerOrOperator returns (uint256) {
-        pauseIndexFactory();
+    function firstRebalanceAction() public nonReentrant onlyOwner returns (uint256) {
         rebalanceNonce += 1;
         uint256 portfolioValue;
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
@@ -182,7 +172,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
         portfolioValueByNonce[rebalanceNonce] = portfolioValue;
         _sellOverweightedAssets(rebalanceNonce, portfolioValue);
-        emit FirstRebalanceAction(rebalanceNonce, block.timestamp);
         return rebalanceNonce;
     }
 
@@ -215,7 +204,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
     }
 
-    function secondRebalanceAction(uint256 _rebalanceNonce) public nonReentrant onlyOwnerOrOperator {
+    function secondRebalanceAction(uint256 _rebalanceNonce) public nonReentrant onlyOwner {
         require(checkFirstRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
         uint256 portfolioValue = portfolioValueByNonce[_rebalanceNonce];
         uint256 totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
@@ -235,7 +224,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             }
         }
         _buyUnderweightedAssets(_rebalanceNonce, totalShortagePercent, usdcBalance);
-        emit SecondRebalanceAction(_rebalanceNonce, block.timestamp);
     }
 
     function estimateAmountAfterFee(uint256 _amount) public view returns (uint256) {
@@ -245,21 +233,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         return amountAfterFee;
     }
 
-    function updatePendingTokenSellAmounts(uint256 _rebalanceNonce) internal {
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
-            if (requestId > 0) {
-                IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
-                if (order.sell) {
-                    uint256 assetAmount = order.assetTokenQuantity;
-                    factoryStorage.decreaseTokenPendingRebalanceAmount(tokenAddress, _rebalanceNonce, assetAmount);
-                }
-            }
-        }
-    }
-
-    function completeRebalanceActions(uint256 _rebalanceNonce) public nonReentrant onlyOwnerOrOperator {
+    function completeRebalanceActions(uint256 _rebalanceNonce) public nonReentrant onlyOwner {
         require(checkSecondRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
@@ -281,14 +255,10 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                 }
             }
         }
-        updatePendingTokenSellAmounts(_rebalanceNonce);
         functionsOracle.updateCurrentList();
-        unpauseIndexFactory();
-        emit CompleteRebalanceActions(_rebalanceNonce, block.timestamp);
     }
 
     function checkFirstRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
-        require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
@@ -306,7 +276,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function checkSecondRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
-        require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
@@ -349,23 +318,5 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function unpause() external onlyOwner {
         _unpause();
-    }
-
-    // pause index factory when rebalance happens
-    function pauseIndexFactory() internal {
-        address indexFactoryAddress = factoryStorage.factoryAddress();
-        IndexFactory indexFactory = IndexFactory(payable(indexFactoryAddress));
-        if (!indexFactory.paused()) {
-            indexFactory.pause();
-        }
-    }
-
-    // unpause index factory when rebalance is done
-    function unpauseIndexFactory() internal {
-        address indexFactoryAddress = factoryStorage.factoryAddress();
-        IndexFactory indexFactory = IndexFactory(payable(indexFactoryAddress));
-        if (indexFactory.paused()) {
-            indexFactory.unpause();
-        }
     }
 }
