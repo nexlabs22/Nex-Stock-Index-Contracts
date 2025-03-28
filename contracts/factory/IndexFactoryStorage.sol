@@ -94,6 +94,9 @@ contract IndexFactoryStorage is
     mapping(uint => mapping(address => uint)) public cancelIssuanceUnfilledAmount;
     mapping(uint => mapping(address => uint)) public cancelRedemptionUnfilledAmount;
 
+    mapping(address => uint) public tokenPendingRebalanceAmount;
+    mapping(address => mapping(uint => uint)) public tokenPendingRebalanceAmountByNonce;
+
     /// @notice Initializes the contract with the given parameters
     /// @param _issuer The address of the issuer
     /// @param _token The address of the token
@@ -224,19 +227,7 @@ contract IndexFactoryStorage is
         return true;
     }
 
-    function setWrappedDShareAddresses(address[] memory _dShares, address[] memory _wrappedDShares) public onlyOwner {
-        require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
-        for(uint i = 0; i < _dShares.length; i++){
-            wrappedDshareAddress[_dShares[i]] = _wrappedDShares[i];
-        }
-    }
-
-    function setPriceFeedAddresses(address[] memory _dShares, address[] memory _priceFeedAddresses) public onlyOwner {
-        require(_dShares.length == _priceFeedAddresses.length, "Array length mismatch");
-        for(uint i = 0; i < _dShares.length; i++){
-            priceFeedByTokenAddress[_dShares[i]] = _priceFeedAddresses[i];
-        }
-    }
+    
 
     function setWrappedDshareAndPriceFeedAddresses(address[] memory _dShares, address[] memory _wrappedDShares, address[] memory _priceFeedAddresses) public onlyOwner {
         require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
@@ -263,6 +254,21 @@ contract IndexFactoryStorage is
     function setFactoryProcessor(address _factoryProcessorAddress) public onlyOwner {
         require(_factoryProcessorAddress != address(0), "invalid factory processor address");
         factoryProcessorAddress = _factoryProcessorAddress;
+    }
+
+    function increaseTokenPendingRebalanceAmount(address _token, uint _nonce, uint _amount) external onlyFactory {
+        require(_token != address(0), "invalid token address");
+        require(_amount > 0, "Invalid amount");
+        tokenPendingRebalanceAmount[_token] += _amount;
+        tokenPendingRebalanceAmountByNonce[_token][_nonce] += _amount;
+    }
+    
+    function decreaseTokenPendingRebalanceAmount(address _token, uint _nonce, uint _amount) external onlyFactory {
+        require(_token != address(0), "invalid token address");
+        require(_amount > 0, "Invalid amount");
+        require(tokenPendingRebalanceAmount[_token] >= _amount, "Insufficient pending rebalance amount");
+        tokenPendingRebalanceAmount[_token] -= _amount;
+        tokenPendingRebalanceAmountByNonce[_token][_nonce] -= _amount;
     }
 
     function increaseIssuanceNonce() external onlyFactory {
@@ -336,18 +342,13 @@ contract IndexFactoryStorage is
         issuanceTokenPrimaryBalance[_issuanceNonce][_token] = _amount;
     }
 
-    function setRedemptionTokenPrimaryBalance(uint _redemptionNonce, address _token, uint _amount) external onlyFactory {
-        require(_token != address(0), "Invalid redemption token address");
-        redemptionTokenPrimaryBalance[_redemptionNonce][_token] = _amount;
-    }
+    
 
     function setIssuanceIndexTokenPrimaryTotalSupply(uint _issuanceNonce, uint _amount) external onlyFactory {
         issuanceIndexTokenPrimaryTotalSupply[_issuanceNonce] = _amount;
     }
 
-    function setRedemptionIndexTokenPrimaryTotalSupply(uint _redemptionNonce, uint _amount) external onlyFactory {
-        redemptionIndexTokenPrimaryTotalSupply[_redemptionNonce] = _amount;
-    }
+    
 
     function setIssuanceInputAmount(uint _issuanceNonce, uint _amount) external onlyFactory {
         require(_amount > 0, "Invalid issuance input amount");
@@ -403,7 +404,9 @@ contract IndexFactoryStorage is
         require(_token != address(0), "invalid token address");
         address wrappedDshareAddress = wrappedDshareAddress[_token];
         uint wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
-        return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
+        uint dshareBalance = WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
+        uint finalDshareBalance = dshareBalance + tokenPendingRebalanceAmount[_token];
+        return finalDshareBalance;
     }
 
     function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) public pure returns (uint256) {

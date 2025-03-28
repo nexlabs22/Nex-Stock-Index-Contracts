@@ -115,7 +115,7 @@ contract SetAllValues is Script {
             revert("Unsupported target chain (wrapped dShares)");
         }
 
-        IndexFactoryStorage(indexFactoryStorageProxy).setWrappedDShareAddresses(dShares, wrappedDshares);
+        // IndexFactoryStorage(indexFactoryStorageProxy).setWrappedDShareAddresses(dShares, wrappedDshares);
     }
 
     // ---------------------------------------------------------------------
@@ -164,7 +164,7 @@ contract SetAllValues is Script {
         marketShares[5] = 10170000000000000000;
         marketShares[6] = 7130000000000000000;
 
-        FunctionsOracle(functionsOracleProxy).mockFillAssetsList(dShares, marketShares);
+        // FunctionsOracle(functionsOracleProxy).mockFillAssetsList(dShares, marketShares);
     }
 
     // ---------------------------------------------------------------------
