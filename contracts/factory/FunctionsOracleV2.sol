@@ -9,8 +9,7 @@ import "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsReques
 
 /// @title Index Token Factory Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
-/// @custom:oz-upgrades-from FunctionsOracleV2
-contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
+contract FunctionsOracleV2 is Initializable, FunctionsClient, ConfirmedOwner {
     using FunctionsRequest for FunctionsRequest.Request;
 
     // Addresses of factory contracts
@@ -36,15 +35,6 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     mapping(address => uint256) public tokenCurrentMarketShare;
     mapping(address => uint256) public tokenOracleMarketShare;
 
-    mapping(address => bool) public isOperator;
-
-    event RequestFulFilled(bytes32 indexed requestId, uint256 time);
-
-    modifier onlyOwnerOrOperator() {
-        require(msg.sender == owner() || isOperator[msg.sender], "Caller is not the owner or operator.");
-        _;
-    }
-
     /// @notice Initializes the contract with the given parameters
     /// @param _functionsRouterAddress The address of the functions router
     /// @param _newDonId The don ID for the oracle
@@ -60,11 +50,6 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-    }
-
-    //set operator
-    function setOperator(address _operator, bool _status) external onlyOwner {
-        isOperator[_operator] = _status;
     }
 
     /**
@@ -96,7 +81,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         bytes[] calldata bytesArgs,
         uint64 subscriptionId,
         uint32 callbackGasLimit
-    ) public onlyOwnerOrOperator returns (bytes32) {
+    ) public returns (bytes32) {
         FunctionsRequest.Request memory req;
         req.initializeRequest(FunctionsRequest.Location.Inline, FunctionsRequest.CodeLanguage.JavaScript, source);
         req.secretsLocation = FunctionsRequest.Location.Remote;
@@ -156,5 +141,9 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             tokenCurrentMarketShare[tokenAddress] = tokenOracleMarketShare[tokenAddress];
             tokenCurrentListIndex[tokenAddress] = i;
         }
+    }
+
+    function mockFillAssetsList(address[] memory _tokens, uint256[] memory _marketShares) public onlyOwner {
+        _initData(_tokens, _marketShares);
     }
 }

@@ -9,8 +9,7 @@ import "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsReques
 
 /// @title Index Token Factory Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
-/// @custom:oz-upgrades-from FunctionsOracleV2
-contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
+contract FunctionsOracleV3 is Initializable, FunctionsClient, ConfirmedOwner {
     using FunctionsRequest for FunctionsRequest.Request;
 
     // Addresses of factory contracts
