@@ -22,8 +22,8 @@ contract SetAllValues is Script {
 
     address public functionsOracleProxy;
 
-    string public targetChain = "sepolia";
-    // string public targetChain = "arbitrum_mainnet";
+    // string public targetChain = "sepolia";
+    string public targetChain = "arbitrum_mainnet";
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -64,8 +64,8 @@ contract SetAllValues is Script {
         IndexFactoryStorage(indexFactoryStorageProxy).setFactoryProcessor(factoryProcessorProxy);
         IndexFactoryStorage(indexFactoryStorageProxy).setFactoryBalancer(indexFactoryBalancerProxy);
 
-        // _setPriceFeedAddresses();
-        _setWrappedDShares();
+        _setPriceFeedAddresses();
+        // _setWrappedDShares();
     }
 
     function _setFunctionsOracleValues() internal {

@@ -107,7 +107,13 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         //rounding order
         IOrderProcessor issuer = factoryStorage.issuer();
         uint8 decimalReduction = issuer.orderDecimalReduction(_token);
-        uint256 orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+
+        uint256 orderAmount;
+        if (decimalReduction > 0) {
+            orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
+        } else {
+            orderAmount = orderAmount0;
+        }
         uint256 extraAmount = orderAmount0 - orderAmount;
 
         if (extraAmount > 0) {
@@ -131,25 +137,26 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenValue = tokenValueByNonce[_rebalanceNonce][tokenAddress];
-            uint256 tokenBalance = factoryStorage.getVaultDshareBalance(tokenAddress);
+            address wrappedDshare = factoryStorage.wrappedDshareAddress(tokenAddress);
+            uint256 tokenBalance = IERC20(wrappedDshare).balanceOf(address(factoryStorage.vault()));
             uint256 tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
             if (tokenValuePercent > functionsOracle.tokenOracleMarketShare(tokenAddress)) {
                 uint256 amount = tokenBalance
                     - ((tokenBalance * functionsOracle.tokenOracleMarketShare(tokenAddress)) / tokenValuePercent);
-                if(tokenValue * amount / tokenBalance > 1e18) {
-                (uint256 requestId, uint256 assetAmount) =
-                    requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
-                actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
-                rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
-                rebalanceSellAssetAmountById[requestId] = amount;
+                if (tokenValue * amount / tokenBalance > 1e18) {
+                    (uint256 requestId, uint256 assetAmount) =
+                        requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
+                    actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
+                    rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
+                    rebalanceSellAssetAmountById[requestId] = amount;
                 }
             } else {
                 uint256 shortagePercent = functionsOracle.tokenOracleMarketShare(tokenAddress) - tokenValuePercent;
-                if((_portfolioValue * shortagePercent)/100e18 > 1e18) {
-                tokenShortagePercentByNonce[_rebalanceNonce][tokenAddress] = shortagePercent;
-                totalShortagePercentByNonce[_rebalanceNonce] += shortagePercent;
+                if ((_portfolioValue * shortagePercent) / 100e18 > 1e18) {
+                    tokenShortagePercentByNonce[_rebalanceNonce][tokenAddress] = shortagePercent;
+                    totalShortagePercentByNonce[_rebalanceNonce] += shortagePercent;
+                }
             }
-        }
         }
     }
 
@@ -256,6 +263,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function checkFirstRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
+        require(_rebalanceNonce > rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
@@ -273,6 +281,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function checkSecondRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
+        require(_rebalanceNonce > rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
