@@ -130,6 +130,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         OrderManager orderManager = factoryStorage.orderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         factoryStorage.setOrderInstanceById(id, order);
+        factoryStorage.increaseTokenPendingRebalanceAmount(_token, rebalanceNonce, orderAmount);
         return (id, orderAmount);
     }
 
@@ -235,6 +236,22 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         return amountAfterFee;
     }
 
+    function updatePendingTokenSellAmounts(uint _rebalanceNonce) internal {
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
+            if (requestId > 0) {
+                IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
+                if (order.sell) {
+                    uint256 assetAmount = order.assetTokenQuantity;
+                    factoryStorage.decreaseTokenPendingRebalanceAmount(
+                        tokenAddress, _rebalanceNonce, assetAmount
+                    );
+                }
+            }
+        }
+    }
+
     function completeRebalanceActions(uint256 _rebalanceNonce) public nonReentrant onlyOwner {
         require(checkSecondRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
         IOrderProcessor issuer = factoryStorage.issuer();
@@ -257,6 +274,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                 }
             }
         }
+        updatePendingTokenSellAmounts(_rebalanceNonce);
         functionsOracle.updateCurrentList();
         unpauseIndexFactory();
         emit CompleteRebalanceActions(_rebalanceNonce, block.timestamp);

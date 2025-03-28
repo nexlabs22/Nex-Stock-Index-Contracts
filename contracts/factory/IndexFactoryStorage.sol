@@ -404,7 +404,9 @@ contract IndexFactoryStorage is
         require(_token != address(0), "invalid token address");
         address wrappedDshareAddress = wrappedDshareAddress[_token];
         uint wrappedDshareBalance = IERC20(wrappedDshareAddress).balanceOf(address(vault));
-        return WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
+        uint dshareBalance = WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
+        uint finalDshareBalance = dshareBalance + tokenPendingRebalanceAmount[_token];
+        return finalDshareBalance;
     }
 
     function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) public pure returns (uint256) {

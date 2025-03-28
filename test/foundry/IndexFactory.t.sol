@@ -1511,11 +1511,13 @@ contract IndexFactoryTest is Test {
         );
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)),
-            5000e18
+            10000e18
+            // 5000e18
         );
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(2)),
-            5000e18
+            10000e18
+            // 5000e18
         );
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(3)),
