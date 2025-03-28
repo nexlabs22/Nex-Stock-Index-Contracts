@@ -22,7 +22,7 @@ import "./FunctionsOracle.sol";
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
 /// @custom:oz-upgrades-from IndexFactory
 // IndexFactoryV2
-contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract IndexFactoryV3 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
