@@ -263,7 +263,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function checkFirstRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
-        require(_rebalanceNonce > rebalanceNonce, "Wrong rebalance nonce!");
+        require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
@@ -281,7 +281,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function checkSecondRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
-        require(_rebalanceNonce > rebalanceNonce, "Wrong rebalance nonce!");
+        require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
