@@ -137,6 +137,11 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         _;
     }
 
+    modifier onlyOwnerOrOperator() {
+        require(msg.sender == owner() || functionsOracle.isOperator(msg.sender), "Caller is not the owner or operator");
+        _;
+    }
+
     /// @notice Sets the functions oracle address
     /// @param _functionsOracle The address of the functions oracle
     function setFunctionsOracle(address _functionsOracle) public onlyOwner {
@@ -261,6 +266,19 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         require(tokenPendingRebalanceAmount[_token] >= _amount, "Insufficient pending rebalance amount");
         tokenPendingRebalanceAmount[_token] -= _amount;
         tokenPendingRebalanceAmountByNonce[_token][_nonce] -= _amount;
+    }
+
+    function resetTokenPendingRebalanceAmount(address _token, uint _nonce) public onlyOwnerOrOperator {
+        require(_token != address(0), "invalid token address");
+        tokenPendingRebalanceAmount[_token] = 0;
+        tokenPendingRebalanceAmountByNonce[_token][_nonce] = 0;
+    }
+
+    function resetAllTokenPendingRebalanceAmount(uint _nonce) public onlyOwnerOrOperator {
+        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            resetTokenPendingRebalanceAmount(tokenAddress, _nonce);
+        }
     }
 
     function increaseIssuanceNonce() external onlyFactory {
