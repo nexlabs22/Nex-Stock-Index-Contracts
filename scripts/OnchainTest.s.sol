@@ -51,7 +51,8 @@ contract OnchainTest is Script {
     }
 
     function redemption() public {
-        IndexFactory(payable(indexFactoryProxy)).redemption(IERC20(indexTokenProxy).balanceOf(user));
+        // IndexFactory(payable(indexFactoryProxy)).redemption(220337304203137160);
+        IndexFactory(payable(indexFactoryProxy)).redemption(1e18);
     }
 
     function issuanceIndexTokensWithUSDC() public {
@@ -61,7 +62,7 @@ contract OnchainTest is Script {
         uint256 quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
 
         // Mainnet
-        // uint256 inputAmount = 25e6;
+        // uint256 inputAmount = 20e6;
         // uint256 feeAmount = IndexFactoryStorage(indexFactoryStorageProxy).calculateIssuanceFee(inputAmount);
         // uint256 quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
 
