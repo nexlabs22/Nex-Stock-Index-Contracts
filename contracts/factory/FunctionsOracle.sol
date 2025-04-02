@@ -109,26 +109,13 @@ contract FunctionsOracle is
         factoryBalancerAddress = _factoryBalancerAddress;
     }
 
-
-
     function requestAssetsData(
         string calldata source,
-        bytes calldata encryptedSecretsReference,
-        string[] calldata args,
-        bytes[] calldata bytesArgs,
         uint64 subscriptionId,
         uint32 callbackGasLimit
     ) public onlyOwnerOrOperator returns (bytes32) {
         FunctionsRequest.Request memory req;
-        req.initializeRequest(FunctionsRequest.Location.Inline, FunctionsRequest.CodeLanguage.JavaScript, source);
-        req.secretsLocation = FunctionsRequest.Location.Remote;
-        req.encryptedSecretsReference = encryptedSecretsReference;
-        if (args.length > 0) {
-        req.setArgs(args);
-        }
-        if (bytesArgs.length > 0) {
-        req.setBytesArgs(bytesArgs);
-        }
+        req.initializeRequestForInlineJavaScript(source);
         return _sendRequest(req.encodeCBOR(), subscriptionId, callbackGasLimit, donId);
     }
 
