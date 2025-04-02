@@ -690,10 +690,6 @@ contract IndexTokenFactoryFuzzTests is Test {
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
         bytes32 requestId = functionsOracle.requestAssetsData(
             "console.log('Hello, World!');",
-            // FunctionsConsumer.Location.Inline, // Use the imported enum directly
-            abi.encodePacked("default"),
-            new string[](1), // Convert to dynamic array
-            new bytes[](1), // Convert to dynamic array
             0,
             0
         );
@@ -731,10 +727,6 @@ contract IndexTokenFactoryFuzzTests is Test {
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
         bytes32 requestId = functionsOracle.requestAssetsData(
             "console.log('Hello, World!');",
-            // FunctionsConsumer.Location.Inline, // Use the imported enum directly
-            abi.encodePacked("default"),
-            new string[](1), // Convert to dynamic array
-            new bytes[](1), // Convert to dynamic array
             0,
             0
         );
