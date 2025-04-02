@@ -56,6 +56,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     event SecondRebalanceAction(uint256 nonce, uint time);
     event CompleteRebalanceActions(uint256 nonce, uint time);
 
+    uint256 public minimumOrderAmount;
+
     modifier onlyOwnerOrOperator() {
         require(
             msg.sender == owner() || functionsOracle.isOperator(msg.sender),
@@ -77,6 +79,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
+    }
+
+    function setMinimumOrderAmount(uint256 _minimumOrderAmount) public onlyOwnerOrOperator returns (bool) {
+        minimumOrderAmount = _minimumOrderAmount;
+        return true;
     }
 
     function setIndexFactoryStorage(address _indexFactoryStorage) public onlyOwner returns (bool) {
@@ -152,7 +159,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             if (tokenValuePercent > functionsOracle.tokenOracleMarketShare(tokenAddress)) {
                 uint256 amount = tokenBalance
                     - ((tokenBalance * functionsOracle.tokenOracleMarketShare(tokenAddress)) / tokenValuePercent);
-                if (tokenValue * amount / tokenBalance > 1e18) {
+                if (tokenValue * amount / tokenBalance > minimumOrderAmount) {
                     (uint256 requestId, uint256 assetAmount) =
                         requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
                     actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
@@ -161,7 +168,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                 }
             } else {
                 uint256 shortagePercent = functionsOracle.tokenOracleMarketShare(tokenAddress) - tokenValuePercent;
-                if ((_portfolioValue * shortagePercent) / 100e18 > 1e18) {
+                if ((_portfolioValue * shortagePercent) / 100e18 > minimumOrderAmount) {
                     tokenShortagePercentByNonce[_rebalanceNonce][tokenAddress] = shortagePercent;
                     totalShortagePercentByNonce[_rebalanceNonce] += shortagePercent;
                 }
