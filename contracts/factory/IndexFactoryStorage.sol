@@ -268,14 +268,14 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         tokenPendingRebalanceAmountByNonce[_token][_nonce] -= _amount;
     }
 
-    function resetTokenPendingRebalanceAmount(address _token, uint _nonce) public onlyOwnerOrOperator {
+    function resetTokenPendingRebalanceAmount(address _token, uint256 _nonce) public onlyOwnerOrOperator {
         require(_token != address(0), "invalid token address");
         tokenPendingRebalanceAmount[_token] = 0;
         tokenPendingRebalanceAmountByNonce[_token][_nonce] = 0;
     }
 
-    function resetAllTokenPendingRebalanceAmount(uint _nonce) public onlyOwnerOrOperator {
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
+    function resetAllTokenPendingRebalanceAmount(uint256 _nonce) public onlyOwnerOrOperator {
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             resetTokenPendingRebalanceAmount(tokenAddress, _nonce);
         }

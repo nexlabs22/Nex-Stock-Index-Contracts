@@ -27,7 +27,7 @@ import "../libraries/Commen.sol" as PrbMath2;
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-/// @custom:oz-upgrades-from IndexFactoryBalancerV4
+/// @custom:oz-upgrades-from IndexFactoryBalancerV3
 contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
