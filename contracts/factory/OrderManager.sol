@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
@@ -14,7 +16,7 @@ import {FeeLib} from "../dinary/common/FeeLib.sol";
 /// @title Order Manager
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable, IERC1271 {
     enum RequestStatus {
         NULL,
         PENDING,
@@ -213,5 +215,15 @@ contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable,
         require(_requestId > 0, "Invalid Request Id");
         require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
         issuer.requestCancel(_requestId);
+    }
+
+    function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4) {
+        address signer = ECDSA.recover(_hash, _signature);
+        
+        if (isOperator[signer]) {
+            return IERC1271.isValidSignature.selector;
+        } else {
+            return 0xffffffff;
+        }
     }
 }
