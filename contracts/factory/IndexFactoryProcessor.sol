@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-
-import "../dinary/orders/IOrderProcessor.sol";
 import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
@@ -17,9 +15,9 @@ import "./IndexFactoryStorage.sol";
 import "./OrderManager.sol";
 import "./FunctionsOracle.sol";
 
-/// @title Index Token Factory
+/// @title Index Token Factory Processor
 /// @author NEX Labs Protocol
-/// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
+/// @notice Handles the completion of asynchronous (Intent-based) issuance and redemption flows.
 contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     IndexFactoryStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
@@ -62,6 +60,18 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         uint256 time
     );
 
+    /**
+     * @dev Restricts access to the authorized Relayer (Operator) or Owner.
+     * Crucial for the V2 Async flow since the Relayer passes the settlement amounts.
+     */
+    modifier onlyOwnerOrOperator() {
+        require(
+            msg.sender == owner() || functionsOracle.isOperator(msg.sender),
+            "Caller is not the owner or operator."
+        );
+        _;
+    }
+
     function initialize(address _factoryStorage, address _functionsOracle) external initializer {
         require(_factoryStorage != address(0), "invalid factory storage address");
         require(_functionsOracle != address(0), "invalid functions oracle address");
@@ -90,148 +100,154 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         return true;
     }
 
-    function completeIssuance(uint256 _issuanceNonce) public nonReentrant whenNotPaused {
-        require(factoryStorage.checkIssuanceOrdersStatus(_issuanceNonce), "Orders are not completed");
+    /**
+     * @dev Completes the asynchronous issuance flow. Called by the off-chain Relayer.
+     */
+    function completeIssuance(uint256 _issuanceNonce, uint256[] calldata _receivedAmounts) public nonReentrant whenNotPaused onlyOwnerOrOperator {
         require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
+        require(_receivedAmounts.length == functionsOracle.totalCurrentList(), "Amounts array length mismatch");
+        
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
-        IOrderProcessor issuer = factoryStorage.issuer();
         uint256 primaryPortfolioValue;
         uint256 secondaryPortfolioValue;
+
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            uint256 tokenRequestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
             uint256 price = factoryStorage.priceInWei(tokenAddress);
-            uint256 balance = issuer.getReceivedAmount(tokenRequestId);
+            
+            uint256 balance = _receivedAmounts[i];
             uint256 receivedValue = balance * price / 1e18;
+            
             uint256 primaryBalance = factoryStorage.issuanceTokenPrimaryBalance(_issuanceNonce, tokenAddress);
             uint256 primaryValue = primaryBalance * price / 1e18;
             uint256 secondaryValue = primaryValue + receivedValue;
+            
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
-            OrderManager orderManager = factoryStorage.orderManager();
-            orderManager.withdrawFunds(tokenAddress, address(this), balance);
-            IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), balance);
-            WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
-                balance, address(factoryStorage.vault())
-            );
+
+            if (balance > 0) {
+                OrderManager orderManager = factoryStorage.orderManager();
+                orderManager.withdrawFunds(tokenAddress, address(this), balance);
+                IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), balance);
+                WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
+                    balance, address(factoryStorage.vault())
+                );
+            }
         }
+
         uint256 primaryTotalSupply = factoryStorage.issuanceIndexTokenPrimaryTotalSupply(_issuanceNonce);
+        uint256 mintAmount;
+
         if (primaryTotalSupply == 0 || primaryPortfolioValue == 0) {
-            uint256 mintAmount = secondaryPortfolioValue / 100;
-            IndexToken token = factoryStorage.token();
-            token.mint(requester, mintAmount);
-            emit Issuanced(
-                _issuanceNonce,
-                requester,
-                factoryStorage.usdc(),
-                factoryStorage.issuanceInputAmount(_issuanceNonce),
-                mintAmount,
-                factoryStorage.getIndexTokenPrice(),
-                block.timestamp
-            );
+            mintAmount = secondaryPortfolioValue / 100;
         } else {
             uint256 secondaryTotalSupply = primaryTotalSupply * secondaryPortfolioValue / primaryPortfolioValue;
-            uint256 mintAmount = secondaryTotalSupply - primaryTotalSupply;
+            mintAmount = secondaryTotalSupply - primaryTotalSupply;
+        }
+
+        // Ensure mintAmount is non-zero to prevent redundant execution or reverts during settlement
+        if (mintAmount > 0) {
             IndexToken token = factoryStorage.token();
             token.mint(requester, mintAmount);
-            emit Issuanced(
-                _issuanceNonce,
-                requester,
-                factoryStorage.usdc(),
-                factoryStorage.issuanceInputAmount(_issuanceNonce),
-                mintAmount,
-                factoryStorage.getIndexTokenPrice(),
-                block.timestamp
-            );
         }
-        factoryStorage.setIssuanceIsCompleted(_issuanceNonce, true);
-    }
-
-    function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant whenNotPaused {
-        require(factoryStorage.checkCancelIssuanceStatus(_issuanceNonce), "Cancel issuance is not completed");
-        require(!factoryStorage.cancelIssuanceComplted(_issuanceNonce), "The process has been completed before");
-        address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
-        uint256 totalBalance;
-        IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 requestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
-            uint256 cancelRequestId = factoryStorage.cancelIssuanceRequestId(_issuanceNonce, tokenAddress);
-            uint256 balance;
-            if (cancelRequestId > 0) {
-                uint256 feeTaken = issuer.getFeesTaken(cancelRequestId);
-                uint256 receivedAmount = issuer.getReceivedAmount(cancelRequestId);
-                balance += receivedAmount - feeTaken;
-            }
-            uint256 unfilledAmount = factoryStorage.cancelIssuanceUnfilledAmount(_issuanceNonce, tokenAddress);
-            totalBalance += (balance + unfilledAmount);
-        }
-        OrderManager orderManager = factoryStorage.orderManager();
-        orderManager.withdrawFunds(factoryStorage.usdc(), requester, totalBalance);
-        factoryStorage.setCancelIssuanceComplted(_issuanceNonce, true);
-        emit IssuanceCancelled(
+        
+        emit Issuanced(
             _issuanceNonce,
             requester,
             factoryStorage.usdc(),
             factoryStorage.issuanceInputAmount(_issuanceNonce),
+            mintAmount,
+            factoryStorage.getIndexTokenPrice(),
+            block.timestamp
+        );
+        
+        factoryStorage.setIssuanceIsCompleted(_issuanceNonce, true);
+    }
+
+    /**
+     * @notice Processes an issuance cancellation and refunds the user's USDC from escrow.
+     * @dev The refund includes the principal and the order processor fee, while the protocol fee remains in the treasury.
+     * @param _issuanceNonce The unique identifier of the issuance request to cancel.
+     */
+    function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant whenNotPaused onlyOwnerOrOperator {
+        require(!factoryStorage.cancelIssuanceComplted(_issuanceNonce), "Cancellation already processed");
+        
+        address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
+        
+        uint256 originalInputAmount = factoryStorage.issuanceInputAmount(_issuanceNonce);
+        uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(originalInputAmount);
+        
+        // REFUND LOGIC: Returns the principal amount plus the external order processor fee. 
+        // The protocol fee is retained in the treasury as it was already collected during initiation.
+        uint256 totalRefund = originalInputAmount + orderProcessorFee;
+
+        OrderManager orderManager = factoryStorage.orderManager();
+        orderManager.withdrawFunds(factoryStorage.usdc(), requester, totalRefund);
+        
+        factoryStorage.setCancelIssuanceComplted(_issuanceNonce, true);
+        
+        emit IssuanceCancelled(
+            _issuanceNonce,
+            requester,
+            factoryStorage.usdc(),
+            originalInputAmount,
             0,
             block.timestamp
         );
     }
 
-    function completeRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
-        require(factoryStorage.checkRedemptionOrdersStatus(_redemptionNonce), "Redemption orders are not completed");
+    /**
+     * @dev Completes the asynchronous redemption flow. Called by the off-chain Relayer.
+     * @param _redemptionNonce The intent ID being settled.
+     * @param _totalUsdcReceived The total USDC amount obtained from liquidating the dShares.
+     */
+    function completeRedemption(uint256 _redemptionNonce, uint256 _totalUsdcReceived) public nonReentrant whenNotPaused onlyOwnerOrOperator {
         require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
+        
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
-        IOrderProcessor issuer = factoryStorage.issuer();
-        uint256 totalBalance;
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 tokenRequestId = factoryStorage.redemptionRequestId(_redemptionNonce, tokenAddress);
-            uint256 balance = issuer.getReceivedAmount(tokenRequestId);
-            uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
-            totalBalance += balance - feeTaken;
-        }
-        uint256 fee = (totalBalance * factoryStorage.feeRate()) / 10000;
+        
+        // Calculate protocol fee from the total USDC liquidated by the Relayer
+        uint256 fee = (_totalUsdcReceived * factoryStorage.feeRate()) / 10000;
         OrderManager orderManager = factoryStorage.orderManager();
-        orderManager.withdrawFunds(factoryStorage.usdc(), factoryStorage.feeReceiver(), fee);
-        orderManager.withdrawFunds(factoryStorage.usdc(), requester, totalBalance - fee);
+        
+        if (fee > 0) {
+            orderManager.withdrawFunds(factoryStorage.usdc(), factoryStorage.feeReceiver(), fee);
+        }
+        
+        // Transfer the remaining USDC to the user
+        uint256 netUserAmount = _totalUsdcReceived - fee;
+        if (netUserAmount > 0) {
+            orderManager.withdrawFunds(factoryStorage.usdc(), requester, netUserAmount);
+        }
+        
         factoryStorage.setRedemptionIsCompleted(_redemptionNonce, true);
+        
         emit Redemption(
             _redemptionNonce,
             requester,
             factoryStorage.usdc(),
             factoryStorage.redemptionInputAmount(_redemptionNonce),
-            totalBalance,
+            netUserAmount,
             factoryStorage.getIndexTokenPrice(),
             block.timestamp
         );
     }
 
-    function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
-        require(factoryStorage.checkCancelRedemptionStatus(_redemptionNonce), "Cancel redemption is not completed");
+    /**
+     * @dev Processes a redemption cancellation, refunding the user by re-minting their burned Index Tokens.
+     */
+    function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused onlyOwnerOrOperator {
         require(!factoryStorage.cancelRedemptionComplted(_redemptionNonce), "The process has been completed before");
 
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
-        IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 tokenRequestId = factoryStorage.cancelRedemptionRequestId(_redemptionNonce, tokenAddress);
-            uint256 filledAmount = issuer.getReceivedAmount(tokenRequestId) - issuer.getFeesTaken(tokenRequestId);
-            uint256 unFilledAmount = factoryStorage.cancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress);
-            uint256 totalBalance = filledAmount + unFilledAmount;
-            if (totalBalance > 0) {
-                OrderManager orderManager = factoryStorage.orderManager();
-                orderManager.withdrawFunds(tokenAddress, address(this), totalBalance);
-                IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), totalBalance);
-                WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
-                    totalBalance, address(factoryStorage.vault())
-                );
-            }
-        }
+        
+        // Re-mint the exact amount of Index Tokens that were burned in the Escrow phase
         IndexToken token = factoryStorage.token();
-        token.mint(requester, factoryStorage.burnedTokenAmountByNonce(_redemptionNonce));
+        uint256 originalBurnAmount = factoryStorage.burnedTokenAmountByNonce(_redemptionNonce);
+        token.mint(requester, originalBurnAmount);
+        
         factoryStorage.setCancelRedemptionComplted(_redemptionNonce, true);
+        
         emit RedemptionCancelled(
             _redemptionNonce,
             requester,
@@ -240,32 +256,5 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
             0,
             block.timestamp
         );
-    }
-
-    function checkMultical(uint256 _reqeustId) public view returns (bool) {
-        IndexFactoryStorage.ActionInfo memory actionInfo = factoryStorage.getActionInfoById(_reqeustId);
-        if (actionInfo.actionType == 1) {
-            return factoryStorage.checkIssuanceOrdersStatus(actionInfo.nonce);
-        } else if (actionInfo.actionType == 2) {
-            return factoryStorage.checkRedemptionOrdersStatus(actionInfo.nonce);
-        } else if (actionInfo.actionType == 3) {
-            return factoryStorage.checkCancelIssuanceStatus(actionInfo.nonce);
-        } else if (actionInfo.actionType == 4) {
-            return factoryStorage.checkCancelRedemptionStatus(actionInfo.nonce);
-        }
-        return false;
-    }
-
-    function multical(uint256 _requestId) public {
-        IndexFactoryStorage.ActionInfo memory actionInfo = factoryStorage.getActionInfoById(_requestId);
-        if (actionInfo.actionType == 1) {
-            completeIssuance(actionInfo.nonce);
-        } else if (actionInfo.actionType == 2) {
-            completeRedemption(actionInfo.nonce);
-        } else if (actionInfo.actionType == 3) {
-            completeCancelIssuance(actionInfo.nonce);
-        } else if (actionInfo.actionType == 4) {
-            completeCancelRedemption(actionInfo.nonce);
-        }
     }
 }

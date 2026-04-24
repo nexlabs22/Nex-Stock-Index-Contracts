@@ -70,8 +70,46 @@ contract OnchainTest is Script {
         // IndexFactory(payable(indexFactoryProxy)).issuanceIndexTokens(100e6);
     }
 
-    function completeIssunace() public {
-        IndexFactoryProcessor(factoryProcessor).completeIssuance(2);
+    /**
+     * @notice Completes an issuance order by providing actual dShare amounts received from Dinari.
+     * @dev Used by the Relayer to settle the index token minting after off-chain execution.
+     * @param _nonce Unique intent ID for the issuance request.
+     */
+    function completeIssunace(uint256 _nonce) public {
+        // Mocking received amounts for the 10 assets in the index.
+        // In production, these values must match the actual shares bought.
+        uint256[] memory amounts = new uint256[](10);
+        for (uint256 i = 0; i < 10; i++) {
+            amounts[i] = 10e18; 
+        }
+
+        IndexFactoryProcessor(factoryProcessor).completeIssuance(_nonce, amounts);
+    }
+
+    /**
+     * @notice Completes a redemption order by providing total USDC recovered from asset liquidation.
+     * @dev Finalizes the exit flow by releasing escrowed USDC to the requester.
+     * @param _nonce Unique intent ID for the redemption request.
+     * @param _totalUsdcReceived The actual USDC amount returned by the provider.
+     */
+    function completeRedemption(uint256 _nonce, uint256 _totalUsdcReceived) public {
+        IndexFactoryProcessor(factoryProcessor).completeRedemption(_nonce, _totalUsdcReceived);
+    }
+
+    /**
+     * @notice Reverts a pending issuance and refunds the escrowed USDC back to the user.
+     * @dev Triggered if the off-chain execution fails or is rejected by the provider.
+     */
+    function completeCancelIssuance(uint256 _nonce) public {
+        IndexFactoryProcessor(factoryProcessor).completeCancelIssuance(_nonce);
+    }
+
+    /**
+     * @notice Reverts a pending redemption and restores the user's index token balance.
+     * @dev Mints back the previously burned tokens if liquidation fails.
+     */
+    function completeCancelRedemption(uint256 _nonce) public {
+        IndexFactoryProcessor(factoryProcessor).completeCancelRedemption(_nonce);
     }
 
     // function firstRebalance() public {
