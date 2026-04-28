@@ -7,7 +7,7 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import {IndexToken} from "../../../../contracts/token/IndexToken.sol";
+import {IndexToken} from "../../contracts/token/IndexToken.sol";
 
 contract UpgradeIndexToken is Script {
     function run() external {

@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 
-import {IndexFactoryStorage} from "../../../../contracts/factory/IndexFactoryStorage.sol";
+import {IndexFactoryStorage} from "../../contracts/factory/IndexFactoryStorage.sol";
 import {IndexToken} from "../../contracts/token/IndexToken.sol";
 import {FunctionsOracle} from "../../contracts/factory/FunctionsOracle.sol";
 import {OrderManager} from "../../contracts/factory/OrderManager.sol";
