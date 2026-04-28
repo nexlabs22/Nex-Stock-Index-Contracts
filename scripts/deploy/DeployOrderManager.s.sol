@@ -37,7 +37,7 @@ contract DeployOrderManager is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address proxy = Upgrades.deployTransparentProxy(
-            "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdc, usdcDecimals, issuer))
+            "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdc, usdcDecimals))
         );
 
         OrderManager orderManagerImplementation = OrderManager(proxy);
@@ -47,6 +47,7 @@ contract DeployOrderManager is Script {
         console.log("OrderManager implementation deployed at:", address(orderManagerImplementation));
         console.log("OrderManager proxy deployed at:", address(proxy));
         console.log("ProxyAdmin for OrderManager deployed at:", address(proxyAdmin));
+        console.log("Post-deploy: call OrderManager.setIndexFactory(IndexFactory proxy) for timeout issuance refunds.");
 
         vm.stopBroadcast();
     }

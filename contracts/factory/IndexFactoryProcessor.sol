@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
 import "./IndexFactoryStorage.sol";
@@ -19,6 +18,15 @@ import "./FunctionsOracle.sol";
 /// @author NEX Labs Protocol
 /// @notice Handles the completion of asynchronous (Intent-based) issuance and redemption flows.
 contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+    
+    error InvalidActionState(
+        uint256 nonce,
+        IndexFactoryStorage.ActionState expected,
+        IndexFactoryStorage.ActionState actual
+    );
+
+    error ZeroIssuanceMint(uint256 issuanceNonce);
+
     IndexFactoryStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
 
@@ -104,7 +112,12 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
      * @dev Completes the asynchronous issuance flow. Called by the off-chain Relayer.
      */
     function completeIssuance(uint256 _issuanceNonce, uint256[] calldata _receivedAmounts) public nonReentrant whenNotPaused onlyOwnerOrOperator {
-        require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
+        IndexFactoryStorage.ActionState issuanceState = factoryStorage.issuanceState(_issuanceNonce);
+        if (issuanceState != IndexFactoryStorage.ActionState.PENDING) {
+            revert InvalidActionState(
+                _issuanceNonce, IndexFactoryStorage.ActionState.PENDING, issuanceState
+            );
+        }
         require(_receivedAmounts.length == functionsOracle.totalCurrentList(), "Amounts array length mismatch");
         
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
@@ -145,11 +158,12 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
             mintAmount = secondaryTotalSupply - primaryTotalSupply;
         }
 
-        // Ensure mintAmount is non-zero to prevent redundant execution or reverts during settlement
-        if (mintAmount > 0) {
-            IndexToken token = factoryStorage.token();
-            token.mint(requester, mintAmount);
+        if (mintAmount == 0) {
+            revert ZeroIssuanceMint(_issuanceNonce);
         }
+
+        IndexToken token = factoryStorage.token();
+        token.mint(requester, mintAmount);
         
         emit Issuanced(
             _issuanceNonce,
@@ -160,8 +174,14 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
             factoryStorage.getIndexTokenPrice(),
             block.timestamp
         );
-        
-        factoryStorage.setIssuanceIsCompleted(_issuanceNonce, true);
+
+        uint256 issuanceEscrow = factoryStorage.getIssuanceEscrowedUsdc(_issuanceNonce);
+        if (issuanceEscrow > 0) {
+            factoryStorage.decreasePendingIssuanceUsdc(issuanceEscrow);
+        }
+
+        factoryStorage.setIssuanceState(_issuanceNonce, IndexFactoryStorage.ActionState.COMPLETED);
+        factoryStorage.setUserActionPending(requester, false);
     }
 
     /**
@@ -170,6 +190,12 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
      * @param _issuanceNonce The unique identifier of the issuance request to cancel.
      */
     function completeCancelIssuance(uint256 _issuanceNonce) public nonReentrant whenNotPaused onlyOwnerOrOperator {
+        IndexFactoryStorage.ActionState issuanceState = factoryStorage.issuanceState(_issuanceNonce);
+        if (issuanceState != IndexFactoryStorage.ActionState.CANCEL_REQUESTED) {
+            revert InvalidActionState(
+                _issuanceNonce, IndexFactoryStorage.ActionState.CANCEL_REQUESTED, issuanceState
+            );
+        }
         require(!factoryStorage.cancelIssuanceComplted(_issuanceNonce), "Cancellation already processed");
         
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
@@ -183,8 +209,15 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
 
         OrderManager orderManager = factoryStorage.orderManager();
         orderManager.withdrawFunds(factoryStorage.usdc(), requester, totalRefund);
-        
+
+        uint256 issuanceEscrow = factoryStorage.getIssuanceEscrowedUsdc(_issuanceNonce);
+        if (issuanceEscrow > 0) {
+            factoryStorage.decreasePendingIssuanceUsdc(issuanceEscrow);
+        }
+
         factoryStorage.setCancelIssuanceComplted(_issuanceNonce, true);
+        factoryStorage.setIssuanceState(_issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
+        factoryStorage.setUserActionPending(requester, false);
         
         emit IssuanceCancelled(
             _issuanceNonce,
@@ -202,7 +235,12 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
      * @param _totalUsdcReceived The total USDC amount obtained from liquidating the dShares.
      */
     function completeRedemption(uint256 _redemptionNonce, uint256 _totalUsdcReceived) public nonReentrant whenNotPaused onlyOwnerOrOperator {
-        require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
+        IndexFactoryStorage.ActionState redemptionState = factoryStorage.redemptionState(_redemptionNonce);
+        if (redemptionState != IndexFactoryStorage.ActionState.PENDING) {
+            revert InvalidActionState(
+                _redemptionNonce, IndexFactoryStorage.ActionState.PENDING, redemptionState
+            );
+        }
         
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         
@@ -219,8 +257,10 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         if (netUserAmount > 0) {
             orderManager.withdrawFunds(factoryStorage.usdc(), requester, netUserAmount);
         }
-        
-        factoryStorage.setRedemptionIsCompleted(_redemptionNonce, true);
+
+        factoryStorage.consumeRedemptionEscrowForNonce(_redemptionNonce);
+
+        factoryStorage.setRedemptionState(_redemptionNonce, IndexFactoryStorage.ActionState.COMPLETED);
         
         emit Redemption(
             _redemptionNonce,
@@ -231,22 +271,33 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
             factoryStorage.getIndexTokenPrice(),
             block.timestamp
         );
+        factoryStorage.setUserActionPending(requester, false);
     }
 
     /**
      * @dev Processes a redemption cancellation, refunding the user by re-minting their burned Index Tokens.
      */
     function completeCancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused onlyOwnerOrOperator {
+        IndexFactoryStorage.ActionState redemptionState = factoryStorage.redemptionState(_redemptionNonce);
+        if (redemptionState != IndexFactoryStorage.ActionState.CANCEL_REQUESTED) {
+            revert InvalidActionState(
+                _redemptionNonce, IndexFactoryStorage.ActionState.CANCEL_REQUESTED, redemptionState
+            );
+        }
         require(!factoryStorage.cancelRedemptionComplted(_redemptionNonce), "The process has been completed before");
 
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
-        
+
+        factoryStorage.consumeRedemptionEscrowForNonce(_redemptionNonce);
+
         // Re-mint the exact amount of Index Tokens that were burned in the Escrow phase
         IndexToken token = factoryStorage.token();
         uint256 originalBurnAmount = factoryStorage.burnedTokenAmountByNonce(_redemptionNonce);
         token.mint(requester, originalBurnAmount);
         
         factoryStorage.setCancelRedemptionComplted(_redemptionNonce, true);
+        factoryStorage.setRedemptionState(_redemptionNonce, IndexFactoryStorage.ActionState.CANCELLED);
+        factoryStorage.setUserActionPending(requester, false);
         
         emit RedemptionCancelled(
             _redemptionNonce,

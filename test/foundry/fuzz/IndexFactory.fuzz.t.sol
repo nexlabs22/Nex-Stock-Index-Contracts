@@ -210,8 +210,7 @@ contract IndexTokenFactoryFuzzTests is Test {
                         OrderManager.initialize,
                         (
                             address(paymentToken),
-                            paymentToken.decimals(),
-                            address(issuer)
+                            paymentToken.decimals()
                         )
                     )
                 )
@@ -269,7 +268,6 @@ contract IndexTokenFactoryFuzzTests is Test {
                     abi.encodeCall(
                         IndexFactoryStorage.initialize,
                         (
-                            address(issuer),
                             address(indexToken),
                             address(vault),
                             address(paymentToken),
@@ -333,9 +331,11 @@ contract IndexTokenFactoryFuzzTests is Test {
         factoryStorage.setFactoryProcessor(address(factoryProcessor));
         factoryStorage.setFactoryBalancer(address(factoryBalancer));
         functionsOracle.setFactoryBalancer(address(factoryBalancer));
+        functionsOracle.setIndexFactoryStorage(address(factoryStorage));
         orderManager.setOperator(address(factory), true);
         orderManager.setOperator(address(factoryProcessor), true);
         orderManager.setOperator(address(factoryBalancer), true);
+        orderManager.setIndexFactory(address(factory));
 
         DShare[10] memory tokens;
         WrappedDShare[10] memory wrappedTokens;
@@ -715,7 +715,7 @@ contract IndexTokenFactoryFuzzTests is Test {
         vm.prank(admin);
         factoryProcessor.completeIssuance(nonce, receivedAmounts);
         
-        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
         assertTrue(indexToken.balanceOf(user) > 0);
     }
 
@@ -807,7 +807,7 @@ contract IndexTokenFactoryFuzzTests is Test {
         vm.prank(admin);
         factoryProcessor.completeRedemption(nonce, totalUsdcReceived);
         
-        assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
+        assertEq(uint8(factoryStorage.redemptionState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
         assertEq(indexToken.balanceOf(user), 0);
         assertTrue(paymentToken.balanceOf(user) > 0);
     }
