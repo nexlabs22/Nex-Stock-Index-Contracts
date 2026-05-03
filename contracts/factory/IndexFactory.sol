@@ -175,6 +175,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         factoryStorage.setIssuanceInputAmount(issuanceNonce, _inputAmount);
         factoryStorage.setIssuanceRequesterByNonce(issuanceNonce, msg.sender);
         factoryStorage.setUserActionPending(msg.sender, true);
+        factoryStorage.setUserPendingIssuanceNonce(msg.sender, issuanceNonce);
         factoryStorage.increasePendingIssuanceUsdc(quantityIn);
         factoryStorage.setIssuanceIntentTimestamp(issuanceNonce, block.timestamp);
 
@@ -258,6 +259,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         factoryStorage.setRedemptionInputAmount(redemptionNonce, _inputAmount);
         factoryStorage.setRedemptionRequesterByNonce(redemptionNonce, msg.sender);
         factoryStorage.setUserActionPending(msg.sender, true);
+        factoryStorage.setUserPendingRedemptionNonce(msg.sender, redemptionNonce);
 
         // 2. Proportional Share Calculation
         // Determine the percentage of the total supply being burned to calculate asset distribution
@@ -393,7 +395,9 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         factoryStorage.setCancelIssuanceComplted(issuanceNonce, true);
         factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
-        factoryStorage.setUserActionPending(requester, false);
+        if (factoryStorage.tryClearUserPendingIssuanceNonce(requester, issuanceNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
+        }
         factoryStorage.clearIssuanceSnapshot(issuanceNonce);
 
         emit IssuanceCancelled(
@@ -417,7 +421,9 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         factoryStorage.setCancelRedemptionComplted(redemptionNonce, true);
         factoryStorage.setRedemptionState(redemptionNonce, IndexFactoryStorage.ActionState.CANCELLED);
-        factoryStorage.setUserActionPending(requester, false);
+        if (factoryStorage.tryClearUserPendingRedemptionNonce(requester, redemptionNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
+        }
 
         emit RedemptionCancelled(
             redemptionNonce,
@@ -448,27 +454,44 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
      * @dev Does not settle funds or change action state — only unlocks `isUserActionPending` for emergencies.
      *      Blocked while the user has an issuance or redemption in `PENDING` so escrow/NAV counters stay consistent
      *      (use `cancelOrder` after ORDER_INTENT_TIMEOUT for atomic settlement instead).
+     *      Uses per-user intent pointers for O(1) gas; falls back to full scans only for legacy state where the
+     *      user lock is set but pointers were never written (pre-upgrade in-flight intents).
      */
     function emergencyUnlock(address user) external onlyOwner {
         require(user != address(0), "invalid user");
-        uint256 maxIssuance = factoryStorage.issuanceNonce();
-        for (uint256 n = 1; n <= maxIssuance; n++) {
-            if (
-                factoryStorage.issuanceRequesterByNonce(n) == user
-                    && factoryStorage.issuanceState(n) == IndexFactoryStorage.ActionState.PENDING
-            ) {
+        uint256 iN = factoryStorage.userPendingIssuanceNonce(user);
+        uint256 rN = factoryStorage.userPendingRedemptionNonce(user);
+        bool legacyLock = factoryStorage.isUserActionPending(user) && iN == 0 && rN == 0;
+
+        if (legacyLock) {
+            uint256 maxIssuance = factoryStorage.issuanceNonce();
+            for (uint256 n = 1; n <= maxIssuance; n++) {
+                if (
+                    factoryStorage.issuanceRequesterByNonce(n) == user
+                        && factoryStorage.issuanceState(n) == IndexFactoryStorage.ActionState.PENDING
+                ) {
+                    revert EmergencyUnlockWithPendingIntent(user);
+                }
+            }
+            uint256 maxRedemption = factoryStorage.redemptionNonce();
+            for (uint256 n = 1; n <= maxRedemption; n++) {
+                if (
+                    factoryStorage.redemptionRequesterByNonce(n) == user
+                        && factoryStorage.redemptionState(n) == IndexFactoryStorage.ActionState.PENDING
+                ) {
+                    revert EmergencyUnlockWithPendingIntent(user);
+                }
+            }
+        } else {
+            if (iN != 0 && factoryStorage.issuanceState(iN) == IndexFactoryStorage.ActionState.PENDING) {
+                revert EmergencyUnlockWithPendingIntent(user);
+            }
+            if (rN != 0 && factoryStorage.redemptionState(rN) == IndexFactoryStorage.ActionState.PENDING) {
                 revert EmergencyUnlockWithPendingIntent(user);
             }
         }
-        uint256 maxRedemption = factoryStorage.redemptionNonce();
-        for (uint256 n = 1; n <= maxRedemption; n++) {
-            if (
-                factoryStorage.redemptionRequesterByNonce(n) == user
-                    && factoryStorage.redemptionState(n) == IndexFactoryStorage.ActionState.PENDING
-            ) {
-                revert EmergencyUnlockWithPendingIntent(user);
-            }
-        }
+
+        factoryStorage.clearUserPendingIntentNonces(user);
         factoryStorage.setUserActionPending(user, false);
     }
 }

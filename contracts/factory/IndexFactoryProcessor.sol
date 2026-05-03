@@ -191,7 +191,9 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         }
 
         factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.COMPLETED);
-        factoryStorage.setUserActionPending(requester, false);
+        if (factoryStorage.tryClearUserPendingIssuanceNonce(requester, issuanceNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
+        }
         factoryStorage.clearIssuanceSnapshot(issuanceNonce);
     }
 
@@ -247,7 +249,9 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
 
         factoryStorage.setCancelIssuanceComplted(_issuanceNonce, true);
         factoryStorage.setIssuanceState(_issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
-        factoryStorage.setUserActionPending(requester, false);
+        if (factoryStorage.tryClearUserPendingIssuanceNonce(requester, _issuanceNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
+        }
         factoryStorage.clearIssuanceSnapshot(_issuanceNonce);
         
         emit IssuanceCancelled(
@@ -302,7 +306,9 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
             factoryStorage.getIndexTokenPrice(),
             block.timestamp
         );
-        factoryStorage.setUserActionPending(requester, false);
+        if (factoryStorage.tryClearUserPendingRedemptionNonce(requester, _redemptionNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
+        }
     }
 
     /**
@@ -328,7 +334,9 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         
         factoryStorage.setCancelRedemptionComplted(_redemptionNonce, true);
         factoryStorage.setRedemptionState(_redemptionNonce, IndexFactoryStorage.ActionState.CANCELLED);
-        factoryStorage.setUserActionPending(requester, false);
+        if (factoryStorage.tryClearUserPendingRedemptionNonce(requester, _redemptionNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
+        }
         
         emit RedemptionCancelled(
             _redemptionNonce,

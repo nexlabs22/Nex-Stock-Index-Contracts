@@ -91,6 +91,10 @@ contract IndexFactoryStorage is
     mapping(address => uint) public tokenPendingRebalanceAmount;
     mapping(address => mapping(uint => uint)) public tokenPendingRebalanceAmountByNonce;
     mapping(address => bool) public isUserActionPending;
+    /// @notice Latest issuance nonce opened by this user while `isUserActionPending` (O(1) emergency checks). 0 = none.
+    mapping(address => uint256) public userPendingIssuanceNonce;
+    /// @notice Latest redemption nonce opened by this user while `isUserActionPending` (O(1) emergency checks). 0 = none.
+    mapping(address => uint256) public userPendingRedemptionNonce;
 
     /// @notice USDC held in OrderManager that is reserved for unsettled issuance intents (logical escrow).
     uint256 public pendingIssuanceUsdc;
@@ -311,6 +315,41 @@ contract IndexFactoryStorage is
     function setUserActionPending(address _user, bool _isPending) external onlyFactory {
         require(_user != address(0), "invalid user");
         isUserActionPending[_user] = _isPending;
+    }
+
+    function setUserPendingIssuanceNonce(address user, uint256 nonce) external onlyFactory {
+        require(user != address(0), "invalid user");
+        userPendingIssuanceNonce[user] = nonce;
+    }
+
+    function setUserPendingRedemptionNonce(address user, uint256 nonce) external onlyFactory {
+        require(user != address(0), "invalid user");
+        userPendingRedemptionNonce[user] = nonce;
+    }
+
+    /// @notice Clears issuance pointer if it matches `nonce`. Returns whether the pointer matched.
+    function tryClearUserPendingIssuanceNonce(address user, uint256 nonce) external onlyFactory returns (bool) {
+        if (userPendingIssuanceNonce[user] != nonce) {
+            return false;
+        }
+        userPendingIssuanceNonce[user] = 0;
+        return true;
+    }
+
+    /// @notice Clears redemption pointer if it matches `nonce`. Returns whether the pointer matched.
+    function tryClearUserPendingRedemptionNonce(address user, uint256 nonce) external onlyFactory returns (bool) {
+        if (userPendingRedemptionNonce[user] != nonce) {
+            return false;
+        }
+        userPendingRedemptionNonce[user] = 0;
+        return true;
+    }
+
+    /// @notice Clears both intent pointers (e.g. emergency unlock).
+    function clearUserPendingIntentNonces(address user) external onlyFactory {
+        require(user != address(0), "invalid user");
+        userPendingIssuanceNonce[user] = 0;
+        userPendingRedemptionNonce[user] = 0;
     }
 
     function emitOrderIntentCreated(

@@ -827,6 +827,74 @@ contract IndexFactoryTest is Test {
         assertEq(pendingSum, 0);
     }
 
+    function testUserPendingIssuanceNonceMatchesOpenIntent() public {
+        uint256 inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        assertEq(factoryStorage.userPendingIssuanceNonce(user), nonce);
+        assertEq(factoryStorage.userPendingRedemptionNonce(user), 0);
+    }
+
+    function testEmergencyUnlockRevertsWhenUserHasPendingIssuance() public {
+        uint256 inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodeWithSelector(IndexFactory.EmergencyUnlockWithPendingIntent.selector, user));
+        vm.prank(admin);
+        factory.emergencyUnlock(user);
+    }
+
+    function testEmergencyUnlockSucceedsWhenIssuanceCancelRequested() public {
+        uint256 inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        factory.cancelOrder(nonce);
+        vm.stopPrank();
+
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.CANCEL_REQUESTED));
+
+        vm.prank(admin);
+        factory.emergencyUnlock(user);
+
+        assertEq(factoryStorage.isUserActionPending(user), false);
+        assertEq(factoryStorage.userPendingIssuanceNonce(user), 0);
+    }
+
+    function testEmergencyUnlockSucceedsForIdleUser() public {
+        address stranger = address(0xBEEF);
+        assertEq(factoryStorage.isUserActionPending(stranger), false);
+
+        vm.prank(admin);
+        factory.emergencyUnlock(stranger);
+
+        assertEq(factoryStorage.isUserActionPending(stranger), false);
+    }
+
     function testCancelOrderBeforeTimeoutRequestsOperatorCancel() public {
         uint inputAmount = 1000e6;
         vm.startPrank(admin);
