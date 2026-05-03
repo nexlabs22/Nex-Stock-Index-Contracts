@@ -535,6 +535,41 @@ contract IndexFactoryTest is Test {
         oracle.fulfillRequest(address(functionsOracle), requestId, data);
     }
 
+    /// @dev Simulates a rebalance that drops `token9` from the oracle basket (9 constituents).
+    function _fulfillOracleWithNineTokensDroppingToken9() internal {
+        vm.startPrank(admin);
+        address[] memory assetList = new address[](9);
+        assetList[0] = address(token0);
+        assetList[1] = address(token1);
+        assetList[2] = address(token2);
+        assetList[3] = address(token3);
+        assetList[4] = address(token4);
+        assetList[5] = address(token5);
+        assetList[6] = address(token6);
+        assetList[7] = address(token7);
+        assetList[8] = address(token8);
+
+        uint256 hundredE18 = 100e18;
+        uint256 baseShare = hundredE18 / 9;
+        uint[] memory tokenShares = new uint[](9);
+        uint256 sum;
+        for (uint256 i; i < 8; i++) {
+            tokenShares[i] = baseShare;
+            sum += baseShare;
+        }
+        tokenShares[8] = hundredE18 - sum;
+
+        link.transfer(address(functionsOracle), 1e17);
+        bytes32 requestId = functionsOracle.requestAssetsData(
+            "console.log('Hello, World!');",
+            0,
+            0
+        );
+        bytes memory data = abi.encode(assetList, tokenShares);
+        oracle.fulfillRequest(address(functionsOracle), requestId, data);
+        vm.stopPrank();
+    }
+
     function updateWrappedDshares() public {
         address[] memory assetList = new address[](10);
         assetList[0] = address(token0);
@@ -843,6 +878,110 @@ contract IndexFactoryTest is Test {
         
         assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
         assertEq(indexToken.balanceOf(user), 10e18);
+    }
+
+    /// @dev Issuance intent snapshots 10 constituents; oracle/current list shrinks to 9 before settlement. Relayer must still pass 10 received amounts matching `issuanceSnapshotTokenAt` order.
+    function testCompleteIssuanceAfterOracleListShrinks() public {
+        vm.startPrank(admin);
+        uint256 inputAmount = 1000e6;
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        assertEq(factoryStorage.issuanceSnapshotLength(nonce), 10);
+
+        _fulfillOracleWithNineTokensDroppingToken9();
+        vm.prank(address(factoryBalancer));
+        functionsOracle.updateCurrentList();
+        assertEq(functionsOracle.totalCurrentList(), 9);
+
+        uint256 receivedAmount = 100e18 / 10;
+        uint[] memory receivedAmounts = new uint[](10);
+        vm.startPrank(admin);
+        for (uint256 i; i < 10; i++) {
+            receivedAmounts[i] = receivedAmount;
+            address tokenAddress = factoryStorage.issuanceSnapshotTokenAt(nonce, i);
+            DShare(tokenAddress).mint(address(orderManager), receivedAmount);
+        }
+        vm.stopPrank();
+
+        vm.prank(admin);
+        factoryProcessor.completeIssuance(nonce, receivedAmounts);
+
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
+        assertEq(factoryStorage.issuanceSnapshotLength(nonce), 0);
+    }
+
+    /// @dev After list shrink, relayer must not use the new live `totalCurrentList()` length for an old nonce.
+    function testCompleteIssuanceRevertsWhenRelayerUsesPostRebalanceListLength() public {
+        vm.startPrank(admin);
+        uint256 inputAmount = 1000e6;
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        _fulfillOracleWithNineTokensDroppingToken9();
+        vm.prank(address(factoryBalancer));
+        functionsOracle.updateCurrentList();
+        assertEq(functionsOracle.totalCurrentList(), 9);
+
+        uint[] memory wrongLenAmounts = new uint[](9);
+        vm.expectRevert(bytes("Amounts array length mismatch"));
+        vm.prank(admin);
+        factoryProcessor.completeIssuance(nonce, wrongLenAmounts);
+    }
+
+    /// @dev Vault has no wrapped balance for token9, so redemption escrow snapshot omits token9; oracle may then drop token9.
+    function testCompleteRedemptionAfterOracleRemovesNonEscrowedConstituent() public {
+        vm.startPrank(admin);
+        for (uint256 i; i < 9; i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+            DShare(tokenAddress).mint(address(admin), 1000e18);
+            DShare(tokenAddress).approve(wrappedTokenAddress, 1000e18);
+            WrappedDShare(wrappedTokenAddress).deposit(1000e18, address(vault));
+        }
+
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 10000e18);
+        indexToken.setMinter(address(factory), true);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        uint256 nonce = factory.redemption(indexToken.balanceOf(address(user)));
+        vm.stopPrank();
+
+        assertEq(factoryStorage.pendingRedemptionAsset(address(token9)), 0);
+
+        _fulfillOracleWithNineTokensDroppingToken9();
+        vm.prank(address(factoryBalancer));
+        functionsOracle.updateCurrentList();
+        assertEq(functionsOracle.totalCurrentList(), 9);
+
+        uint256 totalUsdcReceived = 1000e18;
+        vm.startPrank(admin);
+        paymentToken.mint(address(orderManager), totalUsdcReceived);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        factoryProcessor.completeRedemption(nonce, totalUsdcReceived);
+
+        assertEq(uint8(factoryStorage.redemptionState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
+        for (uint256 i; i < 9; i++) {
+            assertEq(factoryStorage.pendingRedemptionAsset(functionsOracle.currentList(i)), 0);
+        }
     }
 
     function testCompleteIssuance2() public {

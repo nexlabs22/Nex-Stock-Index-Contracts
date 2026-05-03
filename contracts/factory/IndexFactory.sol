@@ -181,6 +181,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         // 4. Record Pre-Issuance Balances for NAV calculation (Required for completion phase)
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
+            factoryStorage.pushIssuanceSnapshotToken(issuanceNonce, tokenAddress);
             
             // NOTE: Synchronous requestBuyOrder() removed for V2 Asynchronous flow.
             // The Relayer will calculate the distribution and request EIP-712 permits off-chain.
@@ -393,6 +394,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         factoryStorage.setCancelIssuanceComplted(issuanceNonce, true);
         factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
         factoryStorage.setUserActionPending(requester, false);
+        factoryStorage.clearIssuanceSnapshot(issuanceNonce);
 
         emit IssuanceCancelled(
             issuanceNonce,

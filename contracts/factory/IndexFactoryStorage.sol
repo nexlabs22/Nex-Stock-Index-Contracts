@@ -102,6 +102,10 @@ contract IndexFactoryStorage is
     mapping(uint256 => uint256) public redemptionIntentTimestamp;
     /// @notice Per-redemption-nonce dShare amount escrowed per asset (must match decrements on settle/cancel).
     mapping(uint256 => mapping(address => uint256)) public redemptionEscrowedAssetByNonce;
+    /// @notice Constituent order at issuance intent creation (TOCTOU-safe vs oracle list changes).
+    mapping(uint256 => address[]) private _issuanceSnapshotTokens;
+    /// @notice Tokens that received redemption escrow for this nonce (TOCTOU-safe vs oracle list changes).
+    mapping(uint256 => address[]) private _redemptionEscrowSnapshotTokens;
 
     event OrderIntentCreated(
         bytes32 indexed intentId,
@@ -528,20 +532,57 @@ contract IndexFactoryStorage is
         require(redemptionEscrowedAssetByNonce[_nonce][_token] == 0, "escrow already recorded");
         redemptionEscrowedAssetByNonce[_nonce][_token] = _amount;
         pendingRedemptionAsset[_token] += _amount;
+        _redemptionEscrowSnapshotTokens[_nonce].push(_token);
+    }
+
+    /// @notice Length of the issuance constituent snapshot for this nonce (0 = pre-migration, use live oracle in processor).
+    function issuanceSnapshotLength(uint256 _nonce) external view returns (uint256) {
+        return _issuanceSnapshotTokens[_nonce].length;
+    }
+
+    /// @notice Token at index in the issuance snapshot (same order as at intent creation).
+    function issuanceSnapshotTokenAt(uint256 _nonce, uint256 _index) external view returns (address) {
+        return _issuanceSnapshotTokens[_nonce][_index];
+    }
+
+    function pushIssuanceSnapshotToken(uint256 _nonce, address _token) external onlyFactory {
+        require(_token != address(0), "invalid token address");
+        _issuanceSnapshotTokens[_nonce].push(_token);
+    }
+
+    function clearIssuanceSnapshot(uint256 _nonce) external onlyFactory {
+        delete _issuanceSnapshotTokens[_nonce];
     }
 
     function consumeRedemptionEscrowForNonce(uint256 _nonce) external onlyFactory {
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 amt = redemptionEscrowedAssetByNonce[_nonce][tokenAddress];
-            if (amt == 0) {
-                continue;
+        address[] storage snapshot = _redemptionEscrowSnapshotTokens[_nonce];
+        if (snapshot.length > 0) {
+            for (uint256 i; i < snapshot.length; i++) {
+                address tokenAddress = snapshot[i];
+                uint256 amt = redemptionEscrowedAssetByNonce[_nonce][tokenAddress];
+                if (amt == 0) {
+                    continue;
+                }
+                if (amt > pendingRedemptionAsset[tokenAddress]) {
+                    revert InsufficientPendingRedemptionAsset();
+                }
+                pendingRedemptionAsset[tokenAddress] -= amt;
+                redemptionEscrowedAssetByNonce[_nonce][tokenAddress] = 0;
             }
-            if (amt > pendingRedemptionAsset[tokenAddress]) {
-                revert InsufficientPendingRedemptionAsset();
+            delete _redemptionEscrowSnapshotTokens[_nonce];
+        } else {
+            for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+                address tokenAddress = functionsOracle.currentList(i);
+                uint256 amt = redemptionEscrowedAssetByNonce[_nonce][tokenAddress];
+                if (amt == 0) {
+                    continue;
+                }
+                if (amt > pendingRedemptionAsset[tokenAddress]) {
+                    revert InsufficientPendingRedemptionAsset();
+                }
+                pendingRedemptionAsset[tokenAddress] -= amt;
+                redemptionEscrowedAssetByNonce[_nonce][tokenAddress] = 0;
             }
-            pendingRedemptionAsset[tokenAddress] -= amt;
-            redemptionEscrowedAssetByNonce[_nonce][tokenAddress] = 0;
         }
     }
 

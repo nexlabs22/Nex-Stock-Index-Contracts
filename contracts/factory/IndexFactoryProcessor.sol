@@ -108,47 +108,57 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         return true;
     }
 
-    /**
-     * @dev Completes the asynchronous issuance flow. Called by the off-chain Relayer.
-     */
-    function completeIssuance(uint256 _issuanceNonce, uint256[] calldata _receivedAmounts) public nonReentrant whenNotPaused onlyOwnerOrOperator {
-        IndexFactoryStorage.ActionState issuanceState = factoryStorage.issuanceState(_issuanceNonce);
-        if (issuanceState != IndexFactoryStorage.ActionState.PENDING) {
-            revert InvalidActionState(
-                _issuanceNonce, IndexFactoryStorage.ActionState.PENDING, issuanceState
+    function _issuanceConstituentAt(uint256 issuanceNonce, uint256 i, uint256 snapLen) private view returns (address) {
+        if (snapLen > 0) {
+            return factoryStorage.issuanceSnapshotTokenAt(issuanceNonce, i);
+        }
+        return functionsOracle.currentList(i);
+    }
+
+    function _applyIssuanceReceivedForToken(
+        uint256 issuanceNonce,
+        address tokenAddress,
+        uint256 balance,
+        OrderManager orderManager
+    ) private returns (uint256 primaryValue, uint256 secondaryValue) {
+        uint256 price = factoryStorage.priceInWei(tokenAddress);
+        uint256 receivedValue = balance * price / 1e18;
+        uint256 primaryBalance = factoryStorage.issuanceTokenPrimaryBalance(issuanceNonce, tokenAddress);
+        primaryValue = primaryBalance * price / 1e18;
+        secondaryValue = primaryValue + receivedValue;
+        if (balance > 0) {
+            orderManager.withdrawFunds(tokenAddress, address(this), balance);
+            IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), balance);
+            WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
+                balance, address(factoryStorage.vault())
             );
         }
-        require(_receivedAmounts.length == functionsOracle.totalCurrentList(), "Amounts array length mismatch");
-        
-        address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
-        uint256 primaryPortfolioValue;
-        uint256 secondaryPortfolioValue;
+    }
 
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 price = factoryStorage.priceInWei(tokenAddress);
-            
-            uint256 balance = _receivedAmounts[i];
-            uint256 receivedValue = balance * price / 1e18;
-            
-            uint256 primaryBalance = factoryStorage.issuanceTokenPrimaryBalance(_issuanceNonce, tokenAddress);
-            uint256 primaryValue = primaryBalance * price / 1e18;
-            uint256 secondaryValue = primaryValue + receivedValue;
-            
-            primaryPortfolioValue += primaryValue;
-            secondaryPortfolioValue += secondaryValue;
-
-            if (balance > 0) {
-                OrderManager orderManager = factoryStorage.orderManager();
-                orderManager.withdrawFunds(tokenAddress, address(this), balance);
-                IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), balance);
-                WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
-                    balance, address(factoryStorage.vault())
-                );
-            }
+    function _completeIssuanceAccumulatePortfolios(
+        uint256 issuanceNonce,
+        uint256[] calldata _receivedAmounts,
+        uint256 snapLen
+    ) private returns (uint256 primaryPortfolioValue, uint256 secondaryPortfolioValue) {
+        uint256 listLen = snapLen > 0 ? snapLen : functionsOracle.totalCurrentList();
+        require(_receivedAmounts.length == listLen, "Amounts array length mismatch");
+        OrderManager orderManager = factoryStorage.orderManager();
+        for (uint256 i; i < listLen; i++) {
+            address tokenAddress = _issuanceConstituentAt(issuanceNonce, i, snapLen);
+            (uint256 pv, uint256 sv) =
+                _applyIssuanceReceivedForToken(issuanceNonce, tokenAddress, _receivedAmounts[i], orderManager);
+            primaryPortfolioValue += pv;
+            secondaryPortfolioValue += sv;
         }
+    }
 
-        uint256 primaryTotalSupply = factoryStorage.issuanceIndexTokenPrimaryTotalSupply(_issuanceNonce);
+    function _finalizeIssuanceMintAndState(
+        uint256 issuanceNonce,
+        address requester,
+        uint256 primaryPortfolioValue,
+        uint256 secondaryPortfolioValue
+    ) private {
+        uint256 primaryTotalSupply = factoryStorage.issuanceIndexTokenPrimaryTotalSupply(issuanceNonce);
         uint256 mintAmount;
 
         if (primaryTotalSupply == 0 || primaryPortfolioValue == 0) {
@@ -159,29 +169,49 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         }
 
         if (mintAmount == 0) {
-            revert ZeroIssuanceMint(_issuanceNonce);
+            revert ZeroIssuanceMint(issuanceNonce);
         }
 
         IndexToken token = factoryStorage.token();
         token.mint(requester, mintAmount);
-        
+
         emit Issuanced(
-            _issuanceNonce,
+            issuanceNonce,
             requester,
             factoryStorage.usdc(),
-            factoryStorage.issuanceInputAmount(_issuanceNonce),
+            factoryStorage.issuanceInputAmount(issuanceNonce),
             mintAmount,
             factoryStorage.getIndexTokenPrice(),
             block.timestamp
         );
 
-        uint256 issuanceEscrow = factoryStorage.getIssuanceEscrowedUsdc(_issuanceNonce);
+        uint256 issuanceEscrow = factoryStorage.getIssuanceEscrowedUsdc(issuanceNonce);
         if (issuanceEscrow > 0) {
             factoryStorage.decreasePendingIssuanceUsdc(issuanceEscrow);
         }
 
-        factoryStorage.setIssuanceState(_issuanceNonce, IndexFactoryStorage.ActionState.COMPLETED);
+        factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.COMPLETED);
         factoryStorage.setUserActionPending(requester, false);
+        factoryStorage.clearIssuanceSnapshot(issuanceNonce);
+    }
+
+    /**
+     * @dev Completes the asynchronous issuance flow. Called by the off-chain Relayer.
+     */
+    function completeIssuance(uint256 _issuanceNonce, uint256[] calldata _receivedAmounts) public nonReentrant whenNotPaused onlyOwnerOrOperator {
+        IndexFactoryStorage.ActionState issuanceState = factoryStorage.issuanceState(_issuanceNonce);
+        if (issuanceState != IndexFactoryStorage.ActionState.PENDING) {
+            revert InvalidActionState(
+                _issuanceNonce, IndexFactoryStorage.ActionState.PENDING, issuanceState
+            );
+        }
+        uint256 snapLen = factoryStorage.issuanceSnapshotLength(_issuanceNonce);
+        (uint256 primaryPortfolioValue, uint256 secondaryPortfolioValue) =
+            _completeIssuanceAccumulatePortfolios(_issuanceNonce, _receivedAmounts, snapLen);
+        address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
+        _finalizeIssuanceMintAndState(
+            _issuanceNonce, requester, primaryPortfolioValue, secondaryPortfolioValue
+        );
     }
 
     /**
@@ -218,6 +248,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         factoryStorage.setCancelIssuanceComplted(_issuanceNonce, true);
         factoryStorage.setIssuanceState(_issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
         factoryStorage.setUserActionPending(requester, false);
+        factoryStorage.clearIssuanceSnapshot(_issuanceNonce);
         
         emit IssuanceCancelled(
             _issuanceNonce,
