@@ -228,7 +228,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
                 _issuanceNonce, IndexFactoryStorage.ActionState.CANCEL_REQUESTED, issuanceState
             );
         }
-        require(!factoryStorage.cancelIssuanceComplted(_issuanceNonce), "Cancellation already processed");
+        require(!factoryStorage.cancelIssuanceCompleted(_issuanceNonce), "Cancellation already processed");
         
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
         
@@ -247,7 +247,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
             factoryStorage.decreasePendingIssuanceUsdc(issuanceEscrow);
         }
 
-        factoryStorage.setCancelIssuanceComplted(_issuanceNonce, true);
+        factoryStorage.setCancelIssuanceCompleted(_issuanceNonce, true);
         factoryStorage.setIssuanceState(_issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
         if (factoryStorage.tryClearUserPendingIssuanceNonce(requester, _issuanceNonce)) {
             factoryStorage.setUserActionPending(requester, false);
@@ -276,7 +276,8 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
                 _redemptionNonce, IndexFactoryStorage.ActionState.PENDING, redemptionState
             );
         }
-        
+        require(_totalUsdcReceived > 0, "zero settlement");
+
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
         
         // Calculate protocol fee from the total USDC liquidated by the Relayer
@@ -321,7 +322,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
                 _redemptionNonce, IndexFactoryStorage.ActionState.CANCEL_REQUESTED, redemptionState
             );
         }
-        require(!factoryStorage.cancelRedemptionComplted(_redemptionNonce), "The process has been completed before");
+        require(!factoryStorage.cancelRedemptionCompleted(_redemptionNonce), "The process has been completed before");
 
         address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
 
@@ -332,7 +333,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         uint256 originalBurnAmount = factoryStorage.burnedTokenAmountByNonce(_redemptionNonce);
         token.mint(requester, originalBurnAmount);
         
-        factoryStorage.setCancelRedemptionComplted(_redemptionNonce, true);
+        factoryStorage.setCancelRedemptionCompleted(_redemptionNonce, true);
         factoryStorage.setRedemptionState(_redemptionNonce, IndexFactoryStorage.ActionState.CANCELLED);
         if (factoryStorage.tryClearUserPendingRedemptionNonce(requester, _redemptionNonce)) {
             factoryStorage.setUserActionPending(requester, false);

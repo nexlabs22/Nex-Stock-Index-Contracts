@@ -83,8 +83,8 @@ contract IndexFactoryStorage is
     mapping(uint => uint) public issuanceIndexTokenPrimaryTotalSupply;
     mapping(uint => address) public issuanceRequesterByNonce;
     mapping(uint => address) public redemptionRequesterByNonce;
-    mapping(uint => bool) public cancelIssuanceComplted;
-    mapping(uint => bool) public cancelRedemptionComplted;
+    mapping(uint => bool) public cancelIssuanceCompleted;
+    mapping(uint => bool) public cancelRedemptionCompleted;
     mapping(uint => uint) public issuanceInputAmount;
     mapping(uint => uint) public redemptionInputAmount;
 
@@ -405,12 +405,12 @@ contract IndexFactoryStorage is
         redemptionInputAmount[_redemptionNonce] = _amount;
     }
 
-    function setCancelIssuanceComplted(uint _issuanceNonce, bool _isCompleted) external onlyFactory {
-        cancelIssuanceComplted[_issuanceNonce] = _isCompleted;
+    function setCancelIssuanceCompleted(uint _issuanceNonce, bool _isCompleted) external onlyFactory {
+        cancelIssuanceCompleted[_issuanceNonce] = _isCompleted;
     }
 
-    function setCancelRedemptionComplted(uint _redemptionNonce, bool _isCompleted) external onlyFactory {
-        cancelRedemptionComplted[_redemptionNonce] = _isCompleted;
+    function setCancelRedemptionCompleted(uint _redemptionNonce, bool _isCompleted) external onlyFactory {
+        cancelRedemptionCompleted[_redemptionNonce] = _isCompleted;
     }
 
     function getVaultDshareBalance(address _token) public view returns(uint){

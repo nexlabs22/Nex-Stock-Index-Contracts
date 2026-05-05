@@ -119,23 +119,14 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         NexVault(factoryStorage.vault()).withdrawFunds(wrappedDshare, address(this), _amount);
         uint256 orderAmount0 = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
 
-        // V2 async placeholder: keep full amount, relayer applies venue-specific rounding.
-        uint256 orderAmount = orderAmount0;
-        uint256 extraAmount = orderAmount0 - orderAmount;
-
-        if (extraAmount > 0) {
-            IERC20(_token).approve(wrappedDshare, extraAmount);
-            WrappedDShare(wrappedDshare).deposit(extraAmount, address(factoryStorage.vault()));
-        }
-
         _receiver; // placeholder: receiver is relayer-side concern in V2 async flow
-        IERC20(_token).safeTransfer(address(factoryStorage.orderManager()), orderAmount);
+        IERC20(_token).safeTransfer(address(factoryStorage.orderManager()), orderAmount0);
         nextRebalanceIntentId += 1;
         uint256 id = nextRebalanceIntentId;
         rebalanceIsSellById[id] = true;
         rebalanceTokenById[id] = _token;
-        factoryStorage.increaseTokenPendingRebalanceAmount(_token, rebalanceNonce, orderAmount);
-        return (id, orderAmount);
+        factoryStorage.increaseTokenPendingRebalanceAmount(_token, rebalanceNonce, orderAmount0);
+        return (id, orderAmount0);
     }
 
     function _emitSellIntent(address _tokenAddress, uint256 _amount, uint256 _rebalanceNonce) internal {
@@ -173,7 +164,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                         requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
                     actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
                     rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
-                    rebalanceSellAssetAmountById[requestId] = amount;
+                    rebalanceSellAssetAmountById[requestId] = assetAmount;
                     _emitSellIntent(tokenAddress, assetAmount, _rebalanceNonce);
                 }
             } else {

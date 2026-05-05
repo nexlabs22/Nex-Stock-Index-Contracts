@@ -176,7 +176,8 @@ contract FunctionsOracle is
         uint256 newLen = totalOracleList;
         uint256 oldLen = totalCurrentList;
         address storageAddr = indexFactoryStorage;
-        if (storageAddr != address(0) && oldLen > 0) {
+        require(storageAddr != address(0), "indexFactoryStorage not set");
+        if (oldLen > 0) {
             IIndexFactoryStoragePendingRedemption st = IIndexFactoryStoragePendingRedemption(storageAddr);
             for (uint256 i; i < oldLen; i++) {
                 address oldToken = currentList[i];

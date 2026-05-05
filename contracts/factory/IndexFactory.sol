@@ -66,7 +66,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     event OrderIntentIssuance(
         uint256 indexed nonce,
         address indexed user,
-        address inputToken,
+        address indexed inputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
@@ -75,7 +75,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     event OrderIntentCancelIssuance(
         uint256 indexed nonce,
         address indexed user,
-        address inputToken,
+        address indexed inputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
@@ -84,7 +84,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     event OrderIntentRedemption(
         uint256 indexed nonce,
         address indexed user,
-        address outputToken,
+        address indexed outputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
@@ -93,7 +93,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     event OrderIntentCancelRedemption(
         uint256 indexed nonce,
         address indexed user,
-        address outputToken,
+        address indexed outputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
@@ -153,7 +153,11 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     function issuanceIndexTokens(uint256 _inputAmount) public nonReentrant whenNotPaused returns (uint256) {
         require(_inputAmount > 0, "Invalid input amount");
         require(!factoryStorage.isUserActionPending(msg.sender), "User has pending action");
-        
+        require(
+            address(factoryStorage.orderManager().indexFactory()) == address(this),
+            "OrderManager not wired"
+        );
+
         // 1. Calculate Fees & Required Input
         uint256 feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
@@ -276,8 +280,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            uint256 wrappedBal = IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(factoryStorage.vault()));
-            uint256 amountToSell = (tokenBurnPercent * wrappedBal) / 1e18;
+            address wrapped = factoryStorage.wrappedDshareAddress(tokenAddress);
+            uint256 wrappedBal = IERC20(wrapped).balanceOf(address(factoryStorage.vault()));
+            uint256 underlyingVaultBal = WrappedDShare(wrapped).previewRedeem(wrappedBal);
+            uint256 amountToSell = (tokenBurnPercent * underlyingVaultBal) / 1e18;
             if (amountToSell > 0) {
                 factoryStorage.recordRedemptionEscrowSlice(redemptionNonce, tokenAddress, amountToSell);
                 factoryStorage.emitOrderIntentCreated(
@@ -382,7 +388,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     }
 
     function _atomicCancelIssuance(uint256 issuanceNonce, address requester) internal {
-        require(!factoryStorage.cancelIssuanceComplted(issuanceNonce), "Cancellation already processed");
+        require(!factoryStorage.cancelIssuanceCompleted(issuanceNonce), "Cancellation already processed");
 
         uint256 originalInputAmount = factoryStorage.issuanceInputAmount(issuanceNonce);
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(originalInputAmount);
@@ -393,7 +399,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         factoryStorage.decreasePendingIssuanceUsdc(escrow);
         factoryStorage.orderManager().releaseEscrow(factoryStorage.usdc(), requester, totalRefund);
 
-        factoryStorage.setCancelIssuanceComplted(issuanceNonce, true);
+        factoryStorage.setCancelIssuanceCompleted(issuanceNonce, true);
         factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
         if (factoryStorage.tryClearUserPendingIssuanceNonce(requester, issuanceNonce)) {
             factoryStorage.setUserActionPending(requester, false);
@@ -411,7 +417,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     }
 
     function _atomicCancelRedemption(uint256 redemptionNonce, address requester) internal {
-        require(!factoryStorage.cancelRedemptionComplted(redemptionNonce), "The process has been completed before");
+        require(!factoryStorage.cancelRedemptionCompleted(redemptionNonce), "The process has been completed before");
 
         factoryStorage.consumeRedemptionEscrowForNonce(redemptionNonce);
 
@@ -419,7 +425,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 originalBurnAmount = factoryStorage.burnedTokenAmountByNonce(redemptionNonce);
         token.mint(requester, originalBurnAmount);
 
-        factoryStorage.setCancelRedemptionComplted(redemptionNonce, true);
+        factoryStorage.setCancelRedemptionCompleted(redemptionNonce, true);
         factoryStorage.setRedemptionState(redemptionNonce, IndexFactoryStorage.ActionState.CANCELLED);
         if (factoryStorage.tryClearUserPendingRedemptionNonce(requester, redemptionNonce)) {
             factoryStorage.setUserActionPending(requester, false);

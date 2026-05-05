@@ -1159,7 +1159,7 @@ contract IndexFactoryTest is Test {
         
         vm.prank(admin);
         factoryProcessor.completeCancelIssuance(nonce);
-        assertEq(factoryStorage.cancelIssuanceComplted(nonce), true);
+        assertEq(factoryStorage.cancelIssuanceCompleted(nonce), true);
     }
 
     function testCancelPartialIssuance() public {
@@ -1178,7 +1178,7 @@ contract IndexFactoryTest is Test {
         
         vm.prank(admin);
         factoryProcessor.completeCancelIssuance(nonce);
-        assertEq(factoryStorage.cancelIssuanceComplted(nonce), true);
+        assertEq(factoryStorage.cancelIssuanceCompleted(nonce), true);
     }
 
     function testRedemption() public {
@@ -1263,6 +1263,29 @@ contract IndexFactoryTest is Test {
         assertEq(indexToken.balanceOf(user), 0);
     }
 
+    function testCompleteRedemptionRevertsOnZeroSettlement() public {
+        vm.startPrank(admin);
+        for (uint i; i < 10; i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            DShare(tokenAddress).mint(address(admin), 1000e18);
+            DShare(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), 1000e18);
+            WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
+        }
+
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 10000e18);
+        indexToken.setMinter(address(factory), true);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        uint256 nonce = factory.redemption(indexToken.balanceOf(address(user)));
+        vm.stopPrank();
+
+        vm.expectRevert(bytes("zero settlement"));
+        vm.prank(admin);
+        factoryProcessor.completeRedemption(nonce, 0);
+    }
+
 
     function testCancelRdemption() public {
         vm.startPrank(admin);
@@ -1286,7 +1309,7 @@ contract IndexFactoryTest is Test {
 
         vm.prank(admin);
         factoryProcessor.completeCancelRedemption(nonce);
-        assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
+        assertEq(factoryStorage.cancelRedemptionCompleted(nonce), true);
         assertEq(indexToken.balanceOf(user), 100e18); // Check tokens were reminted
     }
 
@@ -1312,7 +1335,7 @@ contract IndexFactoryTest is Test {
 
         vm.prank(admin);
         factoryProcessor.completeCancelRedemption(nonce);
-        assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
+        assertEq(factoryStorage.cancelRedemptionCompleted(nonce), true);
     }
 
     function testRebalancing() public {

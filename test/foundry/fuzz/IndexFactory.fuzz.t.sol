@@ -735,7 +735,7 @@ contract IndexTokenFactoryFuzzTests is Test {
         
         vm.prank(admin);
         factoryProcessor.completeCancelIssuance(nonce);
-        assertEq(factoryStorage.cancelIssuanceComplted(nonce), true);
+        assertEq(factoryStorage.cancelIssuanceCompleted(nonce), true);
         assertEq(paymentToken.balanceOf(user), inputAmount + feeAmount);
     }
 

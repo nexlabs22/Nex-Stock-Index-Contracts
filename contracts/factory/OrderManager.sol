@@ -55,6 +55,7 @@ contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable,
     }
 
     function setIndexFactory(address _indexFactory) external onlyOwner {
+        require(_indexFactory != address(0), "invalid factory address");
         indexFactory = _indexFactory;
     }
 
