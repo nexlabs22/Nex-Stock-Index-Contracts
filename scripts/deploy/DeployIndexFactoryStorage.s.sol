@@ -12,7 +12,6 @@ import "../../contracts/factory/IndexFactoryStorage.sol";
 contract DeployIndexFactoryStorage is Script {
     struct ChainVars {
         address functionsOracleProxy;
-        address issuer;
         address indexTokenProxy;
         address nexVaultProxy;
         address usdc;
@@ -36,7 +35,6 @@ contract DeployIndexFactoryStorage is Script {
             abi.encodeCall(
                 IndexFactoryStorage.initialize,
                 (
-                    vars.issuer,
                     vars.indexTokenProxy,
                     vars.nexVaultProxy,
                     vars.usdc,
@@ -62,7 +60,6 @@ contract DeployIndexFactoryStorage is Script {
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             vars.functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
-            vars.issuer = vm.envAddress("SEPOLIA_ISSUER_ADDRESS");
             vars.indexTokenProxy = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
             vars.nexVaultProxy = vm.envAddress("SEPOLIA_VAULT_PROXY_ADDRESS");
             vars.usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
@@ -70,7 +67,6 @@ contract DeployIndexFactoryStorage is Script {
             vars.isMainnet = false;
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             vars.functionsOracleProxy = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
-            vars.issuer = vm.envAddress("ARBITRUM_ISSUER_ADDRESS");
             vars.indexTokenProxy = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
             vars.nexVaultProxy = vm.envAddress("ARBITRUM_VAULT_PROXY_ADDRESS");
             vars.usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");

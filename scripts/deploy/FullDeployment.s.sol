@@ -29,7 +29,6 @@ contract FullDeployment is Script {
     address public feeReceiver;
     uint256 public supplyCeiling;
 
-    address public issuer;
     address public usdc;
     uint8 public usdcDecimals;
     bool public isMainnet;
@@ -125,7 +124,7 @@ contract FullDeployment is Script {
                 owner,
                 abi.encodeCall(
                     IndexFactoryStorage.initialize,
-                    (issuer, indexTokenProxy, nexVaultProxy, usdc, usdcDecimals, functionsOracleProxy, isMainnet)
+                    (indexTokenProxy, nexVaultProxy, usdc, usdcDecimals, functionsOracleProxy, isMainnet)
                 )
             );
 
@@ -227,7 +226,6 @@ contract FullDeployment is Script {
             feeReceiver = vm.envAddress("SEPOLIA_FEE_RECEIVER");
             supplyCeiling = vm.envUint("SEPOLIA_SUPPLY_CEILING");
 
-            issuer = vm.envAddress("SEPOLIA_ISSUER_ADDRESS");
             usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("SEPOLIA_USDC_DECIMALS"));
             isMainnet = false;
@@ -241,7 +239,6 @@ contract FullDeployment is Script {
             feeReceiver = vm.envAddress("ARBITRUM_FEE_RECEIVER");
             supplyCeiling = vm.envUint("ARBITRUM_SUPPLY_CEILING");
 
-            issuer = vm.envAddress("ARBITRUM_ISSUER_ADDRESS");
             usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("ARBITRUM_USDC_DECIMALS"));
             isMainnet = true;

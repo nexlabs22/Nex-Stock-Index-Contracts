@@ -7,9 +7,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-
-import "../dinary/orders/IOrderProcessor.sol";
 import "../dinary/WrappedDShare.sol";
 import "../vault/NexVault.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -25,12 +22,22 @@ contract IndexFactoryStorage is
 {
     using FunctionsRequest for FunctionsRequest.Request;
 
-    struct ActionInfo {
-        uint actionType;
-        uint nonce; 
+    enum ActionState {
+        NONE,
+        PENDING,
+        CANCEL_REQUESTED,
+        COMPLETED,
+        CANCELLED
     }
-    
-    
+
+    enum OrderType {
+        BUY,
+        SELL
+    }
+
+    error NonMainnetPriceUnavailable();
+    error InsufficientPendingIssuanceUsdc();
+    error InsufficientPendingRedemptionAsset();
 
     // Addresses of factory contracts
     address public factoryAddress;
@@ -53,7 +60,6 @@ contract IndexFactoryStorage is
     // Contract instances
     IndexToken public token;
     NexVault public vault;
-    IOrderProcessor public issuer;
     address public usdc;
     uint8 public usdcDecimals;
     OrderManager public orderManager;
@@ -70,35 +76,51 @@ contract IndexFactoryStorage is
     address public feeReceiver;
 
     // Mappings for issuance and redemption data
-    mapping(uint => bool) public issuanceIsCompleted;
-    mapping(uint => bool) public redemptionIsCompleted;
+    mapping(uint256 => ActionState) public issuanceState;
+    mapping(uint256 => ActionState) public redemptionState;
     mapping(uint => uint) public burnedTokenAmountByNonce;
-    mapping(uint => mapping(address => uint)) public cancelIssuanceRequestId;
-    mapping(uint => mapping(address => uint)) public cancelRedemptionRequestId;
-    mapping(uint => mapping(address => uint)) public issuanceRequestId;
-    mapping(uint => mapping(address => uint)) public redemptionRequestId;
-    mapping(uint => uint) public buyRequestPayedAmountById;
-    mapping(uint => uint) public sellRequestAssetAmountById;
     mapping(uint => mapping(address => uint)) public issuanceTokenPrimaryBalance;
-    mapping(uint => mapping(address => uint)) public redemptionTokenPrimaryBalance;
     mapping(uint => uint) public issuanceIndexTokenPrimaryTotalSupply;
-    mapping(uint => uint) public redemptionIndexTokenPrimaryTotalSupply;
     mapping(uint => address) public issuanceRequesterByNonce;
     mapping(uint => address) public redemptionRequesterByNonce;
-    mapping(uint => bool) public cancelIssuanceComplted;
-    mapping(uint => bool) public cancelRedemptionComplted;
-    mapping(uint =>  IOrderProcessor.Order) public orderInstanceById;
+    mapping(uint => bool) public cancelIssuanceCompleted;
+    mapping(uint => bool) public cancelRedemptionCompleted;
     mapping(uint => uint) public issuanceInputAmount;
     mapping(uint => uint) public redemptionInputAmount;
-    mapping(uint => ActionInfo) public actionInfoById;
-    mapping(uint => mapping(address => uint)) public cancelIssuanceUnfilledAmount;
-    mapping(uint => mapping(address => uint)) public cancelRedemptionUnfilledAmount;
 
     mapping(address => uint) public tokenPendingRebalanceAmount;
     mapping(address => mapping(uint => uint)) public tokenPendingRebalanceAmountByNonce;
+    mapping(address => bool) public isUserActionPending;
+    /// @notice Latest issuance nonce opened by this user while `isUserActionPending` (O(1) emergency checks). 0 = none.
+    mapping(address => uint256) public userPendingIssuanceNonce;
+    /// @notice Latest redemption nonce opened by this user while `isUserActionPending` (O(1) emergency checks). 0 = none.
+    mapping(address => uint256) public userPendingRedemptionNonce;
+
+    /// @notice USDC held in OrderManager that is reserved for unsettled issuance intents (logical escrow).
+    uint256 public pendingIssuanceUsdc;
+    /// @notice dShare units (underlying asset) reserved across all pending redemptions, per asset.
+    mapping(address => uint256) public pendingRedemptionAsset;
+    /// @notice Wall-clock start of an issuance intent (for timeout cancel).
+    mapping(uint256 => uint256) public issuanceIntentTimestamp;
+    /// @notice Wall-clock start of a redemption intent (for timeout cancel).
+    mapping(uint256 => uint256) public redemptionIntentTimestamp;
+    /// @notice Per-redemption-nonce dShare amount escrowed per asset (must match decrements on settle/cancel).
+    mapping(uint256 => mapping(address => uint256)) public redemptionEscrowedAssetByNonce;
+    /// @notice Constituent order at issuance intent creation (TOCTOU-safe vs oracle list changes).
+    mapping(uint256 => address[]) private _issuanceSnapshotTokens;
+    /// @notice Tokens that received redemption escrow for this nonce (TOCTOU-safe vs oracle list changes).
+    mapping(uint256 => address[]) private _redemptionEscrowSnapshotTokens;
+
+    event OrderIntentCreated(
+        bytes32 indexed intentId,
+        address indexed user,
+        address indexed assetAddress,
+        uint256 amountIn,
+        uint8 orderType,
+        uint256 nonce
+    );
 
     /// @notice Initializes the contract with the given parameters
-    /// @param _issuer The address of the issuer
     /// @param _token The address of the token
     /// @param _vault The address of the vault
     /// @param _usdc The address of the USDC token
@@ -106,7 +128,6 @@ contract IndexFactoryStorage is
     //  @param _functionsOracle the address of functions oracle contract
     /// @param _isMainnet Boolean indicating if the contract is on mainnet
     function initialize(
-        address _issuer,
         address _token,
         address _vault,
         address _usdc,
@@ -114,13 +135,11 @@ contract IndexFactoryStorage is
         address _functionsOracle,
         bool _isMainnet
     ) external initializer {
-        require(_issuer != address(0), "invalid issuer address");
         require(_token != address(0), "invalid token address");
         require(_vault != address(0), "invalid vault address");
         require(_usdc != address(0), "invalid usdc address");
         require(_functionsOracle != address(0), "invalid functions oracle address");
         require(_usdcDecimals > 0, "invalid decimals");
-        issuer = IOrderProcessor(_issuer);
         token = IndexToken(_token);
         vault = NexVault(_vault);
         usdc = _usdc;
@@ -222,18 +241,6 @@ contract IndexFactoryStorage is
 
     
 
-    /// @notice Allows the owner of the contract to set the issuer
-    /// @param _issuer address
-    /// @return bool
-    function setIssuer(address _issuer) external onlyOwner returns (bool) {
-        require(_issuer != address(0), "invalid issuer address");
-        issuer = IOrderProcessor(_issuer);
-
-        return true;
-    }
-
-    
-
     function setWrappedDshareAndPriceFeedAddresses(address[] memory _dShares, address[] memory _wrappedDShares, address[] memory _priceFeedAddresses) public onlyOwner {
         require(_dShares.length == _wrappedDShares.length, "Array length mismatch");
         require(_dShares.length == _priceFeedAddresses.length, "Array length mismatch");
@@ -297,29 +304,72 @@ contract IndexFactoryStorage is
         redemptionNonce += 1;
     }
     
-    function setIssuanceIsCompleted(uint _issuanceNonce , bool _isCompleted) external onlyFactory {
-        issuanceIsCompleted[_issuanceNonce] = _isCompleted;
+    function setIssuanceState(uint256 _issuanceNonce, ActionState _state) external onlyFactory {
+        issuanceState[_issuanceNonce] = _state;
     }
 
-    function setRedemptionIsCompleted(uint _redemptionNonce , bool _isCompleted) external onlyFactory {
-        redemptionIsCompleted[_redemptionNonce] = _isCompleted;
+    function setRedemptionState(uint256 _redemptionNonce, ActionState _state) external onlyFactory {
+        redemptionState[_redemptionNonce] = _state;
+    }
+
+    function setUserActionPending(address _user, bool _isPending) external onlyFactory {
+        require(_user != address(0), "invalid user");
+        isUserActionPending[_user] = _isPending;
+    }
+
+    function setUserPendingIssuanceNonce(address user, uint256 nonce) external onlyFactory {
+        require(user != address(0), "invalid user");
+        userPendingIssuanceNonce[user] = nonce;
+    }
+
+    function setUserPendingRedemptionNonce(address user, uint256 nonce) external onlyFactory {
+        require(user != address(0), "invalid user");
+        userPendingRedemptionNonce[user] = nonce;
+    }
+
+    /// @notice Clears issuance pointer if it matches `nonce`. Returns whether the pointer matched.
+    function tryClearUserPendingIssuanceNonce(address user, uint256 nonce) external onlyFactory returns (bool) {
+        if (userPendingIssuanceNonce[user] != nonce) {
+            return false;
+        }
+        userPendingIssuanceNonce[user] = 0;
+        return true;
+    }
+
+    /// @notice Clears redemption pointer if it matches `nonce`. Returns whether the pointer matched.
+    function tryClearUserPendingRedemptionNonce(address user, uint256 nonce) external onlyFactory returns (bool) {
+        if (userPendingRedemptionNonce[user] != nonce) {
+            return false;
+        }
+        userPendingRedemptionNonce[user] = 0;
+        return true;
+    }
+
+    /// @notice Clears both intent pointers (e.g. emergency unlock).
+    function clearUserPendingIntentNonces(address user) external onlyFactory {
+        require(user != address(0), "invalid user");
+        userPendingIssuanceNonce[user] = 0;
+        userPendingRedemptionNonce[user] = 0;
+    }
+
+    function emitOrderIntentCreated(
+        address _user,
+        address _assetAddress,
+        uint256 _amountIn,
+        OrderType _orderType,
+        uint256 _nonce
+    ) external onlyFactory returns (bytes32) {
+        require(_user != address(0), "invalid user");
+        require(_assetAddress != address(0), "invalid asset");
+        bytes32 intentId =
+            keccak256(abi.encodePacked(block.chainid, address(this), _nonce, _user, _assetAddress, _amountIn, _orderType));
+        emit OrderIntentCreated(intentId, _user, _assetAddress, _amountIn, uint8(_orderType), _nonce);
+        return intentId;
     }
 
     function setBurnedTokenAmountByNonce(uint _redemptionNonce , uint _burnedAmount) external onlyFactory {
         require(_burnedAmount > 0, "Invalid burn amount");
         burnedTokenAmountByNonce[_redemptionNonce] = _burnedAmount;
-    }
-
-    function setIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid issuance Request Id");
-        require(_token != address(0), "Invalid token address");
-        issuanceRequestId[_issuanceNonce][_token] = _requestId;
-    }
-
-    function setRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid redemption request id");
-        require(_token != address(0), "Invalid token address");
-        redemptionRequestId[_redemptionNonce][_token] = _requestId;
     }
 
     function setIssuanceRequesterByNonce(uint _issuanceNonce, address _requester) external onlyFactory {
@@ -330,29 +380,6 @@ contract IndexFactoryStorage is
     function setRedemptionRequesterByNonce(uint _redemptionNonce, address _requester) external onlyFactory {
         require(_requester != address(0), "Invalid redemption requester address");
         redemptionRequesterByNonce[_redemptionNonce] = _requester;
-    }
-
-    function setCancelIssuanceRequestId(uint _issuanceNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid issuance request id");
-        require(_token != address(0), "Invalid token address");
-        cancelIssuanceRequestId[_issuanceNonce][_token] = _requestId;
-    }
-
-    function setCancelRedemptionRequestId(uint _redemptionNonce, address _token, uint _requestId) external onlyFactory {
-        require(_requestId > 0, "Invalid redemption request id");
-        require(_token != address(0), "Invalid token address");
-        cancelRedemptionRequestId[_redemptionNonce][_token] = _requestId;
-    }
-
-    function setBuyRequestPayedAmountById(uint _requestId, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid buy request amount");
-        require(_requestId > 0, "Invalid Request Id");
-        buyRequestPayedAmountById[_requestId] = _amount;
-    }
-
-    function setSellRequestAssetAmountById(uint _requestId, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid sell request amount");
-        sellRequestAssetAmountById[_requestId] = _amount;
     }
 
     function setIssuanceTokenPrimaryBalance(uint _issuanceNonce, address _token, uint _amount) external onlyFactory {
@@ -378,44 +405,12 @@ contract IndexFactoryStorage is
         redemptionInputAmount[_redemptionNonce] = _amount;
     }
 
-    function setActionInfoById(uint _requestId, ActionInfo memory _actionInfo) external onlyFactory {
-        require(_requestId > 0, "Invalid Request Id");
-        actionInfoById[_requestId] = _actionInfo;
+    function setCancelIssuanceCompleted(uint _issuanceNonce, bool _isCompleted) external onlyFactory {
+        cancelIssuanceCompleted[_issuanceNonce] = _isCompleted;
     }
 
-    function setCancelIssuanceUnfilledAmount(uint _issuanceNonce, address _token, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid cancel issuance unfilled amount");
-        require(_token != address(0), "Invalid token address");
-        cancelIssuanceUnfilledAmount[_issuanceNonce][_token] = _amount;
-    }
-
-    function setCancelRedemptionUnfilledAmount(uint _redemptionNonce, address _token, uint _amount) external onlyFactory {
-        require(_amount > 0, "Invalid cancel redemption unfilled amount");
-        require(_token != address(0), "Invalid token address");
-        cancelRedemptionUnfilledAmount[_redemptionNonce][_token] = _amount;
-    }
-
-    function setCancelIssuanceComplted(uint _issuanceNonce, bool _isCompleted) external onlyFactory {
-        cancelIssuanceComplted[_issuanceNonce] = _isCompleted;
-    }
-
-    function setCancelRedemptionComplted(uint _redemptionNonce, bool _isCompleted) external onlyFactory {
-        cancelRedemptionComplted[_redemptionNonce] = _isCompleted;
-    }
-
-    function setOrderInstanceById(uint _requestId, IOrderProcessor.Order memory _order) external onlyFactory {
-        require(_requestId > 0, "Invalid Request Id");
-        orderInstanceById[_requestId] = _order;
-    }
-
-    function getOrderInstanceById(uint _id) public view returns(IOrderProcessor.Order memory){
-        require(_id > 0, "Invalid Request Id");
-        return orderInstanceById[_id];
-    }
-
-    function getActionInfoById(uint _id) public view returns(ActionInfo memory){
-        require(_id > 0, "Invalid Request Id");
-        return actionInfoById[_id];
+    function setCancelRedemptionCompleted(uint _redemptionNonce, bool _isCompleted) external onlyFactory {
+        cancelRedemptionCompleted[_redemptionNonce] = _isCompleted;
     }
 
     function getVaultDshareBalance(address _token) public view returns(uint){
@@ -448,13 +443,48 @@ contract IndexFactoryStorage is
         return portfolioValue;
     }
 
+    /// @notice Aggregate USD value (18 decimals) of dShares marked pending for redemption settlement.
+    function getPendingRedemptionAssetsValue() public view returns (uint256) {
+        uint256 pendingValue;
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            uint256 qty = pendingRedemptionAsset[tokenAddress];
+            if (qty > 0) {
+                uint256 tokenPrice = priceInWei(tokenAddress);
+                pendingValue += (qty * tokenPrice) / 1e18;
+            }
+        }
+        return pendingValue;
+    }
+
+    /// @notice USDC on OrderManager that is not reserved for pending issuances, normalized to 18 decimals.
+    function getDeployableOrderManagerUsdcValue() public view returns (uint256) {
+        uint256 bal = IERC20(usdc).balanceOf(address(orderManager));
+        uint256 deployable = bal > pendingIssuanceUsdc ? bal - pendingIssuanceUsdc : 0;
+        if (deployable == 0) {
+            return 0;
+        }
+        if (usdcDecimals > 18) {
+            return deployable / (10 ** (usdcDecimals - 18));
+        }
+        return deployable * (10 ** (18 - usdcDecimals));
+    }
+
+    /// @notice NAV numerator for index pricing: vault TVL minus pending redemption claims plus deployable USDC on OrderManager.
+    function getNavPortfolioValue() public view returns (uint256) {
+        uint256 vaultVal = getPortfolioValue();
+        uint256 pendingRedVal = getPendingRedemptionAssetsValue();
+        uint256 vaultNet = vaultVal > pendingRedVal ? vaultVal - pendingRedVal : 0;
+        return vaultNet + getDeployableOrderManagerUsdcValue();
+    }
+
     function getIndexTokenPrice() public view returns(uint){
         uint totalSupply = token.totalSupply();
-        uint portfolioValue = getPortfolioValue();
+        uint256 portfolioValue = getNavPortfolioValue();
         if(totalSupply == 0){
             return 0;
         }
-        return portfolioValue * 1e18 / totalSupply;
+        return uint256(portfolioValue * 1e18 / totalSupply);
     }
 
     function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {     
@@ -470,7 +500,9 @@ contract IndexFactoryStorage is
 
     function priceInWei(address _tokenAddress) public view returns (uint256) {
         require(_tokenAddress != address(0), "invalid token address");
-        if(isMainnet){
+        if (!isMainnet) {
+            revert NonMainnetPriceUnavailable();
+        }
         address feedAddress = priceFeedByTokenAddress[_tokenAddress];
         (uint80 roundId,int price,,uint256 _updatedAt,) = AggregatorV3Interface(feedAddress).latestRoundData();
         require(roundId != 0, "invalid round id");
@@ -481,31 +513,12 @@ contract IndexFactoryStorage is
         uint8 priceFeedDecimals = AggregatorV3Interface(feedAddress).decimals();
         price = _toWei(price, priceFeedDecimals, 18);
         return uint256(price);
-        } else{
-        IOrderProcessor.PricePoint memory tokenPriceData = issuer.latestFillPrice(_tokenAddress, address(usdc));
-        int price = _toWei(int(tokenPriceData.price), latestPriceDecimals, 18);
-        return uint(price);
-        }
-    }
-    
-    function getPrimaryOrder(bool sell) external view returns (IOrderProcessor.Order memory) {
-        return IOrderProcessor.Order({
-            requestTimestamp: uint64(block.timestamp),
-            recipient: address(this),
-            assetToken: address(token),
-            paymentToken: address(usdc),
-            sell: sell,
-            orderType: IOrderProcessor.OrderType.MARKET,
-            assetTokenQuantity: sell ? 100 ether : 0,
-            paymentTokenQuantity: sell ? 0 : 100 ether,
-            price: 0,
-            tif: IOrderProcessor.TIF.GTC
-        });
     }
     
     function getIssuanceAmountOut(uint _amount) public view returns(uint){
         require(_amount > 0, "Invalid amount");
-        uint portfolioValue = getPortfolioValue();
+        uint256 portfolioValue = getNavPortfolioValue();
+        require(portfolioValue > 0, "Invalid portfolio value");
         uint totalSupply = token.totalSupply();
         uint amountOut = _amount * totalSupply / portfolioValue;
         return amountOut;
@@ -513,148 +526,110 @@ contract IndexFactoryStorage is
 
     function getRedemptionAmountOut(uint _amount) public view returns(uint){
         require(_amount > 0, "Invalid amount");
-        uint portfolioValue = getPortfolioValue();
+        uint256 portfolioValue = getNavPortfolioValue();
         uint totalSupply = token.totalSupply();
+        require(totalSupply > 0, "Invalid total supply");
         uint amountOut = _amount * portfolioValue / totalSupply;
         return amountOut;
     }
 
     
 
-    function calculateBuyRequestFee(uint _amount) public view returns(uint){
+    function calculateBuyRequestFee(uint _amount) public pure returns(uint){
         require(_amount > 0, "Invalid amount");
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, _amount);
-        return fee;
+        return 0;
     }
 
-    function calculateIssuanceFee(uint _inputAmount) public view returns(uint256){
+    function calculateIssuanceFee(uint _inputAmount) public pure returns(uint256){
         require(_inputAmount > 0, "Invalid amount");
-        uint256 fees;
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
-        address tokenAddress = functionsOracle.currentList(i);
-        uint256 amount = _inputAmount * functionsOracle.tokenCurrentMarketShare(tokenAddress) / 100e18;
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
-        uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
-        fees += fee;
-        }
-        return fees;
+        return 0;
     }
 
+    /// @notice USDC sent to OrderManager for this issuance nonce (matches initiation escrow).
+    function getIssuanceEscrowedUsdc(uint256 _issuanceNonce) public view returns (uint256) {
+        uint256 input = issuanceInputAmount[_issuanceNonce];
+        if (input == 0) {
+            return 0;
+        }
+        return calculateIssuanceFee(input) + input;
+    }
 
-    
+    function increasePendingIssuanceUsdc(uint256 _amount) external onlyFactory {
+        pendingIssuanceUsdc += _amount;
+    }
 
+    function decreasePendingIssuanceUsdc(uint256 _amount) external onlyFactory {
+        if (_amount > pendingIssuanceUsdc) {
+            revert InsufficientPendingIssuanceUsdc();
+        }
+        pendingIssuanceUsdc -= _amount;
+    }
 
-    function checkCancelIssuanceStatus(uint256 _issuanceNonce) public view returns(bool) {
-        uint completedCount;
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
-            uint receivedAmount = issuer.getReceivedAmount(requestId);
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
-                if(receivedAmount == 0){
-                completedCount += 1;
-                }else{
-                  uint cancelRequestId = cancelIssuanceRequestId[_issuanceNonce][tokenAddress];
-                  if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                        completedCount += 1;
-                  }  
+    function recordRedemptionEscrowSlice(uint256 _nonce, address _token, uint256 _amount) external onlyFactory {
+        require(_token != address(0), "invalid token address");
+        require(_amount > 0, "Invalid amount");
+        require(redemptionEscrowedAssetByNonce[_nonce][_token] == 0, "escrow already recorded");
+        redemptionEscrowedAssetByNonce[_nonce][_token] = _amount;
+        pendingRedemptionAsset[_token] += _amount;
+        _redemptionEscrowSnapshotTokens[_nonce].push(_token);
+    }
+
+    /// @notice Length of the issuance constituent snapshot for this nonce (0 = pre-migration, use live oracle in processor).
+    function issuanceSnapshotLength(uint256 _nonce) external view returns (uint256) {
+        return _issuanceSnapshotTokens[_nonce].length;
+    }
+
+    /// @notice Token at index in the issuance snapshot (same order as at intent creation).
+    function issuanceSnapshotTokenAt(uint256 _nonce, uint256 _index) external view returns (address) {
+        return _issuanceSnapshotTokens[_nonce][_index];
+    }
+
+    function pushIssuanceSnapshotToken(uint256 _nonce, address _token) external onlyFactory {
+        require(_token != address(0), "invalid token address");
+        _issuanceSnapshotTokens[_nonce].push(_token);
+    }
+
+    function clearIssuanceSnapshot(uint256 _nonce) external onlyFactory {
+        delete _issuanceSnapshotTokens[_nonce];
+    }
+
+    function consumeRedemptionEscrowForNonce(uint256 _nonce) external onlyFactory {
+        address[] storage snapshot = _redemptionEscrowSnapshotTokens[_nonce];
+        if (snapshot.length > 0) {
+            for (uint256 i; i < snapshot.length; i++) {
+                address tokenAddress = snapshot[i];
+                uint256 amt = redemptionEscrowedAssetByNonce[_nonce][tokenAddress];
+                if (amt == 0) {
+                    continue;
                 }
-            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                uint cancelRequestId = cancelIssuanceRequestId[_issuanceNonce][tokenAddress];
-                if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                    completedCount += 1;
+                if (amt > pendingRedemptionAsset[tokenAddress]) {
+                    revert InsufficientPendingRedemptionAsset();
                 }
+                pendingRedemptionAsset[tokenAddress] -= amt;
+                redemptionEscrowedAssetByNonce[_nonce][tokenAddress] = 0;
             }
-        }
-        if(completedCount == functionsOracle.totalCurrentList()){
-            return true;
-        }else{
-            return false;
-        }
-    }
-
-    function isIssuanceOrderActive(uint256 _issuanceNonce) public view returns(bool) {
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function checkIssuanceOrdersStatus(uint _issuanceNonce) public view returns(bool) {
-        uint completedOrdersCount;
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint requestId = issuanceRequestId[_issuanceNonce][tokenAddress];
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                completedOrdersCount += 1;
-            }
-        }
-        if(completedOrdersCount == functionsOracle.totalCurrentList()){
-            return true;
-        }else{
-            return false;
-        }
-    }
-
-    function checkRedemptionOrdersStatus(uint256 _redemptionNonce) public view returns(bool) {
-        uint completedOrdersCount;
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                completedOrdersCount += 1;
-            }
-        }
-        if(completedOrdersCount == functionsOracle.totalCurrentList()){
-            return true;
-        }else{
-            return false;
-        }
-    }
-
-    function isRedemptionOrderActive(uint256 _redemptionNonce) public view returns(bool) {
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function checkCancelRedemptionStatus(uint256 _redemptionNonce) public view returns(bool) {
-        uint completedCount;
-        for(uint i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint requestId = redemptionRequestId[_redemptionNonce][tokenAddress];
-            uint receivedAmount = issuer.getReceivedAmount(requestId);
-            if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.CANCELLED)){
-                if(receivedAmount == 0){
-                completedCount += 1;
-                }else{
-                   uint cancelRequestId = cancelRedemptionRequestId[_redemptionNonce][tokenAddress];
-                   if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                    completedCount += 1;
-                   } 
+            delete _redemptionEscrowSnapshotTokens[_nonce];
+        } else {
+            for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+                address tokenAddress = functionsOracle.currentList(i);
+                uint256 amt = redemptionEscrowedAssetByNonce[_nonce][tokenAddress];
+                if (amt == 0) {
+                    continue;
                 }
-            } else if(uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                uint cancelRequestId = cancelRedemptionRequestId[_redemptionNonce][tokenAddress];
-                if(uint8(issuer.getOrderStatus(cancelRequestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)){
-                    completedCount += 1;
+                if (amt > pendingRedemptionAsset[tokenAddress]) {
+                    revert InsufficientPendingRedemptionAsset();
                 }
+                pendingRedemptionAsset[tokenAddress] -= amt;
+                redemptionEscrowedAssetByNonce[_nonce][tokenAddress] = 0;
             }
         }
-        if(completedCount == functionsOracle.totalCurrentList()){
-            return true;
-        }else{
-            return false;
-        }
     }
-    
+
+    function setIssuanceIntentTimestamp(uint256 _issuanceNonce, uint256 _createdAt) external onlyFactory {
+        issuanceIntentTimestamp[_issuanceNonce] = _createdAt;
+    }
+
+    function setRedemptionIntentTimestamp(uint256 _redemptionNonce, uint256 _createdAt) external onlyFactory {
+        redemptionIntentTimestamp[_redemptionNonce] = _createdAt;
+    }
 }

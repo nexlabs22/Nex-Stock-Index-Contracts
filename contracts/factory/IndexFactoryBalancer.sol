@@ -11,9 +11,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 // import "../chainlink/ChainlinkClient.sol";
-import "../dinary/orders/IOrderProcessor.sol";
-import {FeeLib} from "../dinary/common/FeeLib.sol";
-import "../coa/ContractOwnedAccount.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
 // import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -51,6 +48,12 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     mapping(uint256 => uint256) public totalShortagePercentByNonce;
 
     mapping(uint256 => ActionInfo) public actionInfoById;
+    mapping(uint256 => bool) public rebalanceIsSellById;
+    mapping(uint256 => address) public rebalanceTokenById;
+    mapping(uint256 => bool) public rebalanceIntentSettledById;
+    mapping(uint256 => uint256) public rebalanceUsdcReceivedById;
+    mapping(uint256 => uint256) public rebalanceTokenReceivedById;
+    uint256 public nextRebalanceIntentId;
 
     event FirstRebalanceAction(uint256 nonce, uint time);
     event SecondRebalanceAction(uint256 nonce, uint time);
@@ -103,14 +106,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns (uint256) {
-        IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(false);
-        order.recipient = _receiver;
-        order.assetToken = address(_token);
-        order.paymentTokenQuantity = _orderAmount;
-
-        OrderManager orderManager = factoryStorage.orderManager();
-        uint256 id = orderManager.requestBuyOrderFromCurrentBalance(_token, _orderAmount, _receiver);
-        factoryStorage.setOrderInstanceById(id, order);
+        _receiver; // placeholder: receiver is relayer-side concern in V2 async flow
+        nextRebalanceIntentId += 1;
+        uint256 id = nextRebalanceIntentId;
+        rebalanceIsSellById[id] = false;
+        rebalanceTokenById[id] = _token;
         return id;
     }
 
@@ -119,34 +119,34 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         NexVault(factoryStorage.vault()).withdrawFunds(wrappedDshare, address(this), _amount);
         uint256 orderAmount0 = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
 
-        //rounding order
-        IOrderProcessor issuer = factoryStorage.issuer();
-        uint8 decimalReduction = issuer.orderDecimalReduction(_token);
+        _receiver; // placeholder: receiver is relayer-side concern in V2 async flow
+        IERC20(_token).safeTransfer(address(factoryStorage.orderManager()), orderAmount0);
+        nextRebalanceIntentId += 1;
+        uint256 id = nextRebalanceIntentId;
+        rebalanceIsSellById[id] = true;
+        rebalanceTokenById[id] = _token;
+        factoryStorage.increaseTokenPendingRebalanceAmount(_token, rebalanceNonce, orderAmount0);
+        return (id, orderAmount0);
+    }
 
-        uint256 orderAmount;
-        if (decimalReduction > 0) {
-            orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
-        } else {
-            orderAmount = orderAmount0;
-        }
-        uint256 extraAmount = orderAmount0 - orderAmount;
+    function _emitSellIntent(address _tokenAddress, uint256 _amount, uint256 _rebalanceNonce) internal {
+        factoryStorage.emitOrderIntentCreated(
+            msg.sender,
+            _tokenAddress,
+            _amount,
+            IndexFactoryStorage.OrderType.SELL,
+            _rebalanceNonce
+        );
+    }
 
-        if (extraAmount > 0) {
-            IERC20(_token).approve(wrappedDshare, extraAmount);
-            WrappedDShare(wrappedDshare).deposit(extraAmount, address(factoryStorage.vault()));
-        }
-
-        IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(true);
-        order.assetToken = _token;
-        order.assetTokenQuantity = orderAmount;
-        order.recipient = _receiver;
-
-        IERC20(_token).safeTransfer(address(factoryStorage.orderManager()), orderAmount);
-        OrderManager orderManager = factoryStorage.orderManager();
-        uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
-        factoryStorage.setOrderInstanceById(id, order);
-        factoryStorage.increaseTokenPendingRebalanceAmount(_token, rebalanceNonce, orderAmount);
-        return (id, orderAmount);
+    function _emitBuyIntent(address _tokenAddress, uint256 _amount, uint256 _rebalanceNonce) internal {
+        factoryStorage.emitOrderIntentCreated(
+            msg.sender,
+            _tokenAddress,
+            _amount,
+            IndexFactoryStorage.OrderType.BUY,
+            _rebalanceNonce
+        );
     }
 
     function _sellOverweightedAssets(uint256 _rebalanceNonce, uint256 _portfolioValue) internal {
@@ -164,7 +164,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                         requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
                     actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
                     rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
-                    rebalanceSellAssetAmountById[requestId] = amount;
+                    rebalanceSellAssetAmountById[requestId] = assetAmount;
+                    _emitSellIntent(tokenAddress, assetAmount, _rebalanceNonce);
                 }
             } else {
                 uint256 shortagePercent = functionsOracle.tokenOracleMarketShare(tokenAddress) - tokenValuePercent;
@@ -195,97 +196,77 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     function _buyUnderweightedAssets(uint256 _rebalanceNonce, uint256 _totalShortagePercent, uint256 _usdcBalance)
         internal
     {
-        IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 tokenShortagePercent = tokenShortagePercentByNonce[_rebalanceNonce][tokenAddress];
             if (tokenShortagePercent > 0) {
                 uint256 paymentAmount = (tokenShortagePercent * _usdcBalance) / _totalShortagePercent;
-                (uint256 flatFee, uint24 percentageFeeRate) =
-                    issuer.getStandardFees(false, address(factoryStorage.usdc()));
-
-                uint256 amountAfterFee = getAmountAfterFee(percentageFeeRate, paymentAmount) > flatFee
-                    ? getAmountAfterFee(percentageFeeRate, paymentAmount) - flatFee
-                    : 0;
+                // TODO: wire Dinari V2 fee schedule from relayer snapshots.
+                uint256 amountAfterFee = paymentAmount;
 
                 if (amountAfterFee > 0) {
-                    uint256 esFee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amountAfterFee);
                     IERC20(factoryStorage.usdc()).approve(address(factoryStorage.orderManager()), paymentAmount);
                     uint256 requestId =
                         requestBuyOrder(tokenAddress, amountAfterFee, address(factoryStorage.orderManager()));
                     actionInfoById[requestId] = ActionInfo(6, _rebalanceNonce);
                     rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
                     rebalanceBuyPayedAmountById[requestId] = amountAfterFee;
+                    _emitBuyIntent(tokenAddress, amountAfterFee, _rebalanceNonce);
                 }
             }
         }
     }
 
     function secondRebalanceAction(uint256 _rebalanceNonce) public nonReentrant onlyOwnerOrOperator {
-        require(checkFirstRebalanceOrdersStatus(rebalanceNonce), "Rebalance orders are not completed");
+        require(checkFirstRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
         uint256 portfolioValue = portfolioValueByNonce[_rebalanceNonce];
         uint256 totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
-        IOrderProcessor issuer = factoryStorage.issuer();
         uint256 usdcBalance;
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
-            if (requestId > 0) {
-                IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
-                uint256 assetAmount = order.assetTokenQuantity;
-                if (order.sell) {
-                    uint256 balance = issuer.getReceivedAmount(requestId);
-                    uint256 feeTaken = issuer.getFeesTaken(requestId);
-                    usdcBalance += balance - feeTaken;
-                }
+            uint256 assetAmount = rebalanceSellAssetAmountById[requestId];
+            if (requestId > 0 && assetAmount > 0) {
+                // Relayer pushes settled USDC for sell intents via setRebalanceIntentSettlement.
+                usdcBalance += rebalanceUsdcReceivedById[requestId];
             }
         }
         _buyUnderweightedAssets(_rebalanceNonce, totalShortagePercent, usdcBalance);
         emit SecondRebalanceAction(_rebalanceNonce, block.timestamp);
     }
 
-    function estimateAmountAfterFee(uint256 _amount) public view returns (uint256) {
-        IOrderProcessor issuer = factoryStorage.issuer();
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(factoryStorage.usdc()));
-        uint256 amountAfterFee = getAmountAfterFee(percentageFeeRate, _amount) - flatFee;
-        return amountAfterFee;
+    function estimateAmountAfterFee(uint256 _amount) public pure returns (uint256) {
+        // TODO: replace with relayer-provided Dinari V2 fee estimation.
+        return _amount;
     }
 
     function updatePendingTokenSellAmounts(uint _rebalanceNonce) internal {
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
-            if (requestId > 0) {
-                IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
-                if (order.sell) {
-                    uint256 assetAmount = order.assetTokenQuantity;
-                    factoryStorage.decreaseTokenPendingRebalanceAmount(
-                        tokenAddress, _rebalanceNonce, assetAmount
-                    );
-                }
+            uint256 assetAmount = rebalanceSellAssetAmountById[requestId];
+            if (requestId > 0 && assetAmount > 0 && rebalanceIsSellById[requestId]) {
+                factoryStorage.decreaseTokenPendingRebalanceAmount(tokenAddress, _rebalanceNonce, assetAmount);
             }
         }
     }
 
     function completeRebalanceActions(uint256 _rebalanceNonce) public nonReentrant onlyOwnerOrOperator {
         require(checkSecondRebalanceOrdersStatus(_rebalanceNonce), "Rebalance orders are not completed");
-        IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
-            if (requestId > 0) {
-                IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
-                if (!order.sell) {
-                    uint256 tokenBalance = issuer.getReceivedAmount(requestId);
-                    if (tokenBalance > 0) {
-                        OrderManager(factoryStorage.orderManager()).withdrawFunds(
-                            tokenAddress, address(this), tokenBalance
-                        );
-                        IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), tokenBalance);
-                        WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
-                            tokenBalance, address(factoryStorage.vault())
-                        );
-                    }
+            uint256 payedAmount = rebalanceBuyPayedAmountById[requestId];
+            if (requestId > 0 && payedAmount > 0 && !rebalanceIsSellById[requestId]) {
+                uint256 tokenBalance = rebalanceTokenReceivedById[requestId];
+                if (tokenBalance > 0) {
+                    OrderManager(factoryStorage.orderManager()).withdrawFunds(
+                        tokenAddress, address(this), tokenBalance
+                    );
+                    IERC20(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), tokenBalance);
+                    WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
+                        tokenBalance, address(factoryStorage.vault())
+                    );
                 }
             }
         }
@@ -297,16 +278,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function checkFirstRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
         require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
-        uint256 completedOrdersCount;
-        IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             uint256 assetAmount = rebalanceSellAssetAmountById[requestId];
-            if (
-                requestId > 0 && assetAmount > 0
-                    && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            ) {
+            if (requestId > 0 && assetAmount > 0 && !rebalanceIntentSettledById[requestId]) {
                 return false;
             }
         }
@@ -315,20 +291,27 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function checkSecondRebalanceOrdersStatus(uint256 _rebalanceNonce) public view returns (bool) {
         require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
-        uint256 completedOrdersCount;
-        IOrderProcessor issuer = factoryStorage.issuer();
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             uint256 payedAmount = rebalanceBuyPayedAmountById[requestId];
-            if (
-                requestId > 0 && payedAmount > 0
-                    && uint8(issuer.getOrderStatus(requestId)) != uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            ) {
+            if (requestId > 0 && payedAmount > 0 && !rebalanceIntentSettledById[requestId]) {
                 return false;
             }
         }
         return true;
+    }
+
+    function setRebalanceIntentSettlement(
+        uint256 _requestId,
+        bool _isSettled,
+        uint256 _usdcReceived,
+        uint256 _tokenReceived
+    ) external onlyOwnerOrOperator {
+        require(_requestId > 0 && _requestId <= nextRebalanceIntentId, "Invalid request id");
+        rebalanceIntentSettledById[_requestId] = _isSettled;
+        rebalanceUsdcReceivedById[_requestId] = _usdcReceived;
+        rebalanceTokenReceivedById[_requestId] = _tokenReceived;
     }
 
     function checkMultical(uint256 _reqeustId) public view returns (bool) {

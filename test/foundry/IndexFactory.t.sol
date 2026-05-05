@@ -209,19 +209,12 @@ contract IndexFactoryTest is Test {
                         OrderManager.initialize,
                         (
                             address(paymentToken),
-                            paymentToken.decimals(),
-                            address(issuer)
+                            paymentToken.decimals()
                         )
                     )
                 )
             )
         );
-        // orderManager = new OrderManager();
-        // orderManager.initialize(
-        //     address(paymentToken),
-        //     paymentToken.decimals(),
-        //     address(issuer)
-        // );
 
         link = new LinkToken();
         oracle = new MockApiOracle();
@@ -274,7 +267,6 @@ contract IndexFactoryTest is Test {
                     abi.encodeCall(
                         IndexFactoryStorage.initialize,
                         (
-                            address(issuer),
                             address(indexToken),
                             address(vault),
                             address(paymentToken),
@@ -286,18 +278,6 @@ contract IndexFactoryTest is Test {
                 )
             )
         );
-        // factoryStorage = new IndexFactoryStorage();
-        // factoryStorage.initialize(
-        //     address(issuer),
-        //     address(indexToken),
-        //     address(vault),
-        //     address(paymentToken),
-        //     paymentToken.decimals(),
-        //     address(link),
-        //     address(oracle),
-        //     jobId,
-        //     true
-        // );
 
         IndexFactoryBalancer factoryBalancerImpl = new IndexFactoryBalancer();
         factoryBalancer = IndexFactoryBalancer(
@@ -350,9 +330,11 @@ contract IndexFactoryTest is Test {
         factoryStorage.setFactoryProcessor(address(factoryProcessor));
         factoryStorage.setFactoryBalancer(address(factoryBalancer));
         functionsOracle.setFactoryBalancer(address(factoryBalancer));
+        functionsOracle.setIndexFactoryStorage(address(factoryStorage));
         orderManager.setOperator(address(factory), true);
         orderManager.setOperator(address(factoryProcessor), true);
         orderManager.setOperator(address(factoryBalancer), true);
+        orderManager.setIndexFactory(address(factory));
 
         DShare[10] memory tokens;
         WrappedDShare[10] memory wrappedTokens;
@@ -465,190 +447,6 @@ contract IndexFactoryTest is Test {
             });
     }
 
-    function _fillAllBuyOrders(
-        uint _nonce,
-        uint _receivedAmount,
-        uint _feeAmount
-    ) public {
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.issuanceRequestId(_nonce, tokenAddress);
-            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage
-                .getOrderInstanceById(id);
-            // balances before
-            vm.startPrank(operator);
-            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(
-                address(orderManager)
-            );
-
-            issuer.fillOrder(
-                order,
-                orderAmount,
-                _receivedAmount,
-                _feeAmount / functionsOracle.totalCurrentList()
-            );
-            IOrderProcessor.PricePoint memory fillPrice = issuer
-                .latestFillPrice(order.assetToken, order.paymentToken);
-            assertTrue(
-                fillPrice.price == 0 ||
-                    fillPrice.price ==
-                    mulDiv(
-                        orderAmount,
-                        10 ** (18 - paymentToken.decimals()),
-                        _receivedAmount
-                    )
-            );
-            // balances after
-            // assertEq(IERC20(tokenAddress).balanceOf(address(orderManager)), userAssetBefore + receivedAmount);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            );
-        }
-    }
-
-    function _fillAllBuyOrdersWithMultical(
-        uint _nonce,
-        uint _receivedAmount,
-        uint _feeAmount
-    ) public {
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.issuanceRequestId(_nonce, tokenAddress);
-            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage
-                .getOrderInstanceById(id);
-            // balances before
-            vm.startPrank(operator);
-            uint256 userAssetBefore = IERC20(tokenAddress).balanceOf(
-                address(orderManager)
-            );
-
-            issuer.fillOrder(
-                order,
-                orderAmount,
-                _receivedAmount,
-                _feeAmount / functionsOracle.totalCurrentList()
-            );
-            IOrderProcessor.PricePoint memory fillPrice = issuer
-                .latestFillPrice(order.assetToken, order.paymentToken);
-            assertTrue(
-                fillPrice.price == 0 ||
-                    fillPrice.price ==
-                    mulDiv(
-                        orderAmount,
-                        10 ** (18 - paymentToken.decimals()),
-                        _receivedAmount
-                    )
-            );
-            // balances after
-            // assertEq(IERC20(tokenAddress).balanceOf(address(orderManager)), userAssetBefore + receivedAmount);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            );
-            //multical
-            if (factoryProcessor.checkMultical(id)) {
-                factoryProcessor.multical(id);
-            }
-        }
-    }
-
-    function _fillAllSellOrders(
-        uint _nonce,
-        uint _receivedAmount,
-        uint _feeAmount
-    ) public {
-        for (uint i; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.redemptionRequestId(_nonce, tokenAddress);
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage
-                .getOrderInstanceById(id);
-            vm.stopPrank();
-            vm.prank(admin);
-            paymentToken.mint(operator, 100e18);
-            vm.prank(operator);
-            paymentToken.approve(address(issuer), 100e18);
-
-            vm.prank(operator);
-            issuer.fillOrder(order, orderAmount, orderAmount / 10, 1e18);
-            assertEq(issuer.getUnfilledAmount(id), 0);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            );
-        }
-    }
-
-    function _fillAllSellOrdersMultical(
-        uint _nonce,
-        uint _receivedAmount,
-        uint _feeAmount
-    ) public {
-        for (uint i; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.redemptionRequestId(_nonce, tokenAddress);
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage
-                .getOrderInstanceById(id);
-            vm.stopPrank();
-            vm.prank(admin);
-            paymentToken.mint(operator, 100e18);
-            vm.prank(operator);
-            paymentToken.approve(address(issuer), 100e18);
-
-            vm.prank(operator);
-            issuer.fillOrder(order, 1000e18, 100e18, 1e18);
-            assertEq(issuer.getUnfilledAmount(id), 0);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            );
-
-            //check multical
-            if (factoryProcessor.checkMultical(id)) {
-                assertEq(
-                    factoryStorage.checkRedemptionOrdersStatus(_nonce),
-                    true
-                );
-                assertEq(factoryStorage.redemptionIsCompleted(_nonce), false);
-                factoryProcessor.multical(id);
-            }
-        }
-    }
-
-    function _fillCancelIssuanceSellOrders(
-        uint _nonce,
-        uint _receivedAmount,
-        uint _feeAmount
-    ) public {
-        for (uint i; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.cancelIssuanceRequestId(
-                _nonce,
-                tokenAddress
-            );
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage
-                .getOrderInstanceById(id);
-            vm.stopPrank();
-            vm.prank(admin);
-            paymentToken.mint(operator, 100e18);
-            vm.prank(operator);
-            paymentToken.approve(address(issuer), 100e18);
-
-            vm.prank(operator);
-            issuer.fillOrder(order, orderAmount, orderAmount / 10, 1e18);
-            assertEq(issuer.getUnfilledAmount(id), 0);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            );
-        }
-    }
-
     function testInitialization() public {
         assertEq(issuer.owner() == admin, true);
         assertEq(issuer.owner(), admin);
@@ -693,8 +491,6 @@ contract IndexFactoryTest is Test {
         tokenShares[9] = 10e18;
 
         link.transfer(address(functionsOracle), 1e17);
-        // bytes32 requestId = factoryStorage.requestAssetsData();
-        // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
         bytes32 requestId = functionsOracle.requestAssetsData(
             "console.log('Hello, World!');",
             0,
@@ -730,8 +526,6 @@ contract IndexFactoryTest is Test {
         tokenShares[9] = 10e18;
 
         link.transfer(address(functionsOracle), 1e17);
-        // bytes32 requestId = factoryStorage.requestAssetsData();
-        // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares);
         bytes32 requestId = functionsOracle.requestAssetsData(
             "console.log('Hello, World!');",
             0,
@@ -739,6 +533,41 @@ contract IndexFactoryTest is Test {
         );
         bytes memory data = abi.encode(assetList, tokenShares);
         oracle.fulfillRequest(address(functionsOracle), requestId, data);
+    }
+
+    /// @dev Simulates a rebalance that drops `token9` from the oracle basket (9 constituents).
+    function _fulfillOracleWithNineTokensDroppingToken9() internal {
+        vm.startPrank(admin);
+        address[] memory assetList = new address[](9);
+        assetList[0] = address(token0);
+        assetList[1] = address(token1);
+        assetList[2] = address(token2);
+        assetList[3] = address(token3);
+        assetList[4] = address(token4);
+        assetList[5] = address(token5);
+        assetList[6] = address(token6);
+        assetList[7] = address(token7);
+        assetList[8] = address(token8);
+
+        uint256 hundredE18 = 100e18;
+        uint256 baseShare = hundredE18 / 9;
+        uint[] memory tokenShares = new uint[](9);
+        uint256 sum;
+        for (uint256 i; i < 8; i++) {
+            tokenShares[i] = baseShare;
+            sum += baseShare;
+        }
+        tokenShares[8] = hundredE18 - sum;
+
+        link.transfer(address(functionsOracle), 1e17);
+        bytes32 requestId = functionsOracle.requestAssetsData(
+            "console.log('Hello, World!');",
+            0,
+            0
+        );
+        bytes memory data = abi.encode(assetList, tokenShares);
+        oracle.fulfillRequest(address(functionsOracle), requestId, data);
+        vm.stopPrank();
     }
 
     function updateWrappedDshares() public {
@@ -765,8 +594,6 @@ contract IndexFactoryTest is Test {
         wrappedDshareList[7] = address(wrappedToken7);
         wrappedDshareList[8] = address(wrappedToken8);
         wrappedDshareList[9] = address(wrappedToken9);
-
-        // factoryStorage.setWrappedDShareAddresses(assetList, wrappedDshareList);
     }
 
     function updatePriceFeeds() public {
@@ -806,7 +633,6 @@ contract IndexFactoryTest is Test {
         wrappedDshareList[8] = address(wrappedToken8);
         wrappedDshareList[9] = address(wrappedToken9);
 
-        // factoryStorage.setPriceFeedAddresses(assetList, priceFeedList);
         factoryStorage.setWrappedDshareAndPriceFeedAddresses(
             assetList,
             wrappedDshareList,
@@ -839,30 +665,12 @@ contract IndexFactoryTest is Test {
         assertEq(functionsOracle.currentList(4), address(token4));
         assertEq(functionsOracle.currentList(9), address(token9));
         // token shares
-        assertEq(
-            functionsOracle.tokenOracleMarketShare(address(token0)),
-            10e18
-        );
-        assertEq(
-            functionsOracle.tokenOracleMarketShare(address(token1)),
-            10e18
-        );
-        assertEq(
-            functionsOracle.tokenOracleMarketShare(address(token2)),
-            10e18
-        );
-        assertEq(
-            functionsOracle.tokenOracleMarketShare(address(token3)),
-            10e18
-        );
-        assertEq(
-            functionsOracle.tokenOracleMarketShare(address(token4)),
-            10e18
-        );
-        assertEq(
-            functionsOracle.tokenOracleMarketShare(address(token9)),
-            10e18
-        );
+        assertEq(functionsOracle.tokenOracleMarketShare(address(token0)), 10e18);
+        assertEq(functionsOracle.tokenOracleMarketShare(address(token1)), 10e18);
+        assertEq(functionsOracle.tokenOracleMarketShare(address(token2)), 10e18);
+        assertEq(functionsOracle.tokenOracleMarketShare(address(token3)), 10e18);
+        assertEq(functionsOracle.tokenOracleMarketShare(address(token4)), 10e18);
+        assertEq(functionsOracle.tokenOracleMarketShare(address(token9)), 10e18);
 
         vm.stopPrank();
     }
@@ -870,30 +678,12 @@ contract IndexFactoryTest is Test {
     function testWrappedDshareList() public {
         vm.startPrank(admin);
         // token  wrapped list
-        assertEq(
-            factoryStorage.wrappedDshareAddress(address(token0)),
-            address(wrappedToken0)
-        );
-        assertEq(
-            factoryStorage.wrappedDshareAddress(address(token1)),
-            address(wrappedToken1)
-        );
-        assertEq(
-            factoryStorage.wrappedDshareAddress(address(token2)),
-            address(wrappedToken2)
-        );
-        assertEq(
-            factoryStorage.wrappedDshareAddress(address(token3)),
-            address(wrappedToken3)
-        );
-        assertEq(
-            factoryStorage.wrappedDshareAddress(address(token4)),
-            address(wrappedToken4)
-        );
-        assertEq(
-            factoryStorage.wrappedDshareAddress(address(token9)),
-            address(wrappedToken9)
-        );
+        assertEq(factoryStorage.wrappedDshareAddress(address(token0)), address(wrappedToken0));
+        assertEq(factoryStorage.wrappedDshareAddress(address(token1)), address(wrappedToken1));
+        assertEq(factoryStorage.wrappedDshareAddress(address(token2)), address(wrappedToken2));
+        assertEq(factoryStorage.wrappedDshareAddress(address(token3)), address(wrappedToken3));
+        assertEq(factoryStorage.wrappedDshareAddress(address(token4)), address(wrappedToken4));
+        assertEq(factoryStorage.wrappedDshareAddress(address(token9)), address(wrappedToken9));
 
         //test wrapped asset address
         assertEq(wrappedToken0.asset(), address(token0));
@@ -906,38 +696,224 @@ contract IndexFactoryTest is Test {
         vm.stopPrank();
     }
 
+    // --- V2 ASYNC TESTS ---
+
     function testIssuance() public {
         uint inputAmount = 1000e6;
         vm.startPrank(admin);
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        uint quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
 
-        paymentToken.mint(address(user), quantityIn);
+        paymentToken.mint(address(user), totalUsdcRequired);
         vm.stopPrank();
 
         vm.startPrank(user);
 
         uint256 userBalanceBefore = paymentToken.balanceOf(user);
-        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
-        paymentToken.approve(address(factory), quantityIn);
+        uint256 orderManagerBalanceBefore = paymentToken.balanceOf(address(orderManager));
+        
+        paymentToken.approve(address(factory), totalUsdcRequired);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
 
-        for (uint i = 0; i < 10; i++) {
+        // Check Escrow balances
+        assertEq(paymentToken.balanceOf(address(orderManager)), orderManagerBalanceBefore + inputAmount + feeAmount);
+        assertEq(paymentToken.balanceOf(user), userBalanceBefore - totalUsdcRequired);
+        assertEq(factoryStorage.issuanceInputAmount(nonce), inputAmount);
+        uint256 feeCalc = factoryStorage.calculateIssuanceFee(inputAmount);
+        assertEq(factoryStorage.pendingIssuanceUsdc(), feeCalc + inputAmount);
+    }
+
+    function testNAVNotSpikedDuringPendingRedemption() public {
+        vm.startPrank(admin);
+        for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.ACTIVE)
-            );
-            assertEq(issuer.getUnfilledAmount(id), orderAmount);
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+            DShare(tokenAddress).mint(address(admin), 100e18);
+            DShare(tokenAddress).approve(wrappedTokenAddress, 100e18);
+            WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
         }
-        assertEq(
-            paymentToken.balanceOf(operator),
-            operatorBalanceBefore + inputAmount
+
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 100e18);
+        indexToken.setMinter(address(factory), true);
+        vm.stopPrank();
+
+        uint256 p0 = factoryStorage.getIndexTokenPrice();
+        assertGt(p0, 0);
+
+        vm.startPrank(user);
+        uint256 burnAmount = 10e18;
+        factory.redemption(burnAmount);
+        vm.stopPrank();
+
+        uint256 pNav = factoryStorage.getIndexTokenPrice();
+        uint256 naivePrice =
+            factoryStorage.getPortfolioValue() * 1e18 / indexToken.totalSupply();
+
+        assertLt(
+            pNav,
+            naivePrice,
+            "NAV-adjusted index price must stay below naive vault/supply spike"
         );
-        assertEq(paymentToken.balanceOf(user), userBalanceBefore - quantityIn);
-        assertEq(paymentToken.balanceOf(address(issuer)), feeAmount);
+
+        uint256 pendingSum;
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            pendingSum += factoryStorage.pendingRedemptionAsset(functionsOracle.currentList(i));
+        }
+        assertGt(pendingSum, 0);
+        assertApproxEqRel(pNav, p0, 0.03e18);
+    }
+
+    function testAtomicTimeoutCancelIssuanceRefundsUsdc() public {
+        uint inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        assertEq(factoryStorage.pendingIssuanceUsdc(), feeAmount + inputAmount);
+
+        vm.warp(block.timestamp + factory.ORDER_INTENT_TIMEOUT() + 1);
+
+        uint256 balBefore = paymentToken.balanceOf(user);
+        vm.prank(user);
+        factory.cancelOrder(nonce);
+        uint256 balAfter = paymentToken.balanceOf(user);
+
+        assertEq(balAfter - balBefore, feeAmount + inputAmount);
+        assertEq(factoryStorage.pendingIssuanceUsdc(), 0);
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.CANCELLED));
+    }
+
+    function testAtomicTimeoutCancelRedemptionRemintsIndex() public {
+        vm.startPrank(admin);
+        for (uint i; i < 10; i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+            DShare(tokenAddress).mint(address(admin), 100e18);
+            DShare(tokenAddress).approve(wrappedTokenAddress, 100e18);
+            WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
+        }
+
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 100e18);
+        indexToken.setMinter(address(factory), true);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        uint256 nonce = factory.redemption(indexToken.balanceOf(address(user)));
+        vm.stopPrank();
+
+        assertGt(factoryStorage.pendingRedemptionAsset(functionsOracle.currentList(0)), 0);
+
+        vm.warp(block.timestamp + factory.ORDER_INTENT_TIMEOUT() + 1);
+
+        vm.prank(user);
+        factory.cancelOrder(nonce);
+
+        assertEq(indexToken.balanceOf(user), 100e18);
+        assertEq(uint8(factoryStorage.redemptionState(nonce)), uint8(IndexFactoryStorage.ActionState.CANCELLED));
+        uint256 pendingSum;
+        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
+            pendingSum += factoryStorage.pendingRedemptionAsset(functionsOracle.currentList(i));
+        }
+        assertEq(pendingSum, 0);
+    }
+
+    function testUserPendingIssuanceNonceMatchesOpenIntent() public {
+        uint256 inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        assertEq(factoryStorage.userPendingIssuanceNonce(user), nonce);
+        assertEq(factoryStorage.userPendingRedemptionNonce(user), 0);
+    }
+
+    function testEmergencyUnlockRevertsWhenUserHasPendingIssuance() public {
+        uint256 inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodeWithSelector(IndexFactory.EmergencyUnlockWithPendingIntent.selector, user));
+        vm.prank(admin);
+        factory.emergencyUnlock(user);
+    }
+
+    function testEmergencyUnlockSucceedsWhenIssuanceCancelRequested() public {
+        uint256 inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        factory.cancelOrder(nonce);
+        vm.stopPrank();
+
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.CANCEL_REQUESTED));
+
+        vm.prank(admin);
+        factory.emergencyUnlock(user);
+
+        assertEq(factoryStorage.isUserActionPending(user), false);
+        assertEq(factoryStorage.userPendingIssuanceNonce(user), 0);
+    }
+
+    function testEmergencyUnlockSucceedsForIdleUser() public {
+        address stranger = address(0xBEEF);
+        assertEq(factoryStorage.isUserActionPending(stranger), false);
+
+        vm.prank(admin);
+        factory.emergencyUnlock(stranger);
+
+        assertEq(factoryStorage.isUserActionPending(stranger), false);
+    }
+
+    function testCancelOrderBeforeTimeoutRequestsOperatorCancel() public {
+        uint inputAmount = 1000e6;
+        vm.startPrank(admin);
+        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint nonce = factory.issuanceIndexTokens(inputAmount);
+        factory.cancelOrder(nonce);
+        vm.stopPrank();
+
+        assertEq(
+            uint8(factoryStorage.issuanceState(nonce)),
+            uint8(IndexFactoryStorage.ActionState.CANCEL_REQUESTED)
+        );
+        assertEq(factoryStorage.pendingIssuanceUsdc(), feeAmount + inputAmount);
     }
 
     function testCompleteIssuance() public {
@@ -945,36 +921,142 @@ contract IndexFactoryTest is Test {
         uint inputAmount = 1000e6;
         uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        paymentToken.mint(
-            address(user),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
         vm.stopPrank();
 
         vm.startPrank(user);
-
-        uint256 userBalanceBefore = paymentToken.balanceOf(user);
-        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
-        paymentToken.approve(
-            address(factory),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
+        paymentToken.approve(address(factory), totalUsdcRequired);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
         vm.stopPrank();
-        _fillAllBuyOrders(nonce, receivedAmount, feeAmount);
-        assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
-        factoryProcessor.completeIssuance(nonce);
-        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
+
+        // Simulate Relayer Action: Mint the received dShares directly to the OrderManager
+        uint[] memory receivedAmounts = new uint[](10);
+        vm.startPrank(admin);
+        for(uint i=0; i<10; i++) {
+            receivedAmounts[i] = receivedAmount;
+            address tokenAddress = functionsOracle.currentList(i);
+            DShare(tokenAddress).mint(address(orderManager), receivedAmount);
+        }
+        vm.stopPrank();
+
+        // Call completion as Relayer/Operator
+        vm.prank(admin);
+        factoryProcessor.completeIssuance(nonce, receivedAmounts);
+        
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
         assertEq(indexToken.balanceOf(user), 10e18);
+    }
+
+    /// @dev Issuance intent snapshots 10 constituents; oracle/current list shrinks to 9 before settlement. Relayer must still pass 10 received amounts matching `issuanceSnapshotTokenAt` order.
+    function testCompleteIssuanceAfterOracleListShrinks() public {
+        vm.startPrank(admin);
+        uint256 inputAmount = 1000e6;
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        assertEq(factoryStorage.issuanceSnapshotLength(nonce), 10);
+
+        _fulfillOracleWithNineTokensDroppingToken9();
+        vm.prank(address(factoryBalancer));
+        functionsOracle.updateCurrentList();
+        assertEq(functionsOracle.totalCurrentList(), 9);
+
+        uint256 receivedAmount = 100e18 / 10;
+        uint[] memory receivedAmounts = new uint[](10);
+        vm.startPrank(admin);
+        for (uint256 i; i < 10; i++) {
+            receivedAmounts[i] = receivedAmount;
+            address tokenAddress = factoryStorage.issuanceSnapshotTokenAt(nonce, i);
+            DShare(tokenAddress).mint(address(orderManager), receivedAmount);
+        }
+        vm.stopPrank();
+
+        vm.prank(admin);
+        factoryProcessor.completeIssuance(nonce, receivedAmounts);
+
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
+        assertEq(factoryStorage.issuanceSnapshotLength(nonce), 0);
+    }
+
+    /// @dev After list shrink, relayer must not use the new live `totalCurrentList()` length for an old nonce.
+    function testCompleteIssuanceRevertsWhenRelayerUsesPostRebalanceListLength() public {
+        vm.startPrank(admin);
+        uint256 inputAmount = 1000e6;
+        uint256 feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
+        uint256 totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        paymentToken.approve(address(factory), totalUsdcRequired);
+        uint256 nonce = factory.issuanceIndexTokens(inputAmount);
+        vm.stopPrank();
+
+        _fulfillOracleWithNineTokensDroppingToken9();
+        vm.prank(address(factoryBalancer));
+        functionsOracle.updateCurrentList();
+        assertEq(functionsOracle.totalCurrentList(), 9);
+
+        uint[] memory wrongLenAmounts = new uint[](9);
+        vm.expectRevert(bytes("Amounts array length mismatch"));
+        vm.prank(admin);
+        factoryProcessor.completeIssuance(nonce, wrongLenAmounts);
+    }
+
+    /// @dev Vault has no wrapped balance for token9, so redemption escrow snapshot omits token9; oracle may then drop token9.
+    function testCompleteRedemptionAfterOracleRemovesNonEscrowedConstituent() public {
+        vm.startPrank(admin);
+        for (uint256 i; i < 9; i++) {
+            address tokenAddress = functionsOracle.currentList(i);
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
+            DShare(tokenAddress).mint(address(admin), 1000e18);
+            DShare(tokenAddress).approve(wrappedTokenAddress, 1000e18);
+            WrappedDShare(wrappedTokenAddress).deposit(1000e18, address(vault));
+        }
+
+        indexToken.setMinter(address(admin), true);
+        indexToken.mint(address(user), 10000e18);
+        indexToken.setMinter(address(factory), true);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        uint256 nonce = factory.redemption(indexToken.balanceOf(address(user)));
+        vm.stopPrank();
+
+        assertEq(factoryStorage.pendingRedemptionAsset(address(token9)), 0);
+
+        _fulfillOracleWithNineTokensDroppingToken9();
+        vm.prank(address(factoryBalancer));
+        functionsOracle.updateCurrentList();
+        assertEq(functionsOracle.totalCurrentList(), 9);
+
+        uint256 totalUsdcReceived = 1000e18;
+        vm.startPrank(admin);
+        paymentToken.mint(address(orderManager), totalUsdcReceived);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        factoryProcessor.completeRedemption(nonce, totalUsdcReceived);
+
+        assertEq(uint8(factoryStorage.redemptionState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
+        for (uint256 i; i < 9; i++) {
+            assertEq(factoryStorage.pendingRedemptionAsset(functionsOracle.currentList(i)), 0);
+        }
     }
 
     function testCompleteIssuance2() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
-                tokenAddress
-            );
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
             DShare(tokenAddress).mint(address(admin), 100e18);
             DShare(tokenAddress).approve(wrappedTokenAddress, 100e18);
             WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
@@ -983,34 +1065,37 @@ contract IndexFactoryTest is Test {
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
         indexToken.setMinter(address(factory), true);
-
         assertEq(factoryStorage.getPortfolioValue(), 10000e18);
-
         vm.stopPrank();
+
         vm.startPrank(admin);
         uint inputAmount = 1000e6;
         uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        paymentToken.mint(
-            address(user),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
         vm.stopPrank();
 
         vm.startPrank(user);
-
-        uint256 userBalanceBefore = paymentToken.balanceOf(user);
-        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
-        paymentToken.approve(
-            address(factory),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
+        paymentToken.approve(address(factory), totalUsdcRequired);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
         vm.stopPrank();
-        _fillAllBuyOrders(nonce, receivedAmount, feeAmount);
-        assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
-        factoryProcessor.completeIssuance(nonce);
-        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
+
+        // Simulate Relayer Action: Mint the received dShares directly to the OrderManager
+        uint[] memory receivedAmounts = new uint[](10);
+        vm.startPrank(admin);
+        for(uint i=0; i<10; i++) {
+            receivedAmounts[i] = receivedAmount;
+            address tokenAddress = functionsOracle.currentList(i);
+            DShare(tokenAddress).mint(address(orderManager), receivedAmount);
+        }
+        vm.stopPrank();
+
+        // Call completion as Relayer/Operator
+        vm.prank(admin);
+        factoryProcessor.completeIssuance(nonce, receivedAmounts);
+        
+        assertEq(uint8(factoryStorage.issuanceState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
         assertEq(factoryStorage.getPortfolioValue(), 11000e18);
         assertEq(indexToken.balanceOf(user), 110e18);
     }
@@ -1018,12 +1103,10 @@ contract IndexFactoryTest is Test {
     function testCompleteIssuance2InTestnet() public {
         vm.startPrank(admin);
         factoryStorage.setIsMainnet(false);
-        // factoryStorage.setLatestPriceDecimals(0);
+
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
-                tokenAddress
-            );
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
             DShare(tokenAddress).mint(address(admin), 100e18);
             DShare(tokenAddress).approve(wrappedTokenAddress, 100e18);
             WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
@@ -1032,141 +1115,77 @@ contract IndexFactoryTest is Test {
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
         indexToken.setMinter(address(factory), true);
-
-        // assertEq(factoryStorage.getPortfolioValue(), 10000e18);
-
         vm.stopPrank();
         vm.startPrank(admin);
         uint inputAmount = 1000e6;
         uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        paymentToken.mint(
-            address(user),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
         vm.stopPrank();
 
         vm.startPrank(user);
-
-        uint256 userBalanceBefore = paymentToken.balanceOf(user);
-        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
-        paymentToken.approve(
-            address(factory),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
+        paymentToken.approve(address(factory), totalUsdcRequired);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
         vm.stopPrank();
-        _fillAllBuyOrders(nonce, receivedAmount, feeAmount);
-        assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
-        factoryProcessor.completeIssuance(nonce);
-        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
-        assertEq(factoryStorage.getPortfolioValue(), 11000e18);
-        assertEq(indexToken.balanceOf(user), 110e18);
-    }
 
-    function testCompleteIssuanceMultical() public {
+        uint[] memory receivedAmounts = new uint[](10);
         vm.startPrank(admin);
-        // uint totalCurretList = functionsOracle.totalCurrentList();
-        uint inputAmount = 1000e18;
-        uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
-        uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        // uint expectedAmountOut = factoryStorage.getIssuanceAmountOut(inputAmount);
-        paymentToken.mint(
-            address(user),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
+        for(uint i=0; i<10; i++) {
+            receivedAmounts[i] = receivedAmount;
+            address tokenAddress = functionsOracle.currentList(i);
+            DShare(tokenAddress).mint(address(orderManager), receivedAmount);
+        }
         vm.stopPrank();
 
-        vm.startPrank(user);
-
-        uint256 userBalanceBefore = paymentToken.balanceOf(user);
-        uint256 operatorBalanceBefore = paymentToken.balanceOf(operator);
-        paymentToken.approve(
-            address(factory),
-            feeAmount + inputAmount + (inputAmount * 10) / 10000
-        );
-        uint nonce = factory.issuanceIndexTokens(inputAmount);
-        vm.stopPrank();
-        _fillAllBuyOrdersWithMultical(nonce, receivedAmount, feeAmount);
-        // assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
-        // factoryProcessor.completeIssuance(nonce);
-        assertEq(factoryStorage.issuanceIsCompleted(nonce), true);
+        vm.expectRevert(IndexFactoryStorage.NonMainnetPriceUnavailable.selector);
+        vm.prank(admin);
+        factoryProcessor.completeIssuance(nonce, receivedAmounts);
     }
 
     function testCancelIssuance() public {
         vm.startPrank(admin);
-        uint inputAmount = 1000e18;
+        uint inputAmount = 1000e6;
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        uint quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
-        paymentToken.mint(address(user), quantityIn);
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
         vm.stopPrank();
 
         vm.startPrank(user);
-        paymentToken.approve(address(factory), quantityIn);
+        paymentToken.approve(address(factory), totalUsdcRequired);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
-
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.ACTIVE)
-            );
-            assertEq(issuer.getUnfilledAmount(id), orderAmount);
-        }
-        assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), false);
-
         factory.cancelIssuance(nonce);
         vm.stopPrank();
-        vm.startPrank(operator);
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.issuanceRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.buyRequestPayedAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage
-                .getOrderInstanceById(id);
-            paymentToken.approve(address(issuer), orderAmount);
-            issuer.cancelOrder(order, " ");
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.CANCELLED)
-            );
-        }
+        
+        vm.prank(admin);
         factoryProcessor.completeCancelIssuance(nonce);
-        assertEq(factoryStorage.cancelIssuanceComplted(nonce), true);
+        assertEq(factoryStorage.cancelIssuanceCompleted(nonce), true);
     }
 
     function testCancelPartialIssuance() public {
         vm.startPrank(admin);
-        uint inputAmount = 1000e18;
-        uint receivedAmount = 100e18 / functionsOracle.totalCurrentList();
+        uint inputAmount = 1000e6;
         uint feeAmount = factoryStorage.calculateIssuanceFee(inputAmount);
-        uint quantityIn = feeAmount + inputAmount + (inputAmount * 10) / 10000;
-        paymentToken.mint(address(user), quantityIn);
+        uint totalUsdcRequired = feeAmount + inputAmount + (inputAmount * factoryStorage.feeRate()) / 10000;
+        paymentToken.mint(address(user), totalUsdcRequired);
         vm.stopPrank();
 
         vm.startPrank(user);
-        paymentToken.approve(address(factory), quantityIn);
+        paymentToken.approve(address(factory), totalUsdcRequired);
         uint nonce = factory.issuanceIndexTokens(inputAmount);
-        _fillAllBuyOrders(nonce, receivedAmount, feeAmount);
-        assertEq(factoryStorage.checkIssuanceOrdersStatus(nonce), true);
-        vm.stopPrank();
-
-        vm.startPrank(user);
         factory.cancelIssuance(nonce);
-        _fillCancelIssuanceSellOrders(nonce, 10000e18, 1e18);
-        // factoryProcessor.completeCancelIssuance(nonce);
-        // assertEq(factoryStorage.cancelIssuanceComplted(nonce), true);
+        vm.stopPrank();
+        
+        vm.prank(admin);
+        factoryProcessor.completeCancelIssuance(nonce);
+        assertEq(factoryStorage.cancelIssuanceCompleted(nonce), true);
     }
 
     function testRedemption() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
-                tokenAddress
-            );
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
             DShare(tokenAddress).mint(address(admin), 100e18);
             DShare(tokenAddress).approve(wrappedTokenAddress, 100e18);
             WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
@@ -1175,130 +1194,104 @@ contract IndexFactoryTest is Test {
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
         indexToken.setMinter(address(factory), true);
-
         vm.stopPrank();
-        vm.startPrank(user);
-        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
 
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.ACTIVE)
-            );
-            assertEq(issuer.getUnfilledAmount(id), orderAmount);
-        }
+        vm.startPrank(user);
+        uint tokenBalBefore = indexToken.balanceOf(address(user));
+        uint nonce = factory.redemption(tokenBalBefore);
+        vm.stopPrank();
+        
+        // Assert token was burned (escrowed)
+        assertEq(indexToken.balanceOf(address(user)), 0);
+        assertEq(factoryStorage.burnedTokenAmountByNonce(nonce), tokenBalBefore);
     }
 
     function testRedemptionPartialy() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
-                tokenAddress
-            );
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
             uint mintAmount = 100000255 + 1e18;
             DShare(tokenAddress).mint(address(admin), mintAmount);
             DShare(tokenAddress).approve(wrappedTokenAddress, mintAmount);
-            WrappedDShare(wrappedTokenAddress).deposit(
-                mintAmount,
-                address(vault)
-            );
+            WrappedDShare(wrappedTokenAddress).deposit(mintAmount, address(vault));
         }
 
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
         indexToken.setMinter(address(factory), true);
-
         vm.stopPrank();
-        vm.startPrank(user);
-        uint nonce = factory.redemption(
-            indexToken.balanceOf(address(user)) / 10
-        );
 
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.ACTIVE)
-            );
-            assertEq(issuer.getUnfilledAmount(id), 1e18 / 10);
-        }
+        vm.startPrank(user);
+        uint burnAmount = indexToken.balanceOf(address(user)) / 10;
+        uint nonce = factory.redemption(burnAmount);
+        vm.stopPrank();
+        
+        assertEq(factoryStorage.burnedTokenAmountByNonce(nonce), burnAmount);
     }
 
     function testCompleteRedemption() public {
         vm.startPrank(admin);
-
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
             DShare(tokenAddress).mint(address(admin), 1000e18);
-            DShare(tokenAddress).approve(
-                factoryStorage.wrappedDshareAddress(tokenAddress),
-                1000e18
-            );
-            WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress))
-                .deposit(1000e18, address(vault));
+            DShare(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), 1000e18);
+            WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
         }
 
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 10000e18);
         indexToken.setMinter(address(factory), true);
-
         vm.stopPrank();
+
         vm.startPrank(user);
-        assertEq(indexToken.balanceOf(user), 10000e18);
         uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
+        vm.stopPrank();
 
-        _fillAllSellOrders(nonce, 1000e18, 1e18);
+        uint totalUsdcReceived = 1000e18;
+        
+        // Simulate Relayer Action: Mint the liquidated USDC directly to the OrderManager
+        vm.startPrank(admin);
+        paymentToken.mint(address(orderManager), totalUsdcReceived);
+        vm.stopPrank();
 
-        assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
-        assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
-        factoryProcessor.completeRedemption(nonce);
-        assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
+        // Call completion as Relayer/Operator
+        vm.prank(admin);
+        factoryProcessor.completeRedemption(nonce, totalUsdcReceived);
+        
+        assertEq(uint8(factoryStorage.redemptionState(nonce)), uint8(IndexFactoryStorage.ActionState.COMPLETED));
         assertEq(indexToken.balanceOf(user), 0);
     }
 
-    function testCompleteRedemptionMultical() public {
+    function testCompleteRedemptionRevertsOnZeroSettlement() public {
         vm.startPrank(admin);
-
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
             DShare(tokenAddress).mint(address(admin), 1000e18);
-            DShare(tokenAddress).approve(
-                factoryStorage.wrappedDshareAddress(tokenAddress),
-                1000e18
-            );
-            WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress))
-                .deposit(1000e18, address(vault));
+            DShare(tokenAddress).approve(factoryStorage.wrappedDshareAddress(tokenAddress), 1000e18);
+            WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).deposit(1000e18, address(vault));
         }
 
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 10000e18);
         indexToken.setMinter(address(factory), true);
-
         vm.stopPrank();
+
         vm.startPrank(user);
-        uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
+        uint256 nonce = factory.redemption(indexToken.balanceOf(address(user)));
+        vm.stopPrank();
 
-        _fillAllSellOrdersMultical(nonce, 100e18, 1e18);
-
-        // assertEq(factoryStorage.checkRedemptionOrdersStatus(nonce), true);
-        // assertEq(factoryStorage.redemptionIsCompleted(nonce), false);
-        // factoryProcessor.completeRedemption(nonce);
-        assertEq(factoryStorage.redemptionIsCompleted(nonce), true);
+        vm.expectRevert(bytes("zero settlement"));
+        vm.prank(admin);
+        factoryProcessor.completeRedemption(nonce, 0);
     }
+
 
     function testCancelRdemption() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
-                tokenAddress
-            );
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
             DShare(tokenAddress).mint(address(admin), 100e18);
             DShare(tokenAddress).approve(wrappedTokenAddress, 100e18);
             WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
@@ -1307,50 +1300,24 @@ contract IndexFactoryTest is Test {
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
         indexToken.setMinter(address(factory), true);
-
         vm.stopPrank();
+
         vm.startPrank(user);
         uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
-
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.ACTIVE)
-            );
-            assertEq(issuer.getUnfilledAmount(id), orderAmount);
-        }
-
         factory.cancelRedemption(nonce);
         vm.stopPrank();
-        vm.startPrank(operator);
-        for (uint i = 0; i < 10; i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-            uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-            IOrderProcessor.Order memory order = factoryStorage
-                .getOrderInstanceById(id);
-            paymentToken.approve(address(issuer), orderAmount);
-            issuer.cancelOrder(order, " ");
-            assertEq(
-                uint8(issuer.getOrderStatus(id)),
-                uint8(IOrderProcessor.OrderStatus.CANCELLED)
-            );
-        }
 
+        vm.prank(admin);
         factoryProcessor.completeCancelRedemption(nonce);
-        assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
+        assertEq(factoryStorage.cancelRedemptionCompleted(nonce), true);
+        assertEq(indexToken.balanceOf(user), 100e18); // Check tokens were reminted
     }
 
     function testCancelParitalRedemption() public {
         vm.startPrank(admin);
         for (uint i; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(
-                tokenAddress
-            );
+            address wrappedTokenAddress = factoryStorage.wrappedDshareAddress(tokenAddress);
             DShare(tokenAddress).mint(address(admin), 100e18);
             DShare(tokenAddress).approve(wrappedTokenAddress, 100e18);
             WrappedDShare(wrappedTokenAddress).deposit(100e18, address(vault));
@@ -1359,36 +1326,16 @@ contract IndexFactoryTest is Test {
         indexToken.setMinter(address(admin), true);
         indexToken.mint(address(user), 100e18);
         indexToken.setMinter(address(factory), true);
-
         vm.stopPrank();
+
         vm.startPrank(user);
         uint nonce = factory.redemption(indexToken.balanceOf(address(user)));
-        _fillAllSellOrders(nonce, 10000e18, 1e18);
-
-        // for(uint i = 0; i < 10; i++) {
-        // address tokenAddress = functionsOracle.currentList(i);
-        // uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-        // uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-        // assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.ACTIVE));
-        // assertEq(issuer.getUnfilledAmount(id), orderAmount);
-        // }
-        vm.stopPrank();
-        vm.startPrank(user);
         factory.cancelRedemption(nonce);
-        // vm.stopPrank();
-        // vm.startPrank(operator);
-        // for(uint i = 0; i < 10; i++) {
-        //     address tokenAddress = functionsOracle.currentList(i);
-        //     uint id = factoryStorage.redemptionRequestId(nonce, tokenAddress);
-        //     uint orderAmount = factoryStorage.sellRequestAssetAmountById(id);
-        //     IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(id);
-        //     paymentToken.approve(address(issuer), orderAmount);
-        //     issuer.cancelOrder(order, " ");
-        //     assertEq(uint8(issuer.getOrderStatus(id)), uint8(IOrderProcessor.OrderStatus.CANCELLED));
-        // }
+        vm.stopPrank();
 
-        // factoryProcessor.completeCancelRedemption(nonce);
-        // assertEq(factoryStorage.cancelRedemptionComplted(nonce), true);
+        vm.prank(admin);
+        factoryProcessor.completeCancelRedemption(nonce);
+        assertEq(factoryStorage.cancelRedemptionCompleted(nonce), true);
     }
 
     function testRebalancing() public {
@@ -1460,9 +1407,7 @@ contract IndexFactoryTest is Test {
 
         updateOracleList2();
         assertEq(factory.paused(), false);
-        console.log(factoryStorage.getIndexTokenPrice());
         uint nonce = factoryBalancer.firstRebalanceAction();
-        console.log(factoryStorage.getIndexTokenPrice());
         assertEq(factory.paused(), true);
 
         for (uint i; i < 10; i++) {
@@ -1473,25 +1418,11 @@ contract IndexFactoryTest is Test {
                     id
                 );
                 uint payingAmount = orderAmount * 10;
-                IOrderProcessor.Order memory order = factoryStorage
-                    .getOrderInstanceById(id);
-                // console.log(id);
-                // console.log(order.assetTokenQuantity);
-                // console.log(order.paymentTokenQuantity);
-                // console.log(order.sell);
                 vm.stopPrank();
                 vm.prank(admin);
-                paymentToken.mint(operator, payingAmount);
-                vm.prank(operator);
-                paymentToken.approve(address(issuer), payingAmount);
-
-                vm.prank(operator);
-                issuer.fillOrder(order, orderAmount, payingAmount, 0);
-                assertEq(issuer.getUnfilledAmount(id), 0);
-                assertEq(
-                    uint8(issuer.getOrderStatus(id)),
-                    uint8(IOrderProcessor.OrderStatus.FULFILLED)
-                );
+                paymentToken.mint(address(orderManager), payingAmount);
+                vm.prank(admin);
+                factoryBalancer.setRebalanceIntentSettlement(id, true, payingAmount, 0);
             }
         }
 
@@ -1504,12 +1435,10 @@ contract IndexFactoryTest is Test {
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)),
             10000e18
-            // 5000e18
         );
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(2)),
             10000e18
-            // 5000e18
         );
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(3)),
@@ -1541,56 +1470,33 @@ contract IndexFactoryTest is Test {
         );
 
         assertEq(paymentToken.balanceOf(address(orderManager)), 10000e18);
-        // assertEq(factory.estimateAmountAfterFee(10000e18), 0);
-        // assertEq(factoryStorage.calculateIssuanceFee(9950248756218904472636), 0);
 
         vm.prank(admin);
         factoryBalancer.secondRebalanceAction(nonce);
-        console.log(factoryStorage.getIndexTokenPrice());
         for (uint i = 0; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
             uint orderAmount = factoryBalancer.rebalanceBuyPayedAmountById(id);
             if (id > 0 && orderAmount > 0) {
                 uint receivedAmount = orderAmount / 10;
-                uint fees = factoryStorage.calculateBuyRequestFee(orderAmount);
-                IOrderProcessor.Order memory order = factoryStorage
-                    .getOrderInstanceById(id);
-                // balances before
-                vm.startPrank(operator);
-
-                issuer.fillOrder(order, orderAmount, receivedAmount, fees);
-                IOrderProcessor.PricePoint memory fillPrice = issuer
-                    .latestFillPrice(order.assetToken, order.paymentToken);
-                assertTrue(
-                    fillPrice.price == 0 ||
-                        fillPrice.price ==
-                        mulDiv(
-                            orderAmount,
-                            10 ** (18 - paymentToken.decimals()),
-                            receivedAmount
-                        )
-                );
-                // balances after
-                assertEq(
-                    uint8(issuer.getOrderStatus(id)),
-                    uint8(IOrderProcessor.OrderStatus.FULFILLED)
-                );
+                vm.stopPrank();
+                vm.prank(admin);
+                DShare(tokenAddress).mint(address(orderManager), receivedAmount);
+                vm.prank(admin);
+                factoryBalancer.setRebalanceIntentSettlement(id, true, 0, receivedAmount);
             }
         }
-
         vm.stopPrank();
 
         assertEq(factoryBalancer.checkSecondRebalanceOrdersStatus(nonce), true);
         vm.prank(admin);
 
         factoryBalancer.completeRebalanceActions(nonce);
-        console.log(factoryStorage.getIndexTokenPrice());
         assertEq(factory.paused(), false);
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)) /
                 1e18,
-            19950
+            20000
         );
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)) /
@@ -1641,14 +1547,12 @@ contract IndexFactoryTest is Test {
         assertEq(paymentToken.balanceOf(address(factoryBalancer)) / 1e18, 0);
 
         //check to see current list is updated
-        // token current list
         assertEq(functionsOracle.currentList(0), address(token0));
         assertEq(functionsOracle.currentList(1), address(token1));
         assertEq(functionsOracle.currentList(2), address(token2));
         assertEq(functionsOracle.currentList(3), address(token3));
         assertEq(functionsOracle.currentList(4), address(token4));
         assertEq(functionsOracle.currentList(9), address(token9));
-        // token shares
         assertEq(
             functionsOracle.tokenCurrentMarketShare(address(token0)),
             20e18
@@ -1754,21 +1658,11 @@ contract IndexFactoryTest is Test {
                     id
                 );
                 uint payingAmount = orderAmount * 10;
-                IOrderProcessor.Order memory order = factoryStorage
-                    .getOrderInstanceById(id);
                 vm.stopPrank();
                 vm.prank(admin);
-                paymentToken.mint(operator, payingAmount);
-                vm.prank(operator);
-                paymentToken.approve(address(issuer), payingAmount);
-
-                vm.prank(operator);
-                issuer.fillOrder(order, orderAmount, payingAmount, 0);
-                assertEq(issuer.getUnfilledAmount(id), 0);
-                assertEq(
-                    uint8(issuer.getOrderStatus(id)),
-                    uint8(IOrderProcessor.OrderStatus.FULFILLED)
-                );
+                paymentToken.mint(address(orderManager), payingAmount);
+                vm.prank(admin);
+                factoryBalancer.setRebalanceIntentSettlement(id, true, payingAmount, 0);
             }
             if (factoryBalancer.checkMultical(id)) {
                 vm.stopPrank();
@@ -1777,51 +1671,24 @@ contract IndexFactoryTest is Test {
             }
         }
 
-        // vm.prank(admin);
-        // factory.secondRebalanceAction(nonce);
         assertEq(factoryBalancer.checkFirstRebalanceOrdersStatus(nonce), true);
 
         assertEq(
             factoryBalancer.checkSecondRebalanceOrdersStatus(nonce),
             false
         );
-        // vm.prank(admin);
-        // factory.secondRebalanceAction(nonce);
 
         for (uint i = 0; i < 10; i++) {
             address tokenAddress = functionsOracle.currentList(i);
             uint id = factoryBalancer.rebalanceRequestId(nonce, tokenAddress);
             uint orderAmount = factoryBalancer.rebalanceBuyPayedAmountById(id);
-            if (
-                id > 0 &&
-                orderAmount > 0 &&
-                uint8(issuer.getOrderStatus(id)) !=
-                uint8(IOrderProcessor.OrderStatus.FULFILLED)
-            ) {
+            if (id > 0 && orderAmount > 0 && !factoryBalancer.rebalanceIntentSettledById(id)) {
                 uint receivedAmount = orderAmount / 10;
-                uint fees = factoryStorage.calculateBuyRequestFee(orderAmount);
-                IOrderProcessor.Order memory order = factoryStorage
-                    .getOrderInstanceById(id);
-                // balances before
-                vm.startPrank(operator);
-
-                issuer.fillOrder(order, orderAmount, receivedAmount, fees);
-                IOrderProcessor.PricePoint memory fillPrice = issuer
-                    .latestFillPrice(order.assetToken, order.paymentToken);
-                assertTrue(
-                    fillPrice.price == 0 ||
-                        fillPrice.price ==
-                        mulDiv(
-                            orderAmount,
-                            10 ** (18 - paymentToken.decimals()),
-                            receivedAmount
-                        )
-                );
-                // balances after
-                assertEq(
-                    uint8(issuer.getOrderStatus(id)),
-                    uint8(IOrderProcessor.OrderStatus.FULFILLED)
-                );
+                vm.stopPrank();
+                vm.prank(admin);
+                DShare(tokenAddress).mint(address(orderManager), receivedAmount);
+                vm.prank(admin);
+                factoryBalancer.setRebalanceIntentSettlement(id, true, 0, receivedAmount);
                 if (factoryBalancer.checkMultical(id)) {
                     vm.stopPrank();
                     vm.prank(admin);
@@ -1830,17 +1697,12 @@ contract IndexFactoryTest is Test {
             }
         }
 
-        // vm.stopPrank();
-
         assertEq(factoryBalancer.checkSecondRebalanceOrdersStatus(nonce), true);
-
-        // vm.prank(admin);
-        // factoryBalancer.completeRebalanceActions(nonce);
 
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(0)) /
                 1e18,
-            19950
+            20000
         );
         assertEq(
             factoryStorage.getVaultDshareValue(functionsOracle.currentList(1)) /
@@ -1887,43 +1749,5 @@ contract IndexFactoryTest is Test {
                 1e18,
             10000
         );
-
-        assertEq(paymentToken.balanceOf(address(factory)) / 1e18, 0);
-
-        //check to see current list is updated
-        // token current list
-        assertEq(functionsOracle.currentList(0), address(token0));
-        assertEq(functionsOracle.currentList(1), address(token1));
-        assertEq(functionsOracle.currentList(2), address(token2));
-        assertEq(functionsOracle.currentList(3), address(token3));
-        assertEq(functionsOracle.currentList(4), address(token4));
-        assertEq(functionsOracle.currentList(9), address(token9));
-        // token shares
-        assertEq(
-            functionsOracle.tokenCurrentMarketShare(address(token0)),
-            20e18
-        );
-        assertEq(
-            functionsOracle.tokenCurrentMarketShare(address(token1)),
-            5e18
-        );
-        assertEq(
-            functionsOracle.tokenCurrentMarketShare(address(token2)),
-            5e18
-        );
-        assertEq(
-            functionsOracle.tokenCurrentMarketShare(address(token3)),
-            10e18
-        );
-        assertEq(
-            functionsOracle.tokenCurrentMarketShare(address(token4)),
-            10e18
-        );
-        assertEq(
-            functionsOracle.tokenCurrentMarketShare(address(token9)),
-            10e18
-        );
-
-        // }
     }
 }

@@ -44,6 +44,7 @@ contract DeployFunctionsOracle is Script {
         console.log("FunctionsOracle implementation deployed at:", address(functionsOracleImplementation));
         console.log("FunctionsOracle proxy deployed at:", address(proxy));
         console.log("ProxyAdmin for FunctionsOracle deployed at:", address(proxyAdmin));
+        console.log("Post-deploy: FunctionsOracle.setIndexFactoryStorage(IndexFactoryStorage proxy) for list-drop safety.");
 
         vm.stopBroadcast();
     }

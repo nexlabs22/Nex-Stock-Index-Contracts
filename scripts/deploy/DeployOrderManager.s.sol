@@ -18,18 +18,15 @@ contract DeployOrderManager is Script {
 
         address usdc;
         uint8 usdcDecimals;
-        address issuer;
 
         address owner = vm.addr(deployerPrivateKey);
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("SEPOLIA_USDC_DECIMALS"));
-            issuer = vm.envAddress("SEPOLIA_ISSUER_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("ARBITRUM_USDC_DECIMALS"));
-            issuer = vm.envAddress("ARBITRUM_ISSUER_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -37,7 +34,7 @@ contract DeployOrderManager is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address proxy = Upgrades.deployTransparentProxy(
-            "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdc, usdcDecimals, issuer))
+            "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdc, usdcDecimals))
         );
 
         OrderManager orderManagerImplementation = OrderManager(proxy);
@@ -47,6 +44,7 @@ contract DeployOrderManager is Script {
         console.log("OrderManager implementation deployed at:", address(orderManagerImplementation));
         console.log("OrderManager proxy deployed at:", address(proxy));
         console.log("ProxyAdmin for OrderManager deployed at:", address(proxyAdmin));
+        console.log("Post-deploy: call OrderManager.setIndexFactory(IndexFactory proxy) for timeout issuance refunds.");
 
         vm.stopBroadcast();
     }

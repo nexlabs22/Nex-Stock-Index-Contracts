@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "../dinary/orders/IOrderProcessor.sol";
-import {FeeLib} from "../dinary/common/FeeLib.sol";
 import "../vault/NexVault.sol";
 import "../dinary/WrappedDShare.sol";
 import "./IndexFactoryStorage.sol";
@@ -24,6 +22,38 @@ import "./FunctionsOracle.sol";
 // IndexFactoryV2
 contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
+    
+    error InvalidActionState(
+        uint256 nonce,
+        IndexFactoryStorage.ActionState expected,
+        IndexFactoryStorage.ActionState actual
+    );
+
+    error NoMatchingPendingIntent(uint256 intentId);
+
+    error EmergencyUnlockWithPendingIntent(address user);
+
+    /// @dev Mirrors IndexFactoryProcessor.IssuanceCancelled for indexer compatibility.
+    event IssuanceCancelled(
+        uint256 indexed nonce,
+        address indexed user,
+        address inputToken,
+        uint256 inputAmount,
+        uint256 outputAmount,
+        uint256 time
+    );
+
+    /// @dev Mirrors IndexFactoryProcessor.RedemptionCancelled for indexer compatibility.
+    event RedemptionCancelled(
+        uint256 indexed nonce,
+        address indexed user,
+        address outputToken,
+        uint256 inputAmount,
+        uint256 outputAmount,
+        uint256 time
+    );
+
+    uint256 public constant ORDER_INTENT_TIMEOUT = 24 hours;
 
     struct ActionInfo {
         uint256 actionType;
@@ -33,37 +63,37 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     IndexFactoryStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
 
-    event RequestIssuance(
+    event OrderIntentIssuance(
         uint256 indexed nonce,
         address indexed user,
-        address inputToken,
+        address indexed inputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
     );
 
-    event RequestCancelIssuance(
+    event OrderIntentCancelIssuance(
         uint256 indexed nonce,
         address indexed user,
-        address inputToken,
+        address indexed inputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
     );
 
-    event RequestRedemption(
+    event OrderIntentRedemption(
         uint256 indexed nonce,
         address indexed user,
-        address outputToken,
+        address indexed outputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
     );
 
-    event RequestCancelRedemption(
+    event OrderIntentCancelRedemption(
         uint256 indexed nonce,
         address indexed user,
-        address outputToken,
+        address indexed outputToken,
         uint256 inputAmount,
         uint256 outputAmount,
         uint256 time
@@ -116,282 +146,296 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     }
 
     /**
-     * @dev Requests a buy order.
-     * @param _token The address of the token to buy.
-     * @param _orderAmount The amount of the token to buy.
-     * @param _receiver The address to receive the bought tokens.
-     * @return uint The ID of the buy order.
-     */
-    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver) internal returns (uint256) {
-        IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(false);
-        order.recipient = _receiver;
-        order.assetToken = address(_token);
-        order.paymentTokenQuantity = _orderAmount;
-
-        OrderManager orderManager = factoryStorage.orderManager();
-        uint256 id = orderManager.requestBuyOrderFromCurrentBalance(_token, _orderAmount, _receiver);
-        factoryStorage.setOrderInstanceById(id, order);
-        return id;
-    }
-
-    /**
-     * @dev Requests a sell order.
-     * @param _token The address of the token to sell.
-     * @param _amount The amount of the token to sell.
-     * @param _receiver The address to receive the sold tokens.
-     * @return (uint, uint) The ID of the sell order and the order amount.
-     */
-    function requestSellOrder(address _token, uint256 _amount, address _receiver) internal returns (uint256, uint256) {
-        address wrappedDshare = factoryStorage.wrappedDshareAddress(_token);
-        NexVault(factoryStorage.vault()).withdrawFunds(wrappedDshare, address(this), _amount);
-        uint256 orderAmount0 = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
-
-        //rounding order
-        IOrderProcessor issuer = factoryStorage.issuer();
-        uint8 decimalReduction = issuer.orderDecimalReduction(_token);
-
-        uint256 orderAmount;
-        if (decimalReduction > 0) {
-            orderAmount = orderAmount0 - (orderAmount0 % 10 ** (decimalReduction - 1));
-        } else {
-            orderAmount = orderAmount0;
-        }
-        uint256 extraAmount = orderAmount0 - orderAmount;
-
-        if (extraAmount > 0) {
-            IERC20(_token).approve(wrappedDshare, extraAmount);
-            WrappedDShare(wrappedDshare).deposit(extraAmount, address(factoryStorage.vault()));
-        }
-
-        IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(true);
-        order.assetToken = _token;
-        order.assetTokenQuantity = orderAmount;
-        order.recipient = _receiver;
-
-        IERC20(_token).safeTransfer(address(factoryStorage.orderManager()), orderAmount);
-        OrderManager orderManager = factoryStorage.orderManager();
-        uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
-        factoryStorage.setOrderInstanceById(id, order);
-        return (id, orderAmount);
-    }
-
-    /**
-     * @dev Requests a sell order from the order manager's balance.
-     * @param _token The address of the token to sell.
-     * @param _amount The amount of the token to sell.
-     * @param _receiver The address to receive the sold tokens.
-     * @return (uint, uint) The ID of the sell order and the order amount.
-     */
-    function requestSellOrderFromOrderManagerBalance(address _token, uint256 _amount, address _receiver)
-        internal
-        returns (uint256, uint256)
-    {
-        //rounding order
-        IOrderProcessor issuer = factoryStorage.issuer();
-        uint8 decimalReduction = issuer.orderDecimalReduction(_token);
-        uint256 orderAmount;
-        if (decimalReduction > 0) {
-            orderAmount = _amount - (_amount % 10 ** (decimalReduction - 1));
-        } else {
-            orderAmount = _amount;
-        }
-        uint256 extraAmount = _amount - orderAmount;
-
-        IOrderProcessor.Order memory order = factoryStorage.getPrimaryOrder(true);
-        order.assetToken = _token;
-        order.assetTokenQuantity = orderAmount;
-        order.recipient = _receiver;
-
-        OrderManager orderManager = factoryStorage.orderManager();
-        uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
-        factoryStorage.setOrderInstanceById(id, order);
-        return (id, orderAmount);
-    }
-
-    /**
-     * @dev Issues index tokens.
-     * @param _inputAmount The amount of input tokens.
-     * @return uint256 The issuance nonce.
+     * @dev Asynchronous Issuance Request (Dinari V2)
+     * @param _inputAmount The amount of input tokens (USDC).
+     * @return uint256 The issuance nonce (Intent ID).
      */
     function issuanceIndexTokens(uint256 _inputAmount) public nonReentrant whenNotPaused returns (uint256) {
         require(_inputAmount > 0, "Invalid input amount");
+        require(!factoryStorage.isUserActionPending(msg.sender), "User has pending action");
+        require(
+            address(factoryStorage.orderManager().indexFactory()) == address(this),
+            "OrderManager not wired"
+        );
+
+        // 1. Calculate Fees & Required Input
         uint256 feeAmount = (_inputAmount * factoryStorage.feeRate()) / 10000;
         uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(_inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
+        
+        // 2. Escrow Logic: Transfer USDC from User to OrderManager (Safe Vault) & FeeReceiver
         IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, address(factoryStorage.orderManager()), quantityIn);
         IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, factoryStorage.feeReceiver(), feeAmount);
 
+        // 3. Register the Intent (Pending State)
         factoryStorage.increaseIssuanceNonce();
         uint256 issuanceNonce = factoryStorage.issuanceNonce();
+        IndexFactoryStorage.ActionState currentIssuanceState = factoryStorage.issuanceState(issuanceNonce);
+        if (currentIssuanceState != IndexFactoryStorage.ActionState.NONE) {
+            revert InvalidActionState(
+                issuanceNonce, IndexFactoryStorage.ActionState.NONE, currentIssuanceState
+            );
+        }
         factoryStorage.setIssuanceInputAmount(issuanceNonce, _inputAmount);
+        factoryStorage.setIssuanceRequesterByNonce(issuanceNonce, msg.sender);
+        factoryStorage.setUserActionPending(msg.sender, true);
+        factoryStorage.setUserPendingIssuanceNonce(msg.sender, issuanceNonce);
+        factoryStorage.increasePendingIssuanceUsdc(quantityIn);
+        factoryStorage.setIssuanceIntentTimestamp(issuanceNonce, block.timestamp);
+
+        // 4. Record Pre-Issuance Balances for NAV calculation (Required for completion phase)
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            uint256 amount = _inputAmount * functionsOracle.tokenCurrentMarketShare(tokenAddress) / 100e18;
-            uint256 requestId = requestBuyOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
-            factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(1, issuanceNonce));
-            factoryStorage.setBuyRequestPayedAmountById(requestId, amount);
-            factoryStorage.setIssuanceRequestId(issuanceNonce, tokenAddress, requestId);
-            factoryStorage.setIssuanceRequesterByNonce(issuanceNonce, msg.sender);
+            factoryStorage.pushIssuanceSnapshotToken(issuanceNonce, tokenAddress);
+            
+            // NOTE: Synchronous requestBuyOrder() removed for V2 Asynchronous flow.
+            // The Relayer will calculate the distribution and request EIP-712 permits off-chain.
+
             uint256 wrappedDsharesBalance =
                 IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(factoryStorage.vault()));
             uint256 dShareBalance =
                 WrappedDShare(factoryStorage.wrappedDshareAddress(tokenAddress)).previewRedeem(wrappedDsharesBalance);
+            
             factoryStorage.setIssuanceTokenPrimaryBalance(issuanceNonce, tokenAddress, dShareBalance);
-            factoryStorage.setIssuanceIndexTokenPrimaryTotalSupply(
-                issuanceNonce, IERC20(factoryStorage.token()).totalSupply()
-            );
+            uint256 amountIn = _inputAmount * functionsOracle.tokenCurrentMarketShare(tokenAddress) / 100e18;
+            if (amountIn > 0) {
+                factoryStorage.emitOrderIntentCreated(
+                    msg.sender,
+                    tokenAddress,
+                    amountIn,
+                    IndexFactoryStorage.OrderType.BUY,
+                    issuanceNonce
+                );
+            }
         }
-        emit RequestIssuance(issuanceNonce, msg.sender, factoryStorage.usdc(), _inputAmount, 0, block.timestamp);
+
+        // Snapshot total supply
+        factoryStorage.setIssuanceIndexTokenPrimaryTotalSupply(
+            issuanceNonce, IERC20(factoryStorage.token()).totalSupply()
+        );
+
+        // 5. Emit the Async Event for the Backend Relayer
+        emit OrderIntentIssuance(issuanceNonce, msg.sender, factoryStorage.usdc(), _inputAmount, 0, block.timestamp);
+        factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.PENDING);
+        
         return issuanceNonce;
     }
 
     /**
-     * @dev Cancels an issuance.
+     * @dev Requests the cancellation of a pending issuance (Dinari V2 Async Flow).
+     * @notice This registers a cancellation intent. Funds are NOT immediately refunded here 
+     * to prevent race conditions with the off-chain Relayer. The Relayer will intercept this event,
+     * halt API operations, and trigger the actual refund via `completeCancelIssuance`.
      * @param _issuanceNonce The nonce of the issuance to cancel.
      */
     function cancelIssuance(uint256 _issuanceNonce) public whenNotPaused nonReentrant {
-        require(!factoryStorage.issuanceIsCompleted(_issuanceNonce), "Issuance is completed");
+        IndexFactoryStorage.ActionState issuanceState = factoryStorage.issuanceState(_issuanceNonce);
+        if (issuanceState != IndexFactoryStorage.ActionState.PENDING) {
+            revert InvalidActionState(
+                _issuanceNonce, IndexFactoryStorage.ActionState.PENDING, issuanceState
+            );
+        }
         address requester = factoryStorage.issuanceRequesterByNonce(_issuanceNonce);
         require(msg.sender == requester, "Only requester can cancel the issuance");
-        IOrderProcessor issuer = factoryStorage.issuer();
-        uint256 latestCancelIssuanceReqeustId;
+        _handleIssuanceCancellation(_issuanceNonce, requester);
+    }
+
+    /**
+     * @notice Initiates an asynchronous redemption request by burning Index Tokens.
+     * @dev Part of the Dinari V2 Intent-based flow. The actual asset liquidation 
+     * is handled off-chain by the Relayer.
+     * @param _inputAmount The amount of Index Tokens to redeem.
+     * @return redemptionNonce The unique identifier (Intent ID) for this request.
+     */
+    function redemption(uint256 _inputAmount) public nonReentrant whenNotPaused returns (uint256) {
+        require(_inputAmount > 0, "Invalid input amount");
+        require(!factoryStorage.isUserActionPending(msg.sender), "User has pending action");
+        
+        // 1. Intent Registration
+        factoryStorage.increaseRedemptionNonce();
+        uint256 redemptionNonce = factoryStorage.redemptionNonce();
+        IndexFactoryStorage.ActionState currentRedemptionState = factoryStorage.redemptionState(redemptionNonce);
+        if (currentRedemptionState != IndexFactoryStorage.ActionState.NONE) {
+            revert InvalidActionState(
+                redemptionNonce, IndexFactoryStorage.ActionState.NONE, currentRedemptionState
+            );
+        }
+        factoryStorage.setRedemptionInputAmount(redemptionNonce, _inputAmount);
+        factoryStorage.setRedemptionRequesterByNonce(redemptionNonce, msg.sender);
+        factoryStorage.setUserActionPending(msg.sender, true);
+        factoryStorage.setUserPendingRedemptionNonce(msg.sender, redemptionNonce);
+
+        // 2. Proportional Share Calculation
+        // Determine the percentage of the total supply being burned to calculate asset distribution
+        IndexToken token = factoryStorage.token();
+        uint256 tokenBurnPercent = (_inputAmount * 1e18) / token.totalSupply();
+
+        // 3. Asset Escrow (Burning)
+        // Index Tokens are burned immediately to lock the user's position
+        token.burn(msg.sender, _inputAmount);
+        factoryStorage.setBurnedTokenAmountByNonce(redemptionNonce, _inputAmount);
+
+        // 4. Intent Tracking & Off-chain Preparation
+        
+
         for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
             address tokenAddress = functionsOracle.currentList(i);
-            uint256 requestId = factoryStorage.issuanceRequestId(_issuanceNonce, tokenAddress);
-            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
-            if (
-                uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)
-                    && issuer.getReceivedAmount(requestId) == 0
-            ) {
-                OrderManager orderManager = factoryStorage.orderManager();
-                factoryStorage.setCancelIssuanceUnfilledAmount(
-                    _issuanceNonce, tokenAddress, issuer.getUnfilledAmount(requestId)
+            address wrapped = factoryStorage.wrappedDshareAddress(tokenAddress);
+            uint256 wrappedBal = IERC20(wrapped).balanceOf(address(factoryStorage.vault()));
+            uint256 underlyingVaultBal = WrappedDShare(wrapped).previewRedeem(wrappedBal);
+            uint256 amountToSell = (tokenBurnPercent * underlyingVaultBal) / 1e18;
+            if (amountToSell > 0) {
+                factoryStorage.recordRedemptionEscrowSlice(redemptionNonce, tokenAddress, amountToSell);
+                factoryStorage.emitOrderIntentCreated(
+                    msg.sender,
+                    tokenAddress,
+                    amountToSell,
+                    IndexFactoryStorage.OrderType.SELL,
+                    redemptionNonce
                 );
-                orderManager.cancelOrder(requestId);
-            } else if (
-                uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)
-                    || issuer.getReceivedAmount(requestId) > 0
-            ) {
-                uint256 balance = issuer.getReceivedAmount(requestId);
-                (uint256 cancelRequestId, uint256 assetAmount) = requestSellOrderFromOrderManagerBalance(
-                    tokenAddress, balance, address(factoryStorage.orderManager())
-                );
-                factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(3, _issuanceNonce));
-                factoryStorage.setCancelIssuanceRequestId(_issuanceNonce, tokenAddress, cancelRequestId);
-                factoryStorage.setSellRequestAssetAmountById(cancelRequestId, assetAmount);
-                latestCancelIssuanceReqeustId = cancelRequestId;
-                if (uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)) {
-                    factoryStorage.setCancelIssuanceUnfilledAmount(
-                        _issuanceNonce, tokenAddress, issuer.getUnfilledAmount(requestId)
-                    );
-                    OrderManager orderManager = factoryStorage.orderManager();
-                    orderManager.cancelOrder(requestId);
-                }
             }
         }
-        emit RequestCancelIssuance(
-            _issuanceNonce,
+
+        factoryStorage.setRedemptionIntentTimestamp(redemptionNonce, block.timestamp);
+
+        // 5. Emit Intent Event
+        // Triggers the Backend Relayer to begin the asynchronous settlement process
+        emit OrderIntentRedemption(
+            redemptionNonce, 
+            msg.sender, 
+            factoryStorage.usdc(), 
+            _inputAmount, 
+            0, 
+            block.timestamp
+        );
+        factoryStorage.setRedemptionState(redemptionNonce, IndexFactoryStorage.ActionState.PENDING);
+        
+        return redemptionNonce;
+    }
+
+    /**
+     * @dev Requests the cancellation of a pending redemption (Dinari V2 Async Flow).
+     * @notice Emits a cancellation intent. The Relayer will intercept this, stop any 
+     * pending off-chain liquidations, and call `completeCancelRedemption` to refund the user.
+     * @param _redemptionNonce The nonce of the redemption to cancel.
+     */
+    function cancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
+        IndexFactoryStorage.ActionState redemptionState = factoryStorage.redemptionState(_redemptionNonce);
+        if (redemptionState != IndexFactoryStorage.ActionState.PENDING) {
+            revert InvalidActionState(
+                _redemptionNonce, IndexFactoryStorage.ActionState.PENDING, redemptionState
+            );
+        }
+        address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
+        require(msg.sender == requester, "Only requester can cancel the redemption");
+        _handleRedemptionCancellation(_redemptionNonce, requester);
+    }
+
+    /**
+     * @notice Cancels a pending issuance or redemption intent for msg.sender.
+     * @dev Disambiguates by matching requester on issuance vs redemption for the same numeric nonce.
+     *      Before ORDER_INTENT_TIMEOUT: sets CANCEL_REQUESTED for relayer-driven completion.
+     *      After timeout with PENDING: atomically refunds escrow (USDC) or index tokens without the relayer.
+     */
+    function cancelOrder(uint256 intentId) external whenNotPaused nonReentrant {
+        if (
+            factoryStorage.issuanceState(intentId) == IndexFactoryStorage.ActionState.PENDING
+                && factoryStorage.issuanceRequesterByNonce(intentId) == msg.sender
+        ) {
+            _handleIssuanceCancellation(intentId, msg.sender);
+            return;
+        }
+        if (
+            factoryStorage.redemptionState(intentId) == IndexFactoryStorage.ActionState.PENDING
+                && factoryStorage.redemptionRequesterByNonce(intentId) == msg.sender
+        ) {
+            _handleRedemptionCancellation(intentId, msg.sender);
+            return;
+        }
+        revert NoMatchingPendingIntent(intentId);
+    }
+
+    function _handleIssuanceCancellation(uint256 issuanceNonce, address requester) internal {
+        if (block.timestamp > factoryStorage.issuanceIntentTimestamp(issuanceNonce) + ORDER_INTENT_TIMEOUT) {
+            _atomicCancelIssuance(issuanceNonce, requester);
+        } else {
+            factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.CANCEL_REQUESTED);
+            emit OrderIntentCancelIssuance(
+                issuanceNonce,
+                requester,
+                factoryStorage.usdc(),
+                factoryStorage.issuanceInputAmount(issuanceNonce),
+                0,
+                block.timestamp
+            );
+        }
+    }
+
+    function _handleRedemptionCancellation(uint256 redemptionNonce, address requester) internal {
+        if (block.timestamp > factoryStorage.redemptionIntentTimestamp(redemptionNonce) + ORDER_INTENT_TIMEOUT) {
+            _atomicCancelRedemption(redemptionNonce, requester);
+        } else {
+            factoryStorage.setRedemptionState(redemptionNonce, IndexFactoryStorage.ActionState.CANCEL_REQUESTED);
+            emit OrderIntentCancelRedemption(
+                redemptionNonce,
+                requester,
+                factoryStorage.usdc(),
+                factoryStorage.redemptionInputAmount(redemptionNonce),
+                0,
+                block.timestamp
+            );
+        }
+    }
+
+    function _atomicCancelIssuance(uint256 issuanceNonce, address requester) internal {
+        require(!factoryStorage.cancelIssuanceCompleted(issuanceNonce), "Cancellation already processed");
+
+        uint256 originalInputAmount = factoryStorage.issuanceInputAmount(issuanceNonce);
+        uint256 orderProcessorFee = factoryStorage.calculateIssuanceFee(originalInputAmount);
+        uint256 totalRefund = originalInputAmount + orderProcessorFee;
+        uint256 escrow = factoryStorage.getIssuanceEscrowedUsdc(issuanceNonce);
+        require(escrow > 0, "Invalid escrow");
+
+        factoryStorage.decreasePendingIssuanceUsdc(escrow);
+        factoryStorage.orderManager().releaseEscrow(factoryStorage.usdc(), requester, totalRefund);
+
+        factoryStorage.setCancelIssuanceCompleted(issuanceNonce, true);
+        factoryStorage.setIssuanceState(issuanceNonce, IndexFactoryStorage.ActionState.CANCELLED);
+        if (factoryStorage.tryClearUserPendingIssuanceNonce(requester, issuanceNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
+        }
+        factoryStorage.clearIssuanceSnapshot(issuanceNonce);
+
+        emit IssuanceCancelled(
+            issuanceNonce,
             requester,
             factoryStorage.usdc(),
-            factoryStorage.issuanceInputAmount(_issuanceNonce),
+            originalInputAmount,
             0,
             block.timestamp
         );
     }
 
-    /**
-     * @dev Redeems index tokens.
-     * @param _inputAmount The amount of input tokens.
-     * @return uint The redemption nonce.
-     */
-    function redemption(uint256 _inputAmount) public nonReentrant whenNotPaused returns (uint256) {
-        require(_inputAmount > 0, "Invalid input amount");
-        factoryStorage.increaseRedemptionNonce();
-        uint256 redemptionNonce = factoryStorage.redemptionNonce();
-        factoryStorage.setRedemptionInputAmount(redemptionNonce, _inputAmount);
+    function _atomicCancelRedemption(uint256 redemptionNonce, address requester) internal {
+        require(!factoryStorage.cancelRedemptionCompleted(redemptionNonce), "The process has been completed before");
+
+        factoryStorage.consumeRedemptionEscrowForNonce(redemptionNonce);
+
         IndexToken token = factoryStorage.token();
-        uint256 tokenBurnPercent = _inputAmount * 1e18 / token.totalSupply();
-        token.burn(msg.sender, _inputAmount);
-        factoryStorage.setBurnedTokenAmountByNonce(redemptionNonce, _inputAmount);
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 amount = tokenBurnPercent
-                * IERC20(factoryStorage.wrappedDshareAddress(tokenAddress)).balanceOf(address(factoryStorage.vault()))
-                / 1e18;
-            (uint256 requestId, uint256 assetAmount) =
-                requestSellOrder(tokenAddress, amount, address(factoryStorage.orderManager()));
-            factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(2, redemptionNonce));
-            factoryStorage.setSellRequestAssetAmountById(requestId, assetAmount);
-            factoryStorage.setRedemptionRequestId(redemptionNonce, tokenAddress, requestId);
-            factoryStorage.setRedemptionRequesterByNonce(redemptionNonce, msg.sender);
-        }
-        emit RequestRedemption(redemptionNonce, msg.sender, factoryStorage.usdc(), _inputAmount, 0, block.timestamp);
-        return redemptionNonce;
-    }
+        uint256 originalBurnAmount = factoryStorage.burnedTokenAmountByNonce(redemptionNonce);
+        token.mint(requester, originalBurnAmount);
 
-    /**
-     * @dev Cancels an executed redemption.
-     * @param _tokenAddress The address of the token.
-     * @param _redemptionNonce The nonce of the redemption.
-     * @param _requestId The ID of the request.
-     * @param _filledAmount The filled amount.
-     * @param _unFilledAmount The unfilled amount.
-     */
-    function _cancelExecutedRedemption(
-        address _tokenAddress,
-        uint256 _redemptionNonce,
-        uint256 _requestId,
-        uint256 _filledAmount,
-        uint256 _unFilledAmount
-    ) internal {
-        IOrderProcessor issuer = factoryStorage.issuer();
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(factoryStorage.usdc()));
-        uint256 amountAfterFee = factoryStorage.getAmountAfterFee(percentageFeeRate, _filledAmount) - flatFee;
-        uint256 cancelRequestId = requestBuyOrder(_tokenAddress, amountAfterFee, address(factoryStorage.orderManager()));
-        factoryStorage.setActionInfoById(cancelRequestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
-        factoryStorage.setCancelRedemptionRequestId(_redemptionNonce, _tokenAddress, cancelRequestId);
-        if (uint8(issuer.getOrderStatus(_requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)) {
-            factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, _tokenAddress, _unFilledAmount);
-            OrderManager orderManager = factoryStorage.orderManager();
-            orderManager.cancelOrder(_requestId);
+        factoryStorage.setCancelRedemptionCompleted(redemptionNonce, true);
+        factoryStorage.setRedemptionState(redemptionNonce, IndexFactoryStorage.ActionState.CANCELLED);
+        if (factoryStorage.tryClearUserPendingRedemptionNonce(requester, redemptionNonce)) {
+            factoryStorage.setUserActionPending(requester, false);
         }
-    }
 
-    /**
-     * @dev Cancels a redemption.
-     * @param _redemptionNonce The nonce of the redemption to cancel.
-     */
-    function cancelRedemption(uint256 _redemptionNonce) public nonReentrant whenNotPaused {
-        require(!factoryStorage.redemptionIsCompleted(_redemptionNonce), "Redemption is completed");
-        address requester = factoryStorage.redemptionRequesterByNonce(_redemptionNonce);
-        require(msg.sender == requester, "Only requester can cancel the redemption");
-        IOrderProcessor issuer = factoryStorage.issuer();
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            uint256 requestId = factoryStorage.redemptionRequestId(_redemptionNonce, tokenAddress);
-            IOrderProcessor.Order memory order = factoryStorage.getOrderInstanceById(requestId);
-            uint256 filledAmount = issuer.getReceivedAmount(requestId) - issuer.getFeesTaken(requestId);
-            uint256 unFilledAmount = issuer.getUnfilledAmount(requestId);
-            if (
-                uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.ACTIVE)
-                    && filledAmount == 0
-            ) {
-                OrderManager orderManager = factoryStorage.orderManager();
-                orderManager.cancelOrder(requestId);
-                factoryStorage.setActionInfoById(requestId, IndexFactoryStorage.ActionInfo(4, _redemptionNonce));
-                factoryStorage.setCancelRedemptionUnfilledAmount(_redemptionNonce, tokenAddress, unFilledAmount);
-            } else if (
-                uint8(issuer.getOrderStatus(requestId)) == uint8(IOrderProcessor.OrderStatus.FULFILLED)
-                    || filledAmount > 0
-            ) {
-                _cancelExecutedRedemption(tokenAddress, _redemptionNonce, requestId, filledAmount, unFilledAmount);
-            }
-        }
-        emit RequestCancelRedemption(
-            _redemptionNonce,
+        emit RedemptionCancelled(
+            redemptionNonce,
             requester,
             factoryStorage.usdc(),
-            factoryStorage.redemptionInputAmount(_redemptionNonce),
+            factoryStorage.redemptionInputAmount(redemptionNonce),
             0,
             block.timestamp
         );
@@ -409,5 +453,51 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
      */
     function unpause() external onlyOwnerOrOperatorOrBalancer {
         _unpause();
+    }
+
+    /**
+     * @notice Clears the user's pending-action lock if the relayer never completes settlement (liveness).
+     * @dev Does not settle funds or change action state — only unlocks `isUserActionPending` for emergencies.
+     *      Blocked while the user has an issuance or redemption in `PENDING` so escrow/NAV counters stay consistent
+     *      (use `cancelOrder` after ORDER_INTENT_TIMEOUT for atomic settlement instead).
+     *      Uses per-user intent pointers for O(1) gas; falls back to full scans only for legacy state where the
+     *      user lock is set but pointers were never written (pre-upgrade in-flight intents).
+     */
+    function emergencyUnlock(address user) external onlyOwner {
+        require(user != address(0), "invalid user");
+        uint256 iN = factoryStorage.userPendingIssuanceNonce(user);
+        uint256 rN = factoryStorage.userPendingRedemptionNonce(user);
+        bool legacyLock = factoryStorage.isUserActionPending(user) && iN == 0 && rN == 0;
+
+        if (legacyLock) {
+            uint256 maxIssuance = factoryStorage.issuanceNonce();
+            for (uint256 n = 1; n <= maxIssuance; n++) {
+                if (
+                    factoryStorage.issuanceRequesterByNonce(n) == user
+                        && factoryStorage.issuanceState(n) == IndexFactoryStorage.ActionState.PENDING
+                ) {
+                    revert EmergencyUnlockWithPendingIntent(user);
+                }
+            }
+            uint256 maxRedemption = factoryStorage.redemptionNonce();
+            for (uint256 n = 1; n <= maxRedemption; n++) {
+                if (
+                    factoryStorage.redemptionRequesterByNonce(n) == user
+                        && factoryStorage.redemptionState(n) == IndexFactoryStorage.ActionState.PENDING
+                ) {
+                    revert EmergencyUnlockWithPendingIntent(user);
+                }
+            }
+        } else {
+            if (iN != 0 && factoryStorage.issuanceState(iN) == IndexFactoryStorage.ActionState.PENDING) {
+                revert EmergencyUnlockWithPendingIntent(user);
+            }
+            if (rN != 0 && factoryStorage.redemptionState(rN) == IndexFactoryStorage.ActionState.PENDING) {
+                revert EmergencyUnlockWithPendingIntent(user);
+            }
+        }
+
+        factoryStorage.clearUserPendingIntentNonces(user);
+        factoryStorage.setUserActionPending(user, false);
     }
 }

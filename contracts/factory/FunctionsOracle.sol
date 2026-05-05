@@ -7,6 +7,11 @@ import "../chainlink/FunctionsClient.sol";
 import "../chainlink/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 
+/// @notice Minimal view for oracle-list safety (avoids circular imports with IndexFactoryStorage).
+interface IIndexFactoryStoragePendingRedemption {
+    function pendingRedemptionAsset(address token) external view returns (uint256);
+}
+
 /// @title Index Token Factory Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
 contract FunctionsOracle is
@@ -45,6 +50,9 @@ contract FunctionsOracle is
     mapping(address => uint) public tokenOracleMarketShare;
 
     mapping(address => bool) public isOperator;
+
+    /// @notice IndexFactoryStorage proxy; used to block dropping an asset while redemption escrow exists.
+    address public indexFactoryStorage;
 
     event RequestFulFilled(bytes32 indexed requestId, uint time);
 
@@ -109,6 +117,10 @@ contract FunctionsOracle is
         factoryBalancerAddress = _factoryBalancerAddress;
     }
 
+    function setIndexFactoryStorage(address _indexFactoryStorage) external onlyOwner {
+        indexFactoryStorage = _indexFactoryStorage;
+    }
+
     function requestAssetsData(
         string calldata source,
         uint64 subscriptionId,
@@ -161,8 +173,31 @@ contract FunctionsOracle is
 
     function updateCurrentList() external {
         require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
-        totalCurrentList = totalOracleList;
-        for(uint i = 0; i < totalOracleList; i++){
+        uint256 newLen = totalOracleList;
+        uint256 oldLen = totalCurrentList;
+        address storageAddr = indexFactoryStorage;
+        require(storageAddr != address(0), "indexFactoryStorage not set");
+        if (oldLen > 0) {
+            IIndexFactoryStoragePendingRedemption st = IIndexFactoryStoragePendingRedemption(storageAddr);
+            for (uint256 i; i < oldLen; i++) {
+                address oldToken = currentList[i];
+                if (oldToken == address(0)) {
+                    continue;
+                }
+                bool stillInOracle;
+                for (uint256 j; j < newLen; j++) {
+                    if (oracleList[j] == oldToken) {
+                        stillInOracle = true;
+                        break;
+                    }
+                }
+                if (!stillInOracle) {
+                    require(st.pendingRedemptionAsset(oldToken) == 0, "pending redemption for removed asset");
+                }
+            }
+        }
+        totalCurrentList = newLen;
+        for (uint i = 0; i < newLen; i++) {
             address tokenAddress = oracleList[i];
             currentList[i] = tokenAddress;
             tokenCurrentMarketShare[tokenAddress] = tokenOracleMarketShare[tokenAddress];
